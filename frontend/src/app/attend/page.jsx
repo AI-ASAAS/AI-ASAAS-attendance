@@ -85,7 +85,7 @@ export default function AttendPage({ forcedAction = null }) {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-    const t = hash.get('qr') || url.searchParams.get('token') || '';
+    const t = hash.get('qr') || url.searchParams.get('token') || url.searchParams.get('qr') || '';
     const pathAction = window.location.pathname.includes('/enter') ? 'enter' : (window.location.pathname.includes('/exit') ? 'exit' : '');
     const act = forcedAction || url.searchParams.get('action') || pathAction || '';
     if (t) setToken(t);
@@ -257,17 +257,20 @@ export default function AttendPage({ forcedAction = null }) {
     setError('');
     setNotice('');
     try {
-      // If token missing, try to auto-fetch
+      // Always ensure we have a fresh, valid token matching this exact action
       let currentToken = token;
-      if (!currentToken) {
-        try {
-          const act = await api(`/attendance/active-qr?action=${actionType}`);
-          currentToken = act.token;
+      try {
+        const activeData = await api(`/attendance/active-qr?action=${actionType}`);
+        if (activeData && activeData.token) {
+          currentToken = activeData.token;
           setToken(currentToken);
-        } catch {}
+          setBranchInfo(activeData);
+        }
+      } catch (err) {
+        // Fallback to existing token
       }
       if (!currentToken) {
-        throw new Error('يرجى مسح رمز QR الخاص بموقع الشركة أولاً');
+        throw new Error('يرجى مسح رمز QR الخاص بموقع الشركة أولاً أو الضغط على جلب كود اليوم');
       }
 
       const fix = await getGpsFix();

@@ -723,7 +723,7 @@
     function parseParams() {
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const search = new URLSearchParams(window.location.search);
-      qrToken = hash.get('qr') || search.get('token') || '';
+      qrToken = hash.get('qr') || search.get('token') || search.get('qr') || '';
       actionHint = search.get('action') || 'enter';
       const enterBtn = document.getElementById('btnEnter');
       const exitBtn = document.getElementById('btnExit');
@@ -933,7 +933,13 @@
     // Submit attendance action (enter/exit)
     async function submitAttendance(actionType) {
       if (!qrToken) {
-        showAlert('يرجى مسح رمز QR الخاص بالفرع بكاميرا الآيفون أولاً', true);
+        try {
+          const act = await api('/attendance/active-qr?action=' + actionType);
+          if (act && act.token) qrToken = act.token;
+        } catch (e) {}
+      }
+      if (!qrToken) {
+        showAlert('يرجى مسح رمز QR الخاص بالفرع بكاميرا الآيفون أولاً أو تحديث الصفحة', true);
         return;
       }
       showAlert('جارٍ قراءة الموقع وتسجيل الإجراء…');

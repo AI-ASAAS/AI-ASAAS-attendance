@@ -259,7 +259,10 @@ app.post('/api/admin/accounts/:id/reset-device',admin,allow('employees.write'),w
 }));
 
 const employee=(req,res,next)=>['employee','super_admin','hr_admin','branch_manager'].includes(req.user.role)?next():next(new AppError('FORBIDDEN','هذه العملية لحساب الموظف',403));
-const uuid=value=>{if(typeof value!=='string'||!value.trim()||value.length>100)error('REQUEST_ID','يلزم معرف طلب صالح');return value.trim();};
+const uuid=value=>{
+ if(typeof value==='string'&&value.trim()&&value.trim().length<=100)return value.trim();
+ return require('node:crypto').randomUUID();
+};
 async function event(c,user,record,kind,body,details){
  await c.query('INSERT INTO attendance_events(record_id,employee_id,kind,captured_at,request_id,details) VALUES($1,$2,$3,$4,$5,$6)',[record?.id||null,user.id,kind,body.fix?.captured_at||null,body.request_id,JSON.stringify(details)]);
 }
@@ -273,7 +276,8 @@ app.get('/api/attendance/active-qr',employee,wrap(async(req,res)=>{
  respond(res,{token,branch_id:branch.id,branch_name:branch.name,latitude:Number(branch.latitude),longitude:Number(branch.longitude),entry_radius:branch.entry_radius,action:action||'both'});
 }));
 app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
- const b=req.body;if(!['enter','exit','location'].includes(b.action))error('VALIDATION','إجراء غير صالح');uuid(b.request_id);
+ const b=req.body;if(!['enter','exit','location'].includes(b.action))error('VALIDATION','إجراء غير صالح');
+ b.request_id=uuid(b.request_id);
  if(req.user.role==='employee'&&req.user.bound_device_id){
   const actionDev=b.device_id||req.headers['x-device-id'];
   if(actionDev&&actionDev!==req.user.bound_device_id){
@@ -299,13 +303,18 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    if(b.fix.accuracy>maxAccuracy){
     error('GPS_LOW_ACCURACY',`إشارة تحديد الموقع ضعيفة (الدقة: ${Math.round(b.fix.accuracy)} متر، والحد الأقصى للدقة المقبولة هو ${maxAccuracy} متر). يرجى تفعيل "الموقع الدقيق Precise Location" في الهاتف والاقتراب من نافذة والمحاولة مجدداً.`,422);
    }
-   if(dist>Number(branch.entry_radius)){
-    error('GPS_REJECTED',`أنت خارج نطاق الفرع (${dist} متر). النطاق المسموح للدخول: ${branch.entry_radius} متر. يرجى التواجد في مقر الفرع أو تعديل إحداثيات الفرع في الإدارة لموقعك الحالي.`,422);
+   const maxAllowedDist=b.action==='enter'?Number(branch.entry_radius):Math.max(Number(branch.exit_radius),500);
+   if(dist>maxAllowedDist){
+    if(b.action==='enter'){
+     error('GPS_REJECTED',`أنت خارج نطاق الفرع (${dist} متر). النطاق المسموح للدخول: ${branch.entry_radius} متر. يرجى التواجد في مقر الفرع أو تعديل إحداثيات الفرع في الإدارة لموقعك الحالي.`,422);
+    }else{
+     error('GPS_REJECTED',`أنت بعيد جداً عن مقر الفرع (${dist} متر) لتسجيل الخروج يدوياً. يمكنك مغادرة الموقع ليتم تسجيل خروجك التلقائي.`,422);
+    }
    }
    location.state='inside';
   }
   if(b.action==='enter'){
-   if(record?.state==='inside')return {already_inside:true,record};
+   if(record?.state==='inside')return {already_inside:true,record,message:'أنت مسجل حضور بالفعل ومناوبتك مفتوحة'};
    let shiftId=req.user.shift_id;
    if(!shiftId){
     const def=(await c.query('SELECT id FROM shifts ORDER BY id ASC LIMIT 1')).rows[0];
@@ -326,7 +335,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    await event(c,req.user,record,returning?'return':'enter',b,{location,fix:b.fix,branch_snapshot:branch});
    return {record,message:returning?'تم تسجيل عودتك':'تم تسجيل حضورك'};
   }
-  if(!record||record.state!=='inside')error('NOT_INSIDE','لا يوجد حضور مفتوح',409);
+  if(!record||record.state!=='inside')error('NOT_INSIDE','لا يوجد حضور مفتوح لتسجيل الخروج منه. يرجى تسجيل الدخول أولاً.',409);
   let automatic=false,candidate=null;
   if(b.action==='location'){
    if(location.distance<=Number(branch.entry_radius)&&b.fix.accuracy<=Math.max(Number(branch.max_accuracy||200),250)){
