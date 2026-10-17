@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AI-ASAAS-attendance">
+  <meta name="theme-color" content="#231f20">
+  <title>AI-ASAAS-attendance · مساحة التحضير للهواتف الذكية والآيفون</title>
+  <style>
+    :root {
+      --ink: #231f20;
+      --gold: #b59045;
+      --gold-dark: #775b24;
+      --gold-soft: #fbf7ee;
+      --sand: #d2c5ac;
+      --cream: #efe9d8;
+      --paper: #faf9f5;
+      --line: #e8e4db;
+      --muted: #736d65;
+      --success: #2d6a4f;
+      --success-bg: #eaf4ee;
+      --danger: #a83232;
+      --danger-bg: #fdf0ef;
+      --info-bg: #eef5fc;
+      --info: #1d5b90;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .topbar {
+      height: 64px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--ink);
+    }
+    .logo img {
+      width: 32px;
+      height: 36px;
+      object-fit: contain;
+    }
+    .logo-text strong {
+      font-size: 20px;
+      display: block;
+      line-height: 1.1;
+    }
+    .logo-text small {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      display: block;
+    }
+    .badge-time {
+      background: var(--gold-soft);
+      color: var(--gold-dark);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border: 1px solid #ebdcc0;
+    }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px calc(40px + env(safe-area-inset-bottom, 20px));
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 2px 10px rgba(35, 31, 32, 0.04);
+      margin-bottom: 16px;
+    }
+    .profile-card {
+      background: linear-gradient(135deg, #231f20 0%, #2e292b 100%);
+      color: #ffffff;
+      border-radius: 18px;
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 4px 18px rgba(35, 31, 32, 0.12);
+      margin-bottom: 16px;
+    }
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--ink);
+      font-size: 19px;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .profile-info strong {
+      font-size: 16px;
+      display: block;
+    }
+    .profile-info span {
+      font-size: 12px;
+      color: var(--sand);
+      display: block;
+    }
+    .badge-status {
+      margin-inline-start: auto;
+      padding: 5px 12px;
+      border-radius: 14px;
+      font-size: 11.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge-inside { background: #235d3d; color: #fff; }
+    .badge-outside { background: #474143; color: var(--sand); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    
+    .actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .btn-action {
+      background: #faf9f5;
+      border: 2px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .btn-action:hover {
+      transform: translateY(-2px);
+    }
+    .btn-action.active-enter {
+      background: #f4faf6;
+      border-color: #37614b;
+      box-shadow: 0 4px 16px rgba(45, 106, 79, 0.15);
+    }
+    .btn-action.active-exit {
+      background: #fdf6f5;
+      border-color: #992c20;
+      box-shadow: 0 4px 16px rgba(153, 44, 32, 0.15);
+    }
+    .btn-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+    }
+    .icon-enter { background: #e0f2e9; color: #2d6a4f; }
+    .icon-exit { background: #fde8e5; color: #992c20; }
+    
+    .btn-action strong { font-size: 13.5px; color: var(--ink); }
+    .btn-action small { font-size: 10.5px; color: var(--muted); }
+
+    .btn-primary {
+      background: var(--ink);
+      color: #ffffff;
+      border: 0;
+      padding: 13px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      width: 100%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+      box-shadow: 0 4px 14px rgba(35, 31, 32, 0.15);
+      transition: background 0.2s ease;
+    }
+    .btn-primary:active { transform: scale(0.99); }
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { background: #f7f6f2; }
+    .btn-gold {
+      background: var(--gold);
+      color: #ffffff;
+      border: 0;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+      box-shadow: 0 4px 14px rgba(181, 144, 69, 0.25);
+    }
+    .notice {
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+    .notice-error { background: var(--danger-bg); border: 1px solid #f4cbc6; color: var(--danger); }
+    .notice-success { background: var(--success-bg); border: 1px solid #b8dcce; color: var(--success); }
+    .notice-info { background: var(--info-bg); border: 1px solid #b3d1ed; color: var(--info); }
+    
+    .gps-box {
+      background: var(--gold-soft);
+      border: 1px solid #ebdcc0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 12px;
+      font-size: 12.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .pwa-tip {
+      background: #ffffff;
+      border: 1px dashed var(--gold);
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 11.5px;
+      color: var(--muted);
+      margin-top: 18px;
+      line-height: 1.6;
+    }
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #554f49;
+    }
+    .input {
+      padding: 11px 14px;
+      border: 1px solid #dcd5c9;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      width: 100%;
+      background: #fff;
+    }
+    .input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(181, 144, 69, 0.15);
+    }
+
+    /* Success / Hub Screen Styles */
+    .success-hero {
+      text-align: center;
+      padding: 24px 16px;
+      background: linear-gradient(180deg, #f3faf6 0%, #ffffff 100%);
+      border: 1px solid #cce8db;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 20px rgba(45, 106, 79, 0.08);
+      animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .success-icon-badge {
+      width: 68px;
+      height: 68px;
+      background: #2d6a4f;
+      color: #ffffff;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 32px;
+      margin: 0 auto 14px;
+      box-shadow: 0 8px 24px rgba(45, 106, 79, 0.25);
+    }
+    .success-hero h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      color: var(--ink);
+    }
+    .success-hero p {
+      margin: 0 0 14px;
+      font-size: 13.5px;
+      color: #4b6b5a;
+      font-weight: 500;
+    }
+    .meta-list {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 16px;
+      display: grid;
+      gap: 10px;
+      font-size: 12.5px;
+      text-align: right;
+      margin-top: 14px;
+    }
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed var(--line);
+    }
+    .meta-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+    .meta-row span { color: var(--muted); }
+    .meta-row strong { color: var(--ink); }
+
+    .geofence-banner {
+      background: #edf6f2;
+      border: 1px solid #b8dfcb;
+      color: #1f543c;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-top: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      text-align: right;
+      line-height: 1.5;
+    }
+
+    .hub-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .btn-hub {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-family: inherit;
+      color: var(--ink);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-hub:hover {
+      border-color: var(--gold);
+      background: #faf8f4;
+      transform: translateY(-1px);
+    }
+    .btn-hub-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: right;
+    }
+    .btn-hub-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .leave-item {
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #faf9f5;
+      border: 1px solid var(--line);
+      margin-bottom: 10px;
+    }
+    .leave-item-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .status-tag {
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-pending { background: #fdf5e2; color: #8c6b1b; }
+    .status-approved { background: #eaf4ee; color: #2d6a4f; }
+    .status-rejected { background: #fdf0ef; color: #a83232; }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.92); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(-4px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <a href="/attend.html" class="logo">
+      <img src="/brand/asas-logo.png" alt="أساس" onerror="this.style.display='none'">
+      <div class="logo-text">
+        <strong>أساس</strong>
+        <small>AI-ASAAS-ATTENDANCE</small>
+      </div>
+    </a>
+    <div class="badge-time" id="adenTime">توقيت اليمن</div>
+  </header>
+
+  <main class="container">
+    <div id="alertBox"></div>
+
+    <!-- 1. AUTH SECTION (If not logged in) -->
+    <div id="loginCard" class="card" style="display: none;">
+      <h2 style="margin: 0 0 6px; font-size: 17px;">تسجيل الدخول لمساحة الموظف</h2>
+      <p style="margin: 0 0 18px; font-size: 12px; color: var(--muted);">خاص بموظفي أساس على الآيفون وهواتف الموظفين المعتمدة</p>
+      <form id="loginForm">
+        <label class="field">
+          البريد الإلكتروني أو الرقم الوظيفي
+          <input class="input" type="text" id="identInput" required placeholder="emp1@asas.ye أو emp1" autocomplete="username">
+        </label>
+        <label class="field">
+          كلمة المرور
+          <input class="input" type="password" id="passInput" required placeholder="••••••••••••" autocomplete="current-password">
+        </label>
+        <label class="field">
+          رقم هاتف الموظف (لربط وتوثيق الجهاز)
+          <input class="input" type="tel" id="phoneInput" placeholder="777000000" autocomplete="tel">
+        </label>
+
+        <button type="submit" class="btn-primary" id="loginBtn" style="margin-top: 10px;">تسجيل الدخول ومتابعة الحضور</button>
+      </form>
+
+      <div style="margin: 20px 0; text-align: center; position: relative;">
+        <hr style="border: 0; border-top: 1px solid var(--line);">
+        <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 12px; font-size: 11.5px; color: var(--muted);">أو للموظفين المعتمدين</span>
+      </div>
+
+      <button type="button" class="btn-secondary" style="width: 100%; padding: 12px;" onclick="promptGoogleLogin()" id="googleBtn">
+        <span>🌐</span> تسجيل الدخول عبر Google / Gmail
+      </button>
+
+      <div style="margin-top: 16px; padding: 12px; background: #fbf7ee; border-radius: 10px; font-size: 11.5px; color: #775b24; border: 1px solid #ebdcc0; text-align: right;">
+        🛡️ <strong>حماية قيد الجهاز (Single Device Lock):</strong> يتم ربط حساب الموظف بجواله الشخصي عند أول دخول. لا يمكن استخدام نفس الجوال لحساب موظف آخر، ولا يمكن التحضير من هاتف آخر دون مراجعة الإدارة.
+      </div>
+    </div>
+
+    <!-- 2. ATTENDANCE ENTRY SECTION (Main Action View) -->
+    <div id="attendSection" style="display: none;">
+      <div class="profile-card">
+        <div class="avatar" id="empAvatar">أ</div>
+        <div class="profile-info">
+          <strong id="empName">اسم الموظف</strong>
+          <span id="empMeta">الرقم الوظيفي · الدوام</span>
+        </div>
+        <div class="badge-status badge-outside" id="empStatus">
+          <span class="dot"></span>
+          <span id="empStatusText">خارج الموقع</span>
+        </div>
+      </div>
+
+      <!-- Live GPS Card -->
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <strong style="font-size: 14px;">📍 التحقق الجغرافي الميداني (GPS)</strong>
+          <button type="button" class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="checkGPS()">تحديث الموقع</button>
+        </div>
+        <div class="gps-box" id="gpsBox">
+          <span id="gpsText">جارٍ فحص إشارة الـ GPS…</span>
+        </div>
+      </div>
+
+      <!-- Action Card -->
+      <div class="card">
+        <!-- Page Tabs for Separate Codes -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+          <a href="enter.html" id="tabEnterLink" style="padding: 10px; border-radius: 12px; border: 1px solid var(--success); background: #f0f8f4; color: var(--success); text-align: center; font-weight: 700; font-size: 13px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            📥 كود الدخول
+          </a>
+          <a href="exit.html" id="tabExitLink" style="padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--ink); text-align: center; font-weight: 700; font-size: 13px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            📤 كود الخروج
+          </a>
+        </div>
+
+        <h3 style="margin: 0 0 4px; font-size: 15px;" id="actionTitle">إجراء الحضور والانصراف</h3>
+        <p style="margin: 0 0 14px; font-size: 11.5px; color: var(--muted);" id="tokenHint">يرجى مسح رمز QR الخاص بالفرع</p>
+
+        <div class="actions-grid" id="actionsGrid">
+          <button class="btn-action" id="btnEnter" onclick="submitAttendance('enter')">
+            <div class="btn-icon icon-enter">📥</div>
+            <strong>تسجيل دخول / عودة</strong>
+            <small>لبدء العمل أو العودة</small>
+          </button>
+          <button class="btn-action" id="btnExit" onclick="submitAttendance('exit')">
+            <div class="btn-icon icon-exit">📤</div>
+            <strong>تسجيل خروج</strong>
+            <small>لإنهاء الدوام والمغادرة</small>
+          </button>
+        </div>
+
+        <div style="margin-top: 14px; text-align: center;">
+          <button class="btn-secondary" style="width: 100%; font-size: 12.5px;" onclick="showLeaveView()">
+            <span>📝</span> طلب إجازة / خدمات الموظف
+          </button>
+        </div>
+      </div>
+
+      <!-- PWA iOS Instructions -->
+      <div class="pwa-tip">
+        <strong>💡 تثبيت الصفحة على شاشة الآيفون:</strong><br>
+        اضغط زر المشاركة <span dir="ltr">(Share ⎋)</span> في Safari ثم اختر <strong>"إضافة إلى الصفحة الرئيسية (Add to Home Screen)"</strong> ليظهر كأيقونة تطبيق مستقل على الآيفون.
+      </div>
+
+      <div style="margin-top: 20px; text-align: center;">
+        <button class="btn-secondary" onclick="logout()" style="font-size: 12px;">تسجيل الخروج من هذا الجهاز</button>
+      </div>
+    </div>
+
+    <!-- 3. POST-ACTION SUCCESS & HUB VIEW (واجهة تأكيد تفعيل الكود والخدمات) -->
+    <div id="successSection" style="display: none;">
+      <div class="success-hero">
+        <div class="success-icon-badge" id="successIcon">🎉</div>
+        <h2 id="successTitle">تم تفعيل الكود بنجاح!</h2>
+        <p id="successMessage">تم توثيق حضورك وبدء فترة العمل الرسمية</p>
+        <div style="display: inline-block;">
+          <span class="badge-status badge-inside" id="successBadge">
+            <span class="dot"></span>
+            <span id="successBadgeText">حضور مفتوح · داخل النطاق</span>
+          </span>
+        </div>
+
+        <div class="meta-list">
+          <div class="meta-row">
+            <span>⏰ وقت العملية:</span>
+            <strong id="successTime">--:--</strong>
+          </div>
+          <div class="meta-row">
+            <span>🏢 مقر الفرع المعتمد:</span>
+            <strong id="successBranch">فرع أساس</strong>
+          </div>
+          <div class="meta-row">
+            <span>📍 التوثيق الجغرافي:</span>
+            <strong id="successGpsDetails">تم التحقق من النطاق (GPS)</strong>
+          </div>
+        </div>
+
+        <!-- Geofence Active Alert Banner -->
+        <div class="geofence-banner" id="geofenceNotice">
+          <span style="font-size: 18px;">🛡️</span>
+          <div>
+            <strong>الخروج التلقائي مُفعل:</strong>
+            يتم فحص موقعك تلقائياً كل 25 ثانية، وعند مغادرتك لنطاق الفرع سيقوم النظام بتسجيل انصرافك تلقائياً دون الحاجة لمسح الرمز مجدداً.
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Services Hub -->
+      <div class="card">
+        <h3 style="margin: 0 0 10px; font-size: 14px;">الخدمات السريعة للموظف</h3>
+        
+        <div class="hub-grid">
+          <button class="btn-hub" onclick="showLeaveView()">
+            <div class="btn-hub-inner">
+              <div class="btn-hub-icon" style="background: #fdf5e2; color: #8c6b1b;">📝</div>
+              <div>
+                <strong style="font-size: 13.5px; display: block;">تقديم طلب إجازة</strong>
+                <small style="font-size: 11px; color: var(--muted);">سنوية · اضطرارية · مرضية</small>
+              </div>
+            </div>
+            <span style="color: var(--muted);">⬅️</span>
+          </button>
+
+          <button class="btn-hub" onclick="toggleTodayDetails()">
+            <div class="btn-hub-inner">
+              <div class="btn-hub-icon" style="background: #eaf4ee; color: #2d6a4f;">📊</div>
+              <div>
+                <strong style="font-size: 13.5px; display: block;">سجل مناوبة اليوم</strong>
+                <small style="font-size: 11px; color: var(--muted);">أوقات الدخول والخروج والاحتساب</small>
+              </div>
+            </div>
+            <span style="color: var(--muted);" id="toggleArrow">⬇️</span>
+          </button>
+        </div>
+
+        <!-- Collapsible Today Record Details -->
+        <div id="todayRecordCard" style="display: none; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line);">
+          <div class="meta-list" style="margin-top: 0;" id="todayRecordContent">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <button class="btn-secondary" style="width: 100%; font-size: 13px;" onclick="showAttendView()">
+            <span>🔄</span> مسح كود جديد / العودة لصفحة التحضير
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. LEAVE REQUEST SECTION (واجهة طلب الإجازة) -->
+    <div id="leaveSection" style="display: none;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+        <h2 style="margin: 0; font-size: 17px;">تقديم طلب إجازة</h2>
+        <button type="button" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="showSuccessOrAttendView()">
+          العودة ⬅️
+        </button>
+      </div>
+
+      <div class="card">
+        <form id="leaveForm" onsubmit="submitLeaveRequest(event)">
+          <label class="field">
+            نوع الإجازة
+            <select class="input" id="leaveType">
+              <option value="اعتيادية / سنوية">إجازة اعتيادية / سنوية</option>
+              <option value="اضطرارية">إجازة اضطرارية</option>
+              <option value="مرضية">إجازة مرضية</option>
+              <option value="بدون راتب">إجازة بدون راتب</option>
+            </select>
+          </label>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <label class="field">
+              من تاريخ
+              <input class="input" type="date" id="leaveFromDate" required>
+            </label>
+            <label class="field">
+              إلى تاريخ
+              <input class="input" type="date" id="leaveToDate" required>
+            </label>
+          </div>
+
+          <label class="field">
+            سبب الإجازة والتفاصيل
+            <textarea class="input" id="leaveReason" rows="3" required placeholder="يرجى كتابة سبب الإجازة بوضوح للموارد البشرية..."></textarea>
+          </label>
+
+          <button type="submit" class="btn-gold" id="btnSubmitLeave" style="width: 100%; margin-top: 6px;">
+            <span>📨</span> إرسال طلب الإجازة للإدارة
+          </button>
+        </form>
+      </div>
+
+      <!-- Leave Requests History Card -->
+      <div class="card">
+        <h3 style="margin: 0 0 12px; font-size: 14px;">سجل طلبات الإجازة السابقة</h3>
+        <div id="leaveHistoryList">
+          <p style="font-size: 12px; color: var(--muted); text-align: center; margin: 10px 0;">جارٍ تحميل الطلبات السابقة…</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentUser = null;
+    let currentRecord = null;
+    let qrToken = '';
+    let actionHint = '';
+    let latestFix = null;
+    let geofenceInterval = null;
+
+    // Time ticker
+    function updateAdenTime() {
+      const now = new Date();
+      document.getElementById('adenTime').textContent = now.toLocaleTimeString('ar-YE', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Aden'
+      }) + ' · توقيت عدن';
+    }
+    setInterval(updateAdenTime, 1000);
+    updateAdenTime();
+
+    // Parse URL params (#qr=... or ?action=enter)
+    function parseParams() {
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const search = new URLSearchParams(window.location.search);
+      qrToken = hash.get('qr') || search.get('token') || '';
+      actionHint = search.get('action') || '';
+      const enterBtn = document.getElementById('btnEnter');
+      const exitBtn = document.getElementById('btnExit');
+      const tokenHint = document.getElementById('tokenHint');
+      const actionTitle = document.getElementById('actionTitle');
+      const tabEnter = document.getElementById('tabEnterLink');
+      const tabExit = document.getElementById('tabExitLink');
+
+      if (actionHint === 'enter') {
+        if (exitBtn) exitBtn.style.display = 'none';
+        if (enterBtn) {
+          enterBtn.classList.add('active-enter');
+          enterBtn.style.gridColumn = '1 / -1';
+          enterBtn.style.padding = '18px 16px';
+        }
+        if (actionTitle) actionTitle.textContent = 'بوابة كود الدخول والعودة (Check-In)';
+        if (tokenHint) tokenHint.textContent = '✅ كود الدخول والعودة المعتمد مُفعل وجاهز';
+        if (tabEnter) { tabEnter.style.border = '2px solid var(--success)'; tabEnter.style.background = '#eaf4ee'; }
+      } else if (actionHint === 'exit') {
+        if (enterBtn) enterBtn.style.display = 'none';
+        if (exitBtn) {
+          exitBtn.classList.add('active-exit');
+          exitBtn.style.gridColumn = '1 / -1';
+          exitBtn.style.padding = '18px 16px';
+        }
+        if (actionTitle) actionTitle.textContent = 'بوابة كود الخروج والانصراف (Check-Out)';
+        if (tokenHint) tokenHint.textContent = '✅ كود الخروج والانصراف المعتمد مُفعل وجاهز';
+        if (tabExit) { tabExit.style.border = '2px solid var(--ink)'; tabExit.style.background = '#f5f3f0'; }
+      } else if (qrToken) {
+        if (tokenHint) tokenHint.textContent = '✅ رمز اليوم موثق ومُفعل';
+      }
+    }
+
+    function showAlert(msg, isError = false) {
+      const box = document.getElementById('alertBox');
+      box.innerHTML = `<div class="notice ${isError ? 'notice-error' : 'notice-success'}">${msg}</div>`;
+      setTimeout(() => { if (!isError) box.innerHTML = ''; }, 6000);
+    }
+
+    async function api(path, method = 'GET', body = null) {
+      const res = await fetch('/api' + path, {
+        method,
+        credentials: 'same-origin',
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'حدث خطأ في الاتصال');
+      return data.data;
+    }
+
+    async function checkGPS() {
+      const box = document.getElementById('gpsText');
+      box.textContent = 'جارٍ تحديد موقع جهاز الآيفون…';
+      if (!navigator.geolocation) {
+        box.textContent = 'الـ GPS غير مدعوم على هذا المتصفح';
+        return null;
+      }
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            latestFix = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: Math.round(pos.coords.accuracy),
+              captured_at: new Date(pos.timestamp).toISOString()
+            };
+            box.textContent = `✅ تم التقاط الموقع (دقة: ${latestFix.accuracy} م)`;
+            box.style.color = 'var(--success)';
+            resolve(latestFix);
+          },
+          err => {
+            box.textContent = 'تعذر قراءة الـ GPS. يرجى تفعيل إذن الموقع في Safari';
+            box.style.color = 'var(--danger)';
+            resolve(null);
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      });
+    }
+
+    async function init() {
+      parseParams();
+      // Set default leave dates
+      const today = new Date().toISOString().slice(0, 10);
+      const fromEl = document.getElementById('leaveFromDate');
+      const toEl = document.getElementById('leaveToDate');
+      if (fromEl) fromEl.value = today;
+      if (toEl) toEl.value = today;
+
+      try {
+        const u = await api('/auth/me');
+        currentUser = u;
+        await showEmployeeApp(u);
+      } catch (e) {
+        document.getElementById('loginCard').style.display = 'block';
+        document.getElementById('attendSection').style.display = 'none';
+        document.getElementById('successSection').style.display = 'none';
+        document.getElementById('leaveSection').style.display = 'none';
+      }
+    }
+
+    async function showEmployeeApp(u) {
+      document.getElementById('loginCard').style.display = 'none';
+      document.getElementById('attendSection').style.display = 'block';
+      document.getElementById('successSection').style.display = 'none';
+      document.getElementById('leaveSection').style.display = 'none';
+
+      document.getElementById('empName').textContent = u.name;
+      document.getElementById('empMeta').textContent = `${u.identifier} · مساحة العمل المعتمدة`;
+      document.getElementById('empAvatar').textContent = u.name ? u.name[0] : 'أ';
+
+      try {
+        const att = await api('/attendance/me');
+        currentRecord = att.records?.[0];
+        updateStatusBadge(currentRecord);
+      } catch (e) {}
+
+      checkGPS();
+      evaluateGeofenceWatcher();
+    }
+
+    function updateStatusBadge(rec) {
+      const isInside = rec && rec.state === 'inside';
+      const st = document.getElementById('empStatus');
+      const stTxt = document.getElementById('empStatusText');
+      if (!st || !stTxt) return;
+      if (isInside) {
+        st.className = 'badge-status badge-inside';
+        stTxt.textContent = 'حضور مفتوح';
+      } else {
+        st.className = 'badge-status badge-outside';
+        stTxt.textContent = 'خارج الموقع';
+      }
+    }
+
+    function getDeviceId() {
+      let id = localStorage.getItem('asas_device_id');
+      if (!id || id.length < 16) {
+        id = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'dev-' + Math.random().toString(36).slice(2) + Date.now();
+        localStorage.setItem('asas_device_id', id);
+      }
+      return id;
+    }
+    function getDeviceName() {
+      const ua = navigator.userAgent || '';
+      if (/iPhone/i.test(ua)) return 'آيفون Apple iPhone';
+      if (/iPad/i.test(ua)) return 'آيباد Apple iPad';
+      if (/Android/i.test(ua)) return 'هاتف أندرويد';
+      if (/Windows/i.test(ua)) return 'كمبيوتر Windows';
+      if (/Macintosh/i.test(ua)) return 'كمبيوتر Mac';
+      return 'هاتف ذكي';
+    }
+
+    async function promptGoogleLogin() {
+      const email = window.prompt('أدخل بريد Gmail أو بريدك المعتمد لدى الشركة:');
+      if (!email) return;
+      const phone = document.getElementById('phoneInput')?.value || undefined;
+      const btn = document.getElementById('googleBtn');
+      btn.disabled = true;
+      btn.textContent = 'جارٍ التحقق…';
+      try {
+        const res = await api('/auth/google', 'POST', {
+          email,
+          phone,
+          device_id: getDeviceId(),
+          device_name: getDeviceName()
+        });
+        currentUser = res.account;
+        await showEmployeeApp(res.account);
+        showAlert('تم تسجيل الدخول بحساب Google بنجاح');
+      } catch (err) {
+        showAlert(err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🌐</span> تسجيل الدخول عبر Google / Gmail';
+      }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const identifier = document.getElementById('identInput').value.trim();
+      const password = document.getElementById('passInput').value;
+      const phone = document.getElementById('phoneInput').value.trim();
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true;
+      btn.textContent = 'جارٍ التحقق…';
+      try {
+        const res = await api('/auth/login', 'POST', {
+          identifier,
+          password,
+          phone: phone || undefined,
+          device_id: getDeviceId(),
+          device_name: getDeviceName()
+        });
+        currentUser = res.account;
+        await showEmployeeApp(res.account);
+        showAlert('تم تسجيل الدخول بنجاح');
+      } catch (err) {
+        showAlert(err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'تسجيل الدخول ومتابعة الحضور';
+      }
+    });
+
+    // Submit attendance action (enter/exit)
+    async function submitAttendance(actionType) {
+      if (!qrToken) {
+        showAlert('يرجى مسح رمز QR الخاص بالفرع بكاميرا الآيفون أولاً', true);
+        return;
+      }
+      showAlert('جارٍ قراءة الموقع وتسجيل الإجراء…');
+      let fix = await checkGPS();
+      if (!fix) fix = latestFix;
+      if (!fix) {
+        showAlert('يرجى السماح بصلاحية الموقع الجغرافي لإتمام التحضير', true);
+        return;
+      }
+
+      const requestId = 'req_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();
+      try {
+        const res = await api('/attendance/action', 'POST', {
+          action: actionType,
+          token: qrToken,
+          request_id: requestId,
+          device_id: getDeviceId(),
+          fix
+        });
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        currentRecord = res.record;
+        
+        // Transition to dedicated Success & Code Activated Hub View!
+        showSuccessView(actionType, res.message, res.record, fix);
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    // TRANSITION TO SUCCESS & CODE ACTIVATED HUB VIEW
+    function showSuccessView(actionType, message, record, fix) {
+      document.getElementById('attendSection').style.display = 'none';
+      document.getElementById('leaveSection').style.display = 'none';
+      document.getElementById('loginCard').style.display = 'none';
+      const sec = document.getElementById('successSection');
+      sec.style.display = 'block';
+
+      const isEnter = actionType === 'enter';
+      document.getElementById('successIcon').textContent = isEnter ? '🎉' : '👋';
+      document.getElementById('successTitle').textContent = isEnter ? 'تم تفعيل الكود وتسجيل الدخول!' : 'تم تفعيل الكود وتسجيل الخروج!';
+      document.getElementById('successMessage').textContent = message || (isEnter ? 'تم توثيق حضورك وبدء فترة الدوام بنجاح' : 'تم إنهاء المناوبة وتوثيق انصرافك بنجاح');
+
+      const badge = document.getElementById('successBadge');
+      const badgeTxt = document.getElementById('successBadgeText');
+      const notice = document.getElementById('geofenceNotice');
+
+      if (isEnter) {
+        badge.className = 'badge-status badge-inside';
+        badgeTxt.textContent = 'حضور مفتوح · داخل نطاق الفرع';
+        notice.style.display = 'flex';
+      } else {
+        badge.className = 'badge-status badge-outside';
+        badgeTxt.textContent = 'خارج الموقع · انتهت المناوبة';
+        notice.style.display = 'none';
+      }
+
+      const now = new Date();
+      document.getElementById('successTime').textContent = now.toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Aden' });
+      document.getElementById('successBranch').textContent = (currentUser?.branch_name || 'فرع أساس المعتمد');
+      document.getElementById('successGpsDetails').textContent = fix ? `موقع موثق (دقة: ${fix.accuracy} م)` : 'تم التحقق من النطاق';
+
+      // Start background watcher if inside
+      evaluateGeofenceWatcher();
+    }
+
+    function showAttendView() {
+      document.getElementById('successSection').style.display = 'none';
+      document.getElementById('leaveSection').style.display = 'none';
+      document.getElementById('attendSection').style.display = 'block';
+      updateStatusBadge(currentRecord);
+    }
+
+    function showSuccessOrAttendView() {
+      if (currentRecord) {
+        showSuccessView(currentRecord.state === 'inside' ? 'enter' : 'exit', 'حالة حضورك الحالية', currentRecord, latestFix);
+      } else {
+        showAttendView();
+      }
+    }
+
+    // BACKGROUND GEOFENCE AUTO-EXIT WATCHER
+    function evaluateGeofenceWatcher() {
+      if (geofenceInterval) {
+        clearInterval(geofenceInterval);
+        geofenceInterval = null;
+      }
+      // If user is inside, watch position periodically
+      if (currentUser && currentRecord && currentRecord.state === 'inside') {
+        geofenceInterval = setInterval(async () => {
+          if (!currentRecord || currentRecord.state !== 'inside') {
+            clearInterval(geofenceInterval);
+            geofenceInterval = null;
+            return;
+          }
+          if (!navigator.geolocation) return;
+          navigator.geolocation.getCurrentPosition(async pos => {
+            const fix = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: Math.round(pos.coords.accuracy),
+              captured_at: new Date(pos.timestamp).toISOString()
+            };
+            try {
+              const res = await api('/attendance/action', 'POST', {
+                action: 'location',
+                request_id: 'loc_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now(),
+                device_id: getDeviceId(),
+                fix
+              });
+              if (res && res.record) {
+                currentRecord = res.record;
+                // If auto-exit triggered!
+                if (res.automatic || res.record.state === 'outside') {
+                  clearInterval(geofenceInterval);
+                  geofenceInterval = null;
+                  if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+                  showAlert('⚠️ تم تسجيل خروجك التلقائي بنجاح لمغادرتك نطاق الفرع');
+                  showSuccessView('exit', 'تم تسجيل خروجك التلقائي بنجاح لمغادرتك نطاق الفرع', res.record, fix);
+                }
+              }
+            } catch (e) {}
+          }, () => {}, { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
+        }, 25000); // Check every 25 seconds
+      }
+    }
+
+    // LEAVE REQUEST VIEW & SUBMISSION
+    async function showLeaveView() {
+      document.getElementById('attendSection').style.display = 'none';
+      document.getElementById('successSection').style.display = 'none';
+      document.getElementById('leaveSection').style.display = 'block';
+      await loadLeaveHistory();
+    }
+
+    async function submitLeaveRequest(e) {
+      e.preventDefault();
+      const from_date = document.getElementById('leaveFromDate').value;
+      const to_date = document.getElementById('leaveToDate').value;
+      const leaveType = document.getElementById('leaveType').value;
+      const reasonText = document.getElementById('leaveReason').value.trim();
+      const btn = document.getElementById('btnSubmitLeave');
+
+      if (!from_date || !to_date || !reasonText) {
+        showAlert('يرجى ملء جميع الحقول المطلوبة للإجازة', true);
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'جارٍ إرسال الطلب…';
+      try {
+        await api('/leave', 'POST', {
+          from_date,
+          to_date,
+          reason: `[${leaveType}] ${reasonText}`
+        });
+        showAlert('تم إرسال طلب الإجازة للموارد البشرية بنجاح!');
+        document.getElementById('leaveReason').value = '';
+        await loadLeaveHistory();
+      } catch (err) {
+        showAlert(err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>📨</span> إرسال طلب الإجازة للإدارة';
+      }
+    }
+
+    async function loadLeaveHistory() {
+      const list = document.getElementById('leaveHistoryList');
+      try {
+        const rows = await api('/leave');
+        if (!rows || !rows.length) {
+          list.innerHTML = '<p style="font-size: 12px; color: var(--muted); text-align: center; margin: 10px 0;">لا توجد طلبات إجازة سابقة</p>';
+          return;
+        }
+        list.innerHTML = rows.map(r => {
+          let badgeClass = 'status-pending';
+          let badgeText = 'قيد المراجعة 🟡';
+          if (r.status === 'approved') { badgeClass = 'status-approved'; badgeText = 'مقبولة 🟢'; }
+          if (r.status === 'rejected') { badgeClass = 'status-rejected'; badgeText = 'مرفوضة 🔴'; }
+          const from = r.from_date?.slice(0, 10) || '';
+          const to = r.to_date?.slice(0, 10) || '';
+          return `
+            <div class="leave-item">
+              <div class="leave-item-head">
+                <span class="status-tag ${badgeClass}">${badgeText}</span>
+                <span style="font-size: 11.5px; color: var(--muted);">${from} إلى ${to}</span>
+              </div>
+              <p style="margin: 0; font-size: 12.5px; color: var(--ink);">${r.reason || 'إجازة'}</p>
+              ${r.comment ? `<div style="margin-top: 6px; font-size: 11px; color: var(--gold-dark); background: var(--gold-soft); padding: 4px 8px; border-radius: 6px;">ملاحظة الإدارة: ${r.comment}</div>` : ''}
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        list.innerHTML = '<p style="font-size: 12px; color: var(--danger); text-align: center;">تعذر تحميل السجل</p>';
+      }
+    }
+
+    function toggleTodayDetails() {
+      const card = document.getElementById('todayRecordCard');
+      const arrow = document.getElementById('toggleArrow');
+      const isHidden = card.style.display === 'none';
+      card.style.display = isHidden ? 'block' : 'none';
+      arrow.textContent = isHidden ? '⬆️' : '⬇️';
+      if (isHidden && currentRecord) {
+        const firstIn = currentRecord.first_in ? new Date(currentRecord.first_in).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' }) : '—';
+        const lastOut = currentRecord.last_out ? new Date(currentRecord.last_out).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' }) : '—';
+        const late = currentRecord.late_minutes ? `${currentRecord.late_minutes} دقيقة تأخير` : 'في الموعد المحدد ✅';
+        const exitReason = { geofence: 'مغادرة الموقع التلقائية (Geofence)', manual: 'تسجيل يدوي', scheduled: 'نهاية الدوام' }[currentRecord.exit_reason] || (currentRecord.exit_reason || '—');
+        
+        document.getElementById('todayRecordContent').innerHTML = `
+          <div class="meta-row"><span>وقت أول دخول:</span><strong>${firstIn}</strong></div>
+          <div class="meta-row"><span>وقت آخر خروج:</span><strong>${lastOut}</strong></div>
+          <div class="meta-row"><span>الالتزام بالموعد:</span><strong>${late}</strong></div>
+          <div class="meta-row"><span>سبب الخروج:</span><strong>${exitReason}</strong></div>
+          <div class="meta-row"><span>الحالة:</span><strong>${currentRecord.state === 'inside' ? 'حضور مفتوح 🟢' : 'تم الخروج ⚪'}</strong></div>
+        `;
+      }
+    }
+
+    async function logout() {
+      if (geofenceInterval) clearInterval(geofenceInterval);
+      try { await api('/auth/logout', 'POST', {}); } catch (e) {}
+      currentUser = null;
+      currentRecord = null;
+      document.getElementById('attendSection').style.display = 'none';
+      document.getElementById('successSection').style.display = 'none';
+      document.getElementById('leaveSection').style.display = 'none';
+      document.getElementById('loginCard').style.display = 'block';
+      showAlert('تم تسجيل الخروج بنجاح');
+    }
+
+    init();
+  </script>
+</body>
+</html>

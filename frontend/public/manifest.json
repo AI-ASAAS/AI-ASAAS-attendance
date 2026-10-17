@@ -1,16 +1,15 @@
 {
-  "name": "Manikstu Agro Attendance",
-  "short_name": "MK Attend",
-  "description": "Attendance and Workforce Management System",
+  "name": "AI-ASAAS-attendance",
+  "short_name": "أساس",
+  "description": "نظام حضور موظفي أساس - AI-ASAAS Attendance System",
   "start_url": "/attend",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2E7D32",
+  "background_color": "#FAF9F5",
+  "theme_color": "#231F20",
   "orientation": "portrait",
   "icons": [
-    { "src": "/logo.jpeg", "sizes": "192x192", "type": "image/jpeg", "purpose": "any maskable" },
-    { "src": "/logo.jpeg", "sizes": "512x512", "type": "image/jpeg" }
+    { "src": "/brand/asas-logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/brand/asas-logo.png", "sizes": "512x512", "type": "image/png" }
   ],
-  "categories": ["business", "productivity"],
-  "screenshots": []
+  "categories": ["business", "productivity"]
 }

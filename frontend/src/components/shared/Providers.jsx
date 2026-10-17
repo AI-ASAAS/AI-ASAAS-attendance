@@ -13,9 +13,8 @@ const queryClient = new QueryClient({
 export default function Providers({ children }) {
   // Register Service Worker for PWA
   useEffect(() => {
-    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-      navigator.serviceWorker.register('/sw.js').catch(console.error);
-    }
+    // The upstream worker persisted credentials and replayed unverified attendance.
+    // ASAS offline evidence is handled explicitly by the Android client instead.
   }, []);
 
   return (

@@ -1,8 +1,8 @@
-# QR Code Attendance Management System
+# AI-ASAAS-attendance - نظام حضور موظفي أساس
 
 <div align="center">
 
-  <h3>A full-stack, open-source employee attendance system built with Next.js and Node.js</h3>
+  <h3>A full-stack enterprise employee attendance system for AI-ASAAS (Next.js & Node.js)</h3>
 
   ![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)
   ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)
