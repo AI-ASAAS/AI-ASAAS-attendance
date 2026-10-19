@@ -231,7 +231,7 @@ export default function AsasApp(){
 
 function Login({onLogin,initialError}){
  const [identifier,setIdentifier]=useState(''),[password,setPassword]=useState(''),[phone,setPhone]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(initialError);
- const [googleModal,setGoogleModal]=useState(false),[googleEmail,setGoogleEmail]=useState('');
+ const [googleModal,setGoogleModal]=useState(false),[googleEmail,setGoogleEmail]=useState(''),[googleName,setGoogleName]=useState('');
  async function submit(e){
   e.preventDefault();setBusy(true);setError('');
   try{
@@ -246,7 +246,7 @@ function Login({onLogin,initialError}){
   try{
    const device_id=getDeviceId();
    const device_name=getDeviceName();
-   const d=await api('/auth/google','POST',{email:googleEmail,phone:phone||undefined,device_id,device_name});
+   const d=await api('/auth/google','POST',{email:googleEmail,name:googleName||undefined,phone:phone||undefined,device_id,device_name});
    onLogin(d.account);
   }catch(e){setError(e.message);}finally{setBusy(false);}
  }
@@ -306,7 +306,7 @@ function Login({onLogin,initialError}){
    </div>
   </section>
 
-  {googleModal&&<div className="asas-modal-backdrop" onClick={()=>setGoogleModal(false)}><section className="asas-modal" style={{maxWidth:420}}><div className="asas-card-head"><h2>تسجيل الدخول عبر Google</h2><Button icon={X} onClick={()=>setGoogleModal(false)}/></div><form className="asas-form" onSubmit={submitGoogle}><p className="asas-muted">أدخل بريدك الإلكتروني المسجل في قاعدة موظفي أساس لربط الجلسة بجهازك:</p><Field label="بريد Gmail أو بريد العمل" type="email" required autoFocus value={googleEmail} onChange={e=>setGoogleEmail(e.target.value)} placeholder="employee@company.com"/><Field label="رقم الجوال (اختياري لتحديث ملفك)" type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+967 77xxxxxxx"/><div className="asas-modal-footer"><Button type="button" onClick={()=>setGoogleModal(false)}>إلغاء</Button><Button variant="primary" type="submit" disabled={busy}>{busy?'جارٍ التحقق…':'متابعة الدخول'}</Button></div></form></section></div>}
+  {googleModal&&<div className="asas-modal-backdrop" onClick={()=>setGoogleModal(false)}><section className="asas-modal" style={{maxWidth:440}}><div className="asas-card-head"><h2>تسجيل الدخول والتسجيل التلقائي عبر Google</h2><Button icon={X} onClick={()=>setGoogleModal(false)}/></div><form className="asas-form" onSubmit={submitGoogle}><p className="asas-muted" style={{background:'#fbf7ee',padding:10,borderRadius:6,border:'1px solid #ebdcc0',color:'#775b24',fontSize:12.5,lineHeight:1.5}}>⚡ <strong>تسجيل فوري وذكي:</strong> أدخل بريد Google الخاص بك. إذا كان حسابك جديداً، سيتم إنشاؤه وتفعيله تلقائياً وربطه بجهازك فوراً وإرسال إشعار ترحيبي إلى بريدك!</p><Field label="بريد Gmail أو بريد العمل" type="email" required autoFocus value={googleEmail} onChange={e=>setGoogleEmail(e.target.value)} placeholder="your.name@gmail.com"/><Field label="الاسم الكامل (اختياري للتسجيل الجديد)" type="text" value={googleName} onChange={e=>setGoogleName(e.target.value)} placeholder="اسم الموظف"/><Field label="رقم الجوال (اختياري لتأكيد ربط الهاتف)" type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+967 77xxxxxxx"/><div className="asas-modal-footer"><Button type="button" onClick={()=>setGoogleModal(false)}>إلغاء</Button><Button variant="primary" type="submit" disabled={busy}>{busy?'جارٍ التحقق والتسجيل…':'دخول / تسجيل تلقائي'}</Button></div></form></section></div>}
  </div>;
 }
 

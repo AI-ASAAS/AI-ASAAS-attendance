@@ -77,6 +77,7 @@ export default function AttendPage({ forcedAction = null }) {
   const [loginForm, setLoginForm] = useState({ identifier: 'emp1', password: '', phone: '' });
   const [googleModal, setGoogleModal] = useState(false);
   const [googleEmail, setGoogleEmail] = useState('');
+  const [googleName, setGoogleName] = useState('');
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -338,12 +339,14 @@ export default function AttendPage({ forcedAction = null }) {
       const device_name = getDeviceName();
       const d = await api('/auth/google', 'POST', {
         email: googleEmail,
+        name: googleName || undefined,
         phone: loginForm.phone || undefined,
         device_id,
         device_name
       });
       setUser(d.account);
       setGoogleModal(false);
+      setNotice(`مرحباً ${d.account.name}! تم تسجيل الدخول وربط جهازك (${device_name || 'جوالك'}) بنجاح.`);
       await loadUserData();
       await fetchActiveToken();
     } catch (e) {
@@ -1055,32 +1058,42 @@ export default function AttendPage({ forcedAction = null }) {
           </div>
         )}
 
-        {/* Google Sign-In Modal */}
+        {/* Google Sign-In & Auto-Registration Modal */}
         {googleModal && (
           <div style={styles.modalBackdrop} onClick={e => { if (e.target === e.currentTarget) setGoogleModal(false); }}>
             <div style={styles.modalCard}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>تسجيل الدخول عبر Google</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#231f20' }}>تسجيل الدخول والتسجيل التلقائي عبر Google</h3>
                 <button type="button" onClick={() => setGoogleModal(false)} style={styles.iconButton}>✕</button>
               </div>
-              <p style={{ fontSize: 12.5, color: '#736d65', marginBottom: 14 }}>
-                أدخل عنوان بريدك الإلكتروني (Gmail) المسجل لدى الشركة لربط هاتفك وتسجيل الحضور فورياً:
-              </p>
+              <div style={{ background: '#fbf7ee', border: '1px solid #ebdcc0', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: '#775b24', lineHeight: 1.5 }}>
+                ⚡ <strong>تسجيل فوري وذكي:</strong> أدخل بريد Google الخاص بك. إذا كان حسابك جديداً، سيقوم النظام بإنشاء ملف الموظف وربط جوالك تلقائياً، وإرسال إشعار ترحيبي وتأكيدي إلى بريدك في Google فوراً!
+              </div>
               <form onSubmit={handleGoogleLogin} style={styles.form}>
                 <label style={styles.label}>
-                  بريد Gmail أو بريد الموظف
+                  بريد Gmail أو بريد Google
                   <input
                     style={styles.input}
                     type="email"
                     required
                     autoFocus
-                    placeholder="emp1@asas.ye أو your.email@gmail.com"
+                    placeholder="your.email@gmail.com"
                     value={googleEmail}
                     onChange={e => setGoogleEmail(e.target.value)}
                   />
                 </label>
                 <label style={styles.label}>
-                  رقم الجوال (اختياري لتأكيد ربط الهاتف)
+                  الاسم الكامل (اختياري - يظهر في سجلات الحضور)
+                  <input
+                    style={styles.input}
+                    type="text"
+                    placeholder="مثال: أنس الأغبري"
+                    value={googleName}
+                    onChange={e => setGoogleName(e.target.value)}
+                  />
+                </label>
+                <label style={styles.label}>
+                  رقم الجوال (اختياري لربط الهاتف)
                   <input
                     style={styles.input}
                     type="tel"
@@ -1091,7 +1104,7 @@ export default function AttendPage({ forcedAction = null }) {
                 </label>
                 <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                   <button type="submit" disabled={busy} style={{ ...styles.primaryButton, flex: 1 }}>
-                    {busy ? 'جارٍ التحقق…' : 'متابعة الدخول'}
+                    {busy ? 'جارٍ التحقق والتسجيل…' : 'دخول / تسجيل تلقائي'}
                   </button>
                   <button type="button" onClick={() => setGoogleModal(false)} style={styles.secondaryButton}>
                     إلغاء

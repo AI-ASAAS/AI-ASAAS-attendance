@@ -4,26 +4,29 @@
   "description": "AI-ASAAS attendance API",
   "main": "src/asas-server.js",
   "scripts": {
-    "start":   "node src/asas-server.js",
-    "dev":     "nodemon src/asas-server.js",
-    "setup":   "node src/utils/setup-asas.js",
+    "start": "node src/asas-server.js",
+    "dev": "nodemon src/asas-server.js",
+    "setup": "node src/utils/setup-asas.js",
     "migrate": "node src/utils/setup-asas.js",
-    "lint":    "eslint src/",
-    "test":    "node --test test/*.test.js"
+    "lint": "eslint src/",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "cors":              "^2.8.5",
-    "dotenv":            "^16.4.5",
-    "express":           "^4.18.3",
-    "express-rate-limit":"^7.2.0",
-    "helmet":            "^7.1.0",
-    "pg":                "^8.11.5",
-    "winston":           "^3.13.0"
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "express-rate-limit": "^7.2.0",
+    "helmet": "^7.1.0",
+    "nodemailer": "^10.1.7",
+    "pg": "^8.11.5",
+    "winston": "^3.13.0"
   },
   "devDependencies": {
-    "eslint":    "^8.57.0",
-    "nodemon":   "^3.1.0",
+    "eslint": "^8.57.0",
+    "nodemon": "^3.1.0",
     "supertest": "^7.0.0"
   },
-  "engines": { "node": ">=18.0.0" }
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }

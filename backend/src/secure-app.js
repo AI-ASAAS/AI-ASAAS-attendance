@@ -7,7 +7,9 @@ const {AppError}=require('./utils/AppError');
 const security=require('./services/session-security');
 const policy=require('./services/attendance-policy');
 const {closeScheduled}=require('./services/duty-maintenance');
+const notifications=require('./services/notification.service');
 const app=express();
+app.set('trust proxy', 1);
 const wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
 const error=(code,message,status=400)=>{throw new AppError(code,message,status);};
 const origin=()=>process.env.WEB_ORIGIN||'http://localhost:3000';
@@ -82,38 +84,77 @@ app.post('/api/auth/login',rateLimit({windowMs:900000,max:20,standardHeaders:tru
 }));
 
 app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:true,legacyHeaders:false}),wrap(async(req,res)=>{
- const {credential,email:rawEmail,device_id,device_name,phone}=req.body;
+ const {credential,email:rawEmail,device_id,device_name,phone,name:rawName}=req.body;
  let targetEmail=null;
+ let googleName=rawName?String(rawName).trim():null;
  if(credential&&typeof credential==='string'){
   try{
    const parts=credential.split('.');
    if(parts.length>=2){
     const payload=JSON.parse(Buffer.from(parts[1],'base64url').toString('utf8'));
     if(payload.email)targetEmail=payload.email.toLowerCase().trim();
+    if(payload.name&&!googleName)googleName=payload.name.trim();
    }
   }catch(e){}
  }
  if(!targetEmail&&rawEmail&&typeof rawEmail==='string')targetEmail=rawEmail.toLowerCase().trim();
  if(!targetEmail)error('GOOGLE_AUTH','بيانات التحقق من Google غير مكتملة',400);
 
- const result=await db.query('SELECT * FROM accounts WHERE LOWER(email)=$1 AND active=TRUE',[targetEmail]);
- const account=result.rows[0];
- if(!account)error('NOT_REGISTERED',`البريد (${targetEmail}) غير مسجل في النظام. يرجى تواصلك مع إدارة الموارد البشرية لربط بريدك بحسابك.`,404);
-
  const deviceId=device_id?String(device_id).trim():null;
  const deviceName=device_name?String(device_name).trim().slice(0,150):null;
  const userPhone=phone?String(phone).trim().slice(0,50):null;
 
- if(account.role==='employee'&&deviceId){
-  const other=(await db.query('SELECT id, name FROM accounts WHERE bound_device_id=$1 AND id<>$2',[deviceId,account.id])).rows;
-  if(other.length)error('DEVICE_BOUND_OTHER',`هذا الجوال مقترن بالموظف (${other[0].name}). لا يمكن استخدام نفس الجوال لأكثر من موظف منعاً للتحضير بالنيابة.`,403);
-  if(account.bound_device_id&&account.bound_device_id!==deviceId){
-   error('DEVICE_MISMATCH',`حسابك مقترن بجهاز آخر (${account.bound_device_name||'جوالك السابق'}). يرجى التواصل مع إدارة النظام لفك الارتباط.`,403);
+ const result=await db.query('SELECT * FROM accounts WHERE LOWER(email)=$1 AND active=TRUE',[targetEmail]);
+ let account=result.rows[0];
+
+ if(deviceId){
+  const other=(await db.query('SELECT id, name FROM accounts WHERE bound_device_id=$1',[deviceId])).rows;
+  if(other.length&&(!account||other[0].id!==account.id)){
+   error('DEVICE_BOUND_OTHER',`هذا الجوال مقترن بالموظف (${other[0].name}). لا يمكن استخدام نفس الجوال لأكثر من موظف منعاً للتحضير بالنيابة.`,403);
   }
-  if(!account.bound_device_id){
-   await db.query('UPDATE accounts SET bound_device_id=$1, bound_device_name=$2, device_bound_at=NOW(), phone=COALESCE(phone,$3) WHERE id=$4',[deviceId,deviceName||'هاتف ذكي',userPhone,account.id]);
-   account.bound_device_id=deviceId;account.bound_device_name=deviceName||'هاتف ذكي';account.device_bound_at=new Date();
-   if(!account.phone&&userPhone)account.phone=userPhone;
+ }
+
+ if(!account){
+  // Auto-register employee account
+  const defaultBranch=(await db.query('SELECT id FROM branches WHERE active=TRUE ORDER BY id ASC LIMIT 1')).rows[0];
+  const defaultShift=(await db.query('SELECT id FROM shifts ORDER BY id ASC LIMIT 1')).rows[0];
+  if(!defaultBranch||!defaultShift){
+   error('SETUP_REQUIRED','يرجى إعداد الفروع وجداول الدوام أولاً في لوحة التحكم',500);
+  }
+  const cleanPrefix=(targetEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g,'')||'emp').slice(0,15);
+  const identifier=`${cleanPrefix}_${Math.floor(1000+Math.random()*9000)}`;
+  const empName=googleName||targetEmail.split('@')[0];
+  const randomPassHash=await security.hashPassword(`Asas@Auto#${Math.random().toString(36).slice(2)}${Date.now()}`);
+
+  const insertRes=await db.query(
+   `INSERT INTO accounts(identifier,name,password_hash,role,branch_id,shift_id,email,phone,bound_device_id,bound_device_name,device_bound_at,active)
+    VALUES($1,$2,$3,'employee',$4,$5,$6,$7,$8,$9,$10,TRUE)
+    RETURNING *`,
+   [
+    identifier,
+    empName,
+    randomPassHash,
+    defaultBranch.id,
+    defaultShift.id,
+    targetEmail,
+    userPhone,
+    deviceId,
+    deviceName||'هاتف ذكي',
+    deviceId?new Date():null
+   ]
+  );
+  account=insertRes.rows[0];
+  notifications.notifyAccountCreated(account,deviceName).catch(err=>console.error('[Notification Error] Welcome email failed:',err.message));
+ }else{
+  if(account.role==='employee'&&deviceId){
+   if(account.bound_device_id&&account.bound_device_id!==deviceId){
+    error('DEVICE_MISMATCH',`حسابك مقترن بجهاز آخر (${account.bound_device_name||'جوالك السابق'}). يرجى التواصل مع إدارة النظام لفك الارتباط.`,403);
+   }
+   if(!account.bound_device_id){
+    await db.query('UPDATE accounts SET bound_device_id=$1, bound_device_name=$2, device_bound_at=NOW(), phone=COALESCE(phone,$3) WHERE id=$4',[deviceId,deviceName||'هاتف ذكي',userPhone,account.id]);
+    account.bound_device_id=deviceId;account.bound_device_name=deviceName||'هاتف ذكي';account.device_bound_at=new Date();
+    if(!account.phone&&userPhone)account.phone=userPhone;
+   }
   }
  }
 
@@ -353,6 +394,10 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
     record=(await c.query("INSERT INTO duty_records(employee_id,branch_id,shift_id,shift_start,shift_end,first_in,state,close_policy,deduct_away,late_minutes,last_seen) VALUES($1,$2,$3,$4,$5,$6,'inside',$7,$8,$9,$6) RETURNING *",[req.user.id,branch.id,shift.id,window.start,window.end,now,shift.close_policy,shift.deduct_away,late])).rows[0];
    }
    await event(c,req.user,record,returning?'return':'enter',b,{location,fix:b.fix,branch_snapshot:branch});
+   if(!returning&&req.user.email){
+    const timeStr=new Date(now).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'});
+    notifications.notifyCheckIn(req.user,branch.name,timeStr).catch(err=>console.error('[Notification Error] Check-in email failed:',err.message));
+   }
    return {record,message:returning?'تم تسجيل عودتك':'تم تسجيل حضورك'};
   }
   if(!record||record.state!=='inside')error('NOT_INSIDE','لا يوجد حضور مفتوح لتسجيل الخروج منه. يرجى تسجيل الدخول أولاً.',409);
@@ -371,6 +416,11 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    const reason=automatic?'geofence':'manual';
    record=(await c.query("UPDATE duty_records SET state='outside',last_out=$1,away_started=$1,exit_reason=$2,exit_candidate=NULL,last_seen=$1,gps_state=$3 WHERE id=$4 RETURNING *",[now,reason,location.state,record.id])).rows[0];
    await event(c,req.user,record,automatic?'auto_exit':'exit',b,{location,fix:b.fix,branch_snapshot:branch});
+   if(req.user.email){
+    const timeStr=new Date(now).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'});
+    const workingMinutes=countedMinutes(record);
+    notifications.notifyCheckOut(req.user,branch.name,timeStr,workingMinutes).catch(err=>console.error('[Notification Error] Check-out email failed:',err.message));
+   }
    return {record,automatic:!!automatic,message:automatic?'تم تسجيل خروجك التلقائي بنجاح لمغادرتك نطاق الفرع':'تم تسجيل الخروج'};
   }
   await event(c,req.user,record,'location',b,{location,accuracy:b.fix.accuracy,revision:branch.location_revision});
@@ -466,7 +516,16 @@ app.post('/api/leave',employee,wrap(async(req,res)=>{
 }));
 app.patch('/api/leave/:id',admin,allow('leave.review'),wrap(async(req,res)=>{
  const b=req.body;if(!['approved','rejected'].includes(b.status))error('VALIDATION','قرار غير صالح');const comment=string(b.comment,1000);
- respond(res,await db.transaction(async c=>{const row=(await c.query('SELECT l.*,a.branch_id FROM leave_requests l JOIN accounts a ON a.id=l.employee_id WHERE l.id=$1 FOR UPDATE OF l',[id(req.params.id)])).rows[0];if(!row)error('NOT_FOUND','الطلب غير موجود',404);scope(req.user,row.branch_id);if(row.status!=='pending')error('CONFLICT','تمت مراجعة الطلب',409);await c.query('UPDATE leave_requests SET status=$1,comment=$2,reviewed_by=$3 WHERE id=$4',[b.status,comment,req.user.id,row.id]);await audit(c,req.user,'leave.review',row.id,comment,{status:b.status});return {updated:true};}));
+ respond(res,await db.transaction(async c=>{
+  const row=(await c.query('SELECT l.*,a.name,a.email,a.branch_id FROM leave_requests l JOIN accounts a ON a.id=l.employee_id WHERE l.id=$1 FOR UPDATE OF l',[id(req.params.id)])).rows[0];
+  if(!row)error('NOT_FOUND','الطلب غير موجود',404);
+  scope(req.user,row.branch_id);
+  if(row.status!=='pending')error('CONFLICT','تمت مراجعة الطلب',409);
+  await c.query('UPDATE leave_requests SET status=$1,comment=$2,reviewed_by=$3 WHERE id=$4',[b.status,comment,req.user.id,row.id]);
+  await audit(c,req.user,'leave.review',row.id,comment,{status:b.status});
+  notifications.notifyLeaveUpdate({name:row.name,email:row.email},{...row,comment},b.status).catch(err=>console.error('[Notification Error] Leave update email failed:',err.message));
+  return {updated:true};
+ }));
 }));
 app.use((req,res)=>res.status(404).json({success:false,error:'NOT_FOUND',message:'المسار غير موجود'}));
 app.use((err,req,res,next)=>{
