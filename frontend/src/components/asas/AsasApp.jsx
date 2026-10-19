@@ -15,13 +15,52 @@ const states={inside:'حضور مفتوح',outside:'تم الخروج',closed:'�
 const roles={super_admin:'مدير النظام',hr_admin:'الموارد البشرية',branch_manager:'مدير الفرع',viewer:'للعرض فقط',employee:'موظف'};
 const tabs=[['dashboard','نظرة عامة',LayoutDashboard],['records','الحضور والانصراف',CalendarDays],['accounts','الموظفون والأجهزة',Users],['branches','المواقع والفروع',MapPin],['qr','رموز QR المعتمدة',QrCode],['shifts','الدوام والاحتساب',Clock3],['leave','الإجازات',FileText],['audit','سجل العمليات',ShieldCheck],['settings','إعدادات النظام',Settings2]];
 const permissions={'employees.read':'عرض الموظفين','employees.write':'إدارة الموظفين','locations.write':'تعديل المواقع','qr.manage':'إدارة QR','shifts.write':'الدوام والاحتساب','reports.export':'تصدير التقارير','attendance.edit':'تصحيح الحضور','leave.review':'مراجعة الإجازات','audit.read':'سجل العمليات'};
-const defaults={branches:{name:'',latitude:'',longitude:'',entry_radius:80,exit_radius:120,max_accuracy:30,exit_samples:3,exit_delay_seconds:120,active:true,reason:''},shifts:{name:'',start_time:'08:00',end_time:'16:00',work_days:[0,1,2,3,4],grace_minutes:15,close_policy:'actual_exit',deduct_away:false,reason:''},accounts:{name:'',identifier:'',email:'',phone:'',password:'',role:'employee',branch_id:'',shift_id:'',permissions:[]},records:{first_in:'',last_out:'',state:'closed',exit_reason:'admin_correction',deduct_away:false,reason:''}};
+const defaults={branches:{name:'',latitude:'',longitude:'',entry_radius:80,exit_radius:120,max_accuracy:30,exit_samples:3,exit_delay_seconds:120,active:true,reason:''},shifts:{name:'',start_time:'08:00',end_time:'16:00',work_days:[0,1,2,3,4],grace_minutes:15,close_policy:'actual_exit',deduct_away:false,reason:''},accounts:{name:'',identifier:'',email:'',phone:'',password:'',role:'employee',branch_id:'',shift_id:'',permissions:[]},records:{first_in:'',last_out:'',state:'closed',exit_reason:'انتهاء ساعات الدوام الرسمي في الموعد',deduct_away:false,reason:''}};
 function Brand(){return <div className="asas-logo"><span className="asas-mark"><img src="/brand/asas-logo.png" alt="شعار أساس"/></span><div><strong>أساس</strong><small>نظام إدارة الحضور</small></div></div>;}
 function Button({children,icon:Icon,variant='',...props}){return <button className={`asas-btn ${variant}`} {...props}>{Icon&&<Icon/>}{children}</button>;}
 function Badge({state}){return <span className={`asas-badge ${state}`}>{states[state]||state}</span>;}
 function Empty({children='لا توجد سجلات بعد'}){return <div className="asas-empty"><FileText/>{children}</div>;}
 function Field({label,children,...props}){return <label className="asas-label">{label}{children||<input className="asas-input" {...props}/>}</label>;}
-function Records({rows,onEdit,canEdit}){return rows.length?<div className="asas-table-wrap"><table className="asas-table"><thead><tr>{['الموظف','الفرع','الدوام','أول دخول','آخر خروج','الحالة','سبب الخروج','الاحتساب',...(canEdit?['إجراء']:[] )].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><strong>{r.name}</strong><small>{r.identifier}</small></td><td>{r.branch_name}</td><td>{date(r.shift_start)}</td><td>{time(r.first_in)}</td><td>{time(r.last_out)}</td><td><Badge state={r.state}/></td><td>{{geofence:'مغادرة الموقع',manual:'مسح QR',scheduled:'نهاية الدوام',admin_correction:'تصحيح إداري'}[r.exit_reason]||r.exit_reason||'—'}</td><td>{r.counted_minutes==null?'مفتوح':`${r.counted_minutes} دقيقة`}<small>{r.deduct_away?'مع خصم المغادرة':'دون خصم المغادرة'}</small></td>{canEdit&&<td><Button onClick={()=>onEdit(r)}>تصحيح</Button></td>}</tr>)}</tbody></table></div>:<Empty/>;}
+function Records({rows,onEdit,canEdit}){return rows.length?<div className="asas-table-wrap"><table className="asas-table"><thead><tr>{['الموظف','الفرع','الدوام','أول دخول','آخر خروج','الحالة التلقائية','سبب الخروج التلقائي','الاحتساب',...(canEdit?['إجراء']:[] )].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{rows.map(r=>{
+ const isInside = r.state === 'inside';
+ const isEarly = r.status_key === 'early_exit';
+ const isLate = r.status_key && r.status_key.startsWith('late');
+ const statusLabel = r.status_label || (isInside ? 'حاضر في الموعد' : 'تم الانصراف');
+ const exitReasonLabel = r.exit_reason_label || (isInside ? 'قيد الدوام (على رأس العمل)' : ({geofence:'مغادرة نطاق الموقع تلقائياً (GPS)',manual:'انتهاء ساعات الدوام الرسمي في الموعد',scheduled:'انتهاء فترة المناوبة المجدولة تلقائياً',admin_correction:'تصحيح إداري'}[r.exit_reason]||r.exit_reason||'انتهاء الدوام الرسمي'));
+
+ return <tr key={r.id}>
+  <td><strong>{r.name}</strong><small>{r.identifier}</small></td>
+  <td>{r.branch_name}</td>
+  <td>{date(r.shift_start)}</td>
+  <td><span style={{color:'#2d6a4f',fontWeight:600}}>{time(r.first_in)}</span></td>
+  <td><span style={{color:isInside?'#856404':'#231f20'}}>{time(r.last_out)}</span></td>
+  <td>
+   <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`} style={{
+     display:'inline-flex',
+     alignItems:'center',
+     gap:4,
+     background: isInside ? (isLate ? '#fff3cd' : '#eaf4ee') : (isEarly ? '#ffe8cc' : '#f5f3f0'),
+     color: isInside ? (isLate ? '#856404' : '#2d6a4f') : (isEarly ? '#d9480f' : '#474143'),
+     fontWeight: 600
+   }}>
+     {isInside ? (isLate ? <Clock3 size={12}/> : <CheckCircle2 size={12}/>) : <LogOut size={12}/>}
+     {statusLabel}
+   </span>
+  </td>
+  <td>
+   <span style={{
+     fontSize:12,
+     color: isInside ? '#736d65' : (exitReasonLabel.includes('مبكر') ? '#c92a2a' : (exitReasonLabel.includes('إضافي') ? '#1e7e34' : '#2b8a3e')),
+     fontWeight: exitReasonLabel.includes('مبكر') || exitReasonLabel.includes('إضافي') ? 600 : 500,
+     display:'inline-block'
+   }}>
+     {exitReasonLabel}
+   </span>
+  </td>
+  <td>{r.counted_minutes==null?'مفتوح':`${r.counted_minutes} دقيقة`}<small>{r.deduct_away?'مع خصم المغادرة':'دون خصم المغادرة'}</small></td>
+  {canEdit&&<td><Button onClick={()=>onEdit(r)}>تصحيح</Button></td>}
+ </tr>;
+})}</tbody></table></div>:<Empty/>;}
 
 export default function AsasApp(){
  const [user,setUser]=useState(null),[boot,setBoot]=useState(true),[tab,setTab]=useState('dashboard'),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[open,setOpen]=useState(false),[notice,setNotice]=useState('');
@@ -224,7 +263,7 @@ export default function AsasApp(){
    </div>}
   </main></div>
   {modal&&<div className="asas-modal-backdrop" onClick={e=>{if(e.target===e.currentTarget&&!busy)setModal(null);}}><section className="asas-modal" role="dialog" aria-modal="true" aria-label="تحرير البيانات"><div className="asas-card-head"><h2>{form.id?'تعديل':'إضافة'} {modal==='branches'?'موقع الشركة':modal==='shifts'?'الدوام وسياسة الاحتساب':modal==='records'?'سجل الحضور':'حساب موظف'}</h2><Button icon={X} onClick={()=>setModal(null)} aria-label="إغلاق"/></div><form className="asas-form" onSubmit={save}>{error&&<div className="asas-notice error" role="alert">{error}</div>}{modal!=='records'&&modal!=='accounts'&&<Field label="الاسم" required value={form.name} onChange={e=>set('name',e.target.value)}/>}
-   {modal==='records'&&<><Field label="اسم الموظف"><input className="asas-input" disabled value={form.name||''}/></Field><div className="asas-form-grid"><Field label="وقت الدخول" type="datetime-local" required value={form.first_in} onChange={e=>set('first_in',e.target.value)}/><Field label="وقت الخروج" type="datetime-local" value={form.last_out} onChange={e=>set('last_out',e.target.value)}/></div><div className="asas-form-grid"><Field label="الحالة"><select className="asas-input" value={form.state} onChange={e=>set('state',e.target.value)}><option value="inside">حضور مفتوح</option><option value="outside">تم الخروج</option><option value="closed">مغلق</option></select></Field><Field label="سبب الخروج"><select className="asas-input" value={form.exit_reason} onChange={e=>set('exit_reason',e.target.value)}><option value="manual">مسح QR يدوي</option><option value="geofence">مغادرة الموقع التلقائية</option><option value="scheduled">نهاية الدوام المجدولة</option><option value="admin_correction">تصحيح إداري</option></select></Field></div><label className="asas-check"><input type="checkbox" checked={form.deduct_away} onChange={e=>set('deduct_away',e.target.checked)}/>خصم فترات المغادرة والعودة من الوقت المحتسب</label></>}
+    {modal==='records'&&<><Field label="اسم الموظف"><input className="asas-input" disabled value={form.name||''}/></Field><div className="asas-form-grid"><Field label="وقت الدخول" type="datetime-local" required value={form.first_in} onChange={e=>set('first_in',e.target.value)}/><Field label="وقت الخروج" type="datetime-local" value={form.last_out} onChange={e=>set('last_out',e.target.value)}/></div><div className="asas-form-grid"><Field label="الحالة التلقائية"><select className="asas-input" value={form.state} onChange={e=>set('state',e.target.value)}><option value="inside">حاضر الآن (قيد الدوام)</option><option value="outside">تم الانصراف</option><option value="closed">مغلق رسمياً</option></select></Field><Field label="سبب الخروج التلقائي"><select className="asas-input" value={form.exit_reason} onChange={e=>set('exit_reason',e.target.value)}><option value="انتهاء ساعات الدوام الرسمي في الموعد">انتهاء ساعات الدوام الرسمي في الموعد</option><option value="خروج مبكر بموافقة الإدارة">خروج مبكر بموافقة الإدارة</option><option value="خروج مؤقت / إذن رسمي">خروج مؤقت / إذن رسمي</option><option value="مغادرة نطاق الموقع تلقائياً (GPS)">مغادرة نطاق الموقع تلقائياً (GPS)</option><option value="انتهاء فترة المناوبة المجدولة تلقائياً">انتهاء فترة المناوبة المجدولة تلقائياً</option><option value="تصحيح إداري">تصحيح إداري</option></select></Field></div><label className="asas-check"><input type="checkbox" checked={form.deduct_away} onChange={e=>set('deduct_away',e.target.checked)}/>خصم فترات المغادرة والعودة من الوقت المحتسب</label></>}
     {modal==='branches'&&<><div className="asas-form-grid">{[['latitude','خط العرض',-90,90],['longitude','خط الطول',-180,180],['entry_radius','نطاق الدخول بالمتر',10,1000],['exit_radius','نطاق الخروج بالمتر',11,2000],['max_accuracy','أقصى هامش خطأ بالمتر',1,500],['exit_samples','عدد قراءات التأكيد',2,10],['exit_delay_seconds','مدة التأكيد بالثواني',30,600]].map(([k,label,min,max])=><Field key={k} label={label} type="number" required min={min} max={max} step={k==='latitude'||k==='longitude'?'any':1} value={form[k]} onChange={e=>set(k,e.target.value)}/>)}</div><div className="asas-actions" style={{marginTop:10}}><Button type="button" icon={MapPin} onClick={()=>navigator.geolocation?.getCurrentPosition(p=>{set('latitude',p.coords.latitude);set('longitude',p.coords.longitude);},()=>setError('تعذر الحصول على الموقع؛ أدخل الإحداثيات من الخريطة.'),{enableHighAccuracy:true,timeout:15000})}>استخدام موقع هذا الجهاز</Button>{form.latitude&&form.longitude&&<a className="asas-btn" href={`https://www.google.com/maps?q=${form.latitude},${form.longitude}`} target="_blank" rel="noreferrer">عرض في Google Maps</a>}</div>{form.latitude&&form.longitude&&!isNaN(Number(form.latitude))&&!isNaN(Number(form.longitude))&&<iframe className="asas-map" src={`https://maps.google.com/maps?q=${form.latitude},${form.longitude}&hl=ar&z=17&output=embed`} loading="lazy" title="معاينة موقع Google Maps" allowFullScreen/>}<p className="asas-help">يجب التحقق ميدانياً من الإحداثيات والحدود عبر Google Maps. تعديل الموقع يعيد فترة تأكيد الخروج للحضور المفتوح.</p><label className="asas-check"><input type="checkbox" checked={form.active} onChange={e=>set('active',e.target.checked)}/>الموقع مفعل</label></>}
    {modal==='shifts'&&<><div className="asas-form-grid"><Field label="بداية الدوام" type="time" value={form.start_time.slice(0,5)} required onChange={e=>set('start_time',e.target.value)}/><Field label="نهاية الدوام" type="time" value={form.end_time.slice(0,5)} required onChange={e=>set('end_time',e.target.value)}/></div><Field label="فترة السماح بالدقائق" type="number" min="0" max="120" value={form.grace_minutes} onChange={e=>set('grace_minutes',e.target.value)}/><Field label="عند نهاية الدوام"><select className="asas-input" value={form.close_policy} onChange={e=>set('close_policy',e.target.value)}><option value="actual_exit">انتظار الخروج الفعلي</option><option value="scheduled">إغلاق تلقائي بنهاية الدوام</option></select></Field><Field label="احتساب فترات المغادرة والعودة"><select className="asas-input" value={String(form.deduct_away)} onChange={e=>set('deduct_away',e.target.value==='true')}><option value="false">لا تخصم مدد المغادرة</option><option value="true">اخصم مدد المغادرة من الوقت المحتسب</option></select></Field><p className="asas-help">يظل السجل واحداً للمناوبة في الحالتين. هذا احتساب وقت وليس خصماً مالياً من الراتب.</p><div className="asas-days">{['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'].map((d,i)=><label className="asas-check" key={d}><input type="checkbox" checked={form.work_days.includes(i)} onChange={e=>set('work_days',e.target.checked?[...form.work_days,i]:form.work_days.filter(n=>n!==i))}/>{d}</label>)}</div></>}
    {modal==='accounts'&&<>
@@ -432,7 +471,7 @@ function Employee({user,logout}){
         <span style={{fontSize:12, color:'#736d65', display:'block'}}>حالتك الحالية حسب النظام:</span>
         <strong style={{fontSize:15, color: isInside ? '#1e7e34' : '#775b24', display:'flex', alignItems:'center', gap:6}}>
           {isInside ? <CheckCircle2 size={16}/> : <AlertCircle size={16}/>}
-          {isInside ? 'داخل موقع العمل (حضور مفتوح)' : (todayRecord?.last_out ? 'تم تسجيل الانصراف وإنهاء الدوام' : 'خارج موقع العمل (جاهز لتسجيل الحضور)')}
+          {data?.automatic_status?.status_label || (isInside ? 'داخل موقع العمل (حضور مفتوح)' : (todayRecord?.last_out ? 'تم تسجيل الانصراف وإنهاء الدوام' : 'خارج موقع العمل (جاهز لتسجيل الحضور)'))}
         </strong>
       </div>
       <span className="asas-badge" style={{background: isInside ? '#c3e6cb' : '#ffeeba', color: isInside ? '#155724' : '#856404', fontWeight:700}}>
@@ -440,21 +479,26 @@ function Employee({user,logout}){
       </span>
     </div>
 
-    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:14}}>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12,marginBottom:14}}>
      <div style={{background:'#fcfbf7',border:'1px solid #d2c5ac',padding:12,borderRadius:8,textAlign:'center'}}>
       <div style={{fontSize:12,color:'#736d65',marginBottom:4}}>وقت أول دخول (حضور)</div>
-      <div style={{fontSize:18,fontWeight:700,color:'#231f20'}}>{todayRecord?.first_in ? time(todayRecord.first_in) : '—'}</div>
-      <small style={{color:'#736d65',fontSize:11}}>{todayRecord?.first_in ? 'سُجل بنجاح' : 'لم يسجل بعد'}</small>
+      <div style={{fontSize:17,fontWeight:700,color:'#231f20'}}>{todayRecord?.first_in ? time(todayRecord.first_in) : '—'}</div>
+      <small style={{color:'#736d65',fontSize:11}}>{todayRecord?.first_in ? (todayRecord.status_label || 'سُجل بنجاح') : 'لم يسجل بعد'}</small>
      </div>
      <div style={{background:'#fcfbf7',border:'1px solid #d2c5ac',padding:12,borderRadius:8,textAlign:'center'}}>
       <div style={{fontSize:12,color:'#736d65',marginBottom:4}}>وقت آخر خروج (انصراف)</div>
-      <div style={{fontSize:18,fontWeight:700,color:'#231f20'}}>{todayRecord?.last_out ? time(todayRecord.last_out) : '—'}</div>
-      <small style={{color:'#736d65',fontSize:11}}>{todayRecord?.last_out ? 'سُجل بنجاح' : 'لم يسجل بعد'}</small>
+      <div style={{fontSize:17,fontWeight:700,color:'#231f20'}}>{todayRecord?.last_out ? time(todayRecord.last_out) : '—'}</div>
+      <small style={{color:'#736d65',fontSize:11}}>{todayRecord?.last_out ? 'سُجل بنجاح' : (isInside ? 'قيد الدوام' : 'لم يسجل بعد')}</small>
+     </div>
+     <div style={{background:'#fcfbf7',border:'1px solid #d2c5ac',padding:12,borderRadius:8,textAlign:'center'}}>
+      <div style={{fontSize:12,color:'#736d65',marginBottom:4}}>سبب الخروج التلقائي</div>
+      <div style={{fontSize:13,fontWeight:700,color:todayRecord?.exit_reason_label?.includes('مبكر')?'#c92a2a':'#775b24',marginTop:3}}>{todayRecord?.exit_reason_label || data?.automatic_status?.exit_reason_label || (isInside ? 'قيد الدوام' : '—')}</div>
+      <small style={{color:'#736d65',fontSize:11}}>حسب توقيت الدوام</small>
      </div>
      <div style={{background:'#fcfbf7',border:'1px solid #d2c5ac',padding:12,borderRadius:8,textAlign:'center'}}>
       <div style={{fontSize:12,color:'#736d65',marginBottom:4}}>التوقيت اللحظي الآن</div>
-      <div style={{fontSize:18,fontWeight:700,color:'#b59045'}}>{liveTime||'—'}</div>
-      <small style={{color:'#736d65',fontSize:11}}>توقيت صنعاء (محدّث لحظياً)</small>
+      <div style={{fontSize:17,fontWeight:700,color:'#b59045'}}>{liveTime||'—'}</div>
+      <small style={{color:'#736d65',fontSize:11}}>توقيت صنعاء (اليمن)</small>
      </div>
     </div>
 

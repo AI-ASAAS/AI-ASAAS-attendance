@@ -322,6 +322,8 @@ export default function AttendPage({ forcedAction = null }) {
         action: effectiveAction,
         message: result.message || (effectiveAction === 'enter' ? 'تم توثيق حضورك وبدء فترة العمل الرسمية' : 'تم إنهاء المناوبة وتوثيق انصرافك بنجاح'),
         record: result.record,
+        status_label: result.status_label || result.record?.status_label,
+        exit_reason_label: result.exit_reason_label || result.record?.exit_reason_label,
         fix,
         time: new Date()
       });
@@ -737,6 +739,16 @@ export default function AttendPage({ forcedAction = null }) {
                     <strong>{actionSuccess.time.toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Aden' })}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#736d65' }}>🏷️ الحالة التلقائية:</span>
+                    <strong style={{ color: actionSuccess.action === 'enter' ? '#2d6a4f' : '#231f20' }}>{actionSuccess.status_label || (actionSuccess.action === 'enter' ? 'حاضر في الموعد' : 'تم الانصراف')}</strong>
+                  </div>
+                  {actionSuccess.action === 'exit' && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#736d65' }}>📋 سبب الخروج التلقائي:</span>
+                      <strong style={{ color: '#775b24' }}>{actionSuccess.exit_reason_label || 'انتهاء ساعات الدوام الرسمي في الموعد'}</strong>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#736d65' }}>🏢 مقر الفرع:</span>
                     <strong>{branchInfo?.branch_name || 'فرع أساس المعتمد'}</strong>
                   </div>
@@ -870,10 +882,17 @@ export default function AttendPage({ forcedAction = null }) {
                       gap: 6
                     }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: isInside ? '#2d6a4f' : '#b59045', display: 'inline-block' }} />
-                      {isInside ? 'حاضر الآن في الدوام' : 'خارج الدوام حالياً'}
+                      {autoStatus?.status_label || (isInside ? 'حاضر الآن في الدوام' : (currentRecord?.last_out ? 'تم تسجيل الانصراف' : 'خارج الدوام حالياً'))}
                     </span>
                     <span style={{ fontSize: 11.5, color: '#736d65' }}>توقيت صنعاء (اليمن)</span>
                   </div>
+
+                  {!isInside && currentRecord?.last_out && (
+                    <div style={{ background: '#fcfbf7', border: '1px solid #ebdcc0', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#775b24', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>📋 سبب الخروج التلقائي:</span>
+                      <strong>{currentRecord.exit_reason_label || autoStatus?.exit_reason_label || currentRecord.exit_reason || 'انتهاء ساعات الدوام الرسمي في الموعد'}</strong>
+                    </div>
+                  )}
 
                   <div style={styles.cardHeader}>
                     <div style={{ ...styles.iconCircle, background: '#fbf8f2', color: '#b59045' }}>

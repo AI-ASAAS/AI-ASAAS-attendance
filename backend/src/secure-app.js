@@ -383,6 +383,60 @@ const uuid=value=>{
 async function event(c,user,record,kind,body,details){
  await c.query('INSERT INTO attendance_events(record_id,employee_id,kind,captured_at,request_id,details) VALUES($1,$2,$3,$4,$5,$6)',[record?.id||null,user.id,kind,body.fix?.captured_at||null,body.request_id,JSON.stringify(details)]);
 }
+
+function resolveRecordStatus(r){
+ if(!r)return {status_key:'absent',status_label:'لم يسجل حضور اليوم',exit_reason_label:'—'};
+ const isInside = r.state === 'inside';
+ const late = Number(r.late_minutes || 0);
+
+ if(isInside){
+  const status_key = late > 0 ? 'late_inside' : 'ontime_inside';
+  const status_label = late > 0 ? `حاضر متأخر (${late} دقيقة)` : 'حاضر في الموعد';
+  const exit_reason_label = 'قيد الدوام (على رأس العمل)';
+  return { status_key, status_label, exit_reason_label };
+ }
+
+ let earlyMinutes = 0;
+ let overtimeMinutes = 0;
+ if(r.shift_end && r.last_out){
+  const diffMin = Math.round((new Date(r.last_out) - new Date(r.shift_end)) / 60000);
+  if(diffMin < -10){
+   earlyMinutes = Math.abs(diffMin);
+  } else if(diffMin > 30){
+   overtimeMinutes = diffMin;
+  }
+ }
+
+ let status_key = 'ontime_outside';
+ let status_label = 'انصراف مكتمل في الموعد';
+
+ if(earlyMinutes > 0){
+  status_key = 'early_exit';
+  status_label = `انصراف مبكر (${earlyMinutes} د)`;
+ } else if(overtimeMinutes > 0){
+  status_key = 'overtime_exit';
+  status_label = `انصراف مع إضافي (+${overtimeMinutes} د)`;
+ } else if(late > 0){
+  status_key = 'late_outside';
+  status_label = 'تم الانصراف (مع تأخير)';
+ }
+
+ let exit_reason_label = 'انتهاء ساعات الدوام الرسمي في الموعد';
+ const rawReason = String(r.exit_reason || '');
+ if(rawReason.includes('مغادرة') || rawReason === 'geofence'){
+  exit_reason_label = 'مغادرة نطاق الموقع تلقائياً (GPS)';
+ } else if(rawReason.includes('مجدولة') || rawReason === 'scheduled'){
+  exit_reason_label = 'انتهاء فترة المناوبة المجدولة تلقائياً';
+ } else if(rawReason.includes('مبكر') || earlyMinutes > 0){
+  exit_reason_label = earlyMinutes > 0 ? `خروج مبكر قبل نهاية الدوام بـ ${earlyMinutes} دقيقة` : (rawReason || 'خروج مبكر');
+ } else if(rawReason.includes('إضافي') || overtimeMinutes > 0){
+  exit_reason_label = overtimeMinutes > 0 ? `انتهاء مناوبة عمل إضافي (+${overtimeMinutes} دقيقة)` : (rawReason || 'عمل إضافي');
+ } else if(rawReason && !['manual', 'geofence', 'scheduled'].includes(rawReason)){
+  exit_reason_label = rawReason;
+ }
+
+ return { status_key, status_label, exit_reason_label };
+}
 app.get('/api/attendance/active-qr',employee,wrap(async(req,res)=>{
  const branchId=Number(req.query.branch||req.user.branch_id||1);
  const branch=(await db.query('SELECT * FROM branches WHERE id=$1 AND active=TRUE',[branchId])).rows[0];
@@ -461,7 +515,11 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
     const timeStr=new Date(now).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'});
     notifications.notifyCheckIn(req.user,branch.name,timeStr).catch(err=>console.error('[Notification Error] Check-in email failed:',err.message));
    }
-   return {record,action:'enter',automatic:isAuto,message:returning?(isAuto?'تم تسجيل عودتك تلقائياً':'تم تسجيل عودتك'):(isAuto?'تم تسجيل حضورك تلقائياً بحسب حالتك':'تم تسجيل حضورك')};
+   const resolved = resolveRecordStatus(record);
+   const enterMsg = record.late_minutes > 0
+     ? `تم تسجيل حضورك بنجاح (تأخير ${record.late_minutes} دقيقة عن بداية الدوام)`
+     : (returning ? (isAuto ? 'تم تسجيل عودتك تلقائياً' : 'تم تسجيل عودتك') : (isAuto ? 'تم تسجيل حضورك تلقائياً بحسب حالتك' : 'تم تسجيل حضورك'));
+   return {record:{...record,...resolved},action:'enter',automatic:isAuto,message:enterMsg,status_label:resolved.status_label,exit_reason_label:resolved.exit_reason_label};
   }
   if(!record||record.state!=='inside')error('NOT_INSIDE','لا يوجد حضور مفتوح لتسجيل الخروج منه. يرجى تسجيل الدخول أولاً.',409);
   let automatic=false,candidate=null;
@@ -476,15 +534,39 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    await c.query('UPDATE duty_records SET exit_candidate=$1,last_seen=$2,gps_state=$3 WHERE id=$4',[JSON.stringify(candidate),now,location.state,record.id]);
   }
   if(b.action==='exit'||automatic){
-   const reason=automatic?'geofence':'manual';
+   let reason = automatic ? 'مغادرة نطاق الموقع تلقائياً (GPS)' : 'انتهاء ساعات الدوام الرسمي في الموعد';
+   let earlyMins = 0;
+   if(record.shift_end){
+    const shiftEnd = new Date(record.shift_end);
+    const diffMin = Math.round((now - shiftEnd) / 60000);
+    if(diffMin < -10){
+     earlyMins = Math.abs(diffMin);
+     if(!automatic) reason = `خروج مبكر قبل نهاية الدوام بـ ${earlyMins} دقيقة`;
+    } else if(diffMin > 30){
+     if(!automatic) reason = `انتهاء عمل إضافي (+${diffMin} دقيقة)`;
+    } else {
+     if(!automatic) reason = 'انتهاء ساعات الدوام الرسمي في الموعد';
+    }
+   }
    record=(await c.query("UPDATE duty_records SET state='outside',last_out=$1,away_started=$1,exit_reason=$2,exit_candidate=NULL,last_seen=$1,gps_state=$3 WHERE id=$4 RETURNING *",[now,reason,location.state,record.id])).rows[0];
-   await event(c,req.user,record,automatic?'auto_exit':'exit',b,{location,fix:b.fix,branch_snapshot:branch,is_auto:isAuto});
+   await event(c,req.user,record,automatic?'auto_exit':'exit',b,{location,fix:b.fix,branch_snapshot:branch,is_auto:isAuto,exit_reason:reason});
    if(req.user.email){
     const timeStr=new Date(now).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'});
     const workingMinutes=countedMinutes(record);
     notifications.notifyCheckOut(req.user,branch.name,timeStr,workingMinutes).catch(err=>console.error('[Notification Error] Check-out email failed:',err.message));
    }
-   return {record,action:'exit',automatic:automatic||isAuto,message:automatic?'تم تسجيل خروجك التلقائي بنجاح لمغادرتك نطاق الفرع':(isAuto?'تم تسجيل انصرافك تلقائياً بحسب حالتك':'تم تسجيل الخروج')};
+   const resolved = resolveRecordStatus(record);
+   const exitMsg = automatic
+     ? 'تم تسجيل خروجك التلقائي بنجاح لمغادرتك نطاق الفرع'
+     : (earlyMins > 0 ? `تم تسجيل انصرافك بنجاح (${reason})` : (isAuto ? 'تم تسجيل انصرافك تلقائياً بنهاية دوامك' : 'تم تسجيل الخروج'));
+   return {
+     record:{...record,...resolved},
+     action:'exit',
+     automatic:automatic||isAuto,
+     message:exitMsg,
+     status_label:resolved.status_label,
+     exit_reason_label:resolved.exit_reason_label
+   };
   }
   await event(c,req.user,record,'location',b,{location,accuracy:b.fix.accuracy,revision:branch.location_revision});
   return {record:{...record,gps_state:location.state,last_seen:now},pending_exit:candidate?.count||0};
@@ -492,7 +574,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
 }));
 app.get('/api/attendance/me',employee,wrap(async(req,res)=>{
  await closeScheduled();
- const records=(await db.query('SELECT * FROM duty_records WHERE employee_id=$1 ORDER BY shift_start DESC LIMIT 31',[req.user.id])).rows;
+ const records=(await db.query('SELECT r.*, s.start_time, s.end_time, s.grace_minutes FROM duty_records r LEFT JOIN shifts s ON s.id=r.shift_id WHERE r.employee_id=$1 ORDER BY r.shift_start DESC LIMIT 31',[req.user.id])).rows;
  const shift=(await db.query('SELECT * FROM shifts WHERE id=$1',[req.user.shift_id])).rows[0]||null;
  const todayRecord = records.find(r => {
    try {
@@ -502,13 +584,21 @@ app.get('/api/attendance/me',employee,wrap(async(req,res)=>{
    } catch { return false; }
  }) || records[0] || null;
  const isInside = todayRecord && todayRecord.state === 'inside';
+ const autoInfo = todayRecord ? resolveRecordStatus(todayRecord) : null;
  const automatic_status = {
    is_inside: Boolean(isInside),
    suggested_action: isInside ? 'exit' : 'enter',
-   status_label: isInside ? 'حاضر داخل موقع العمل' : (todayRecord?.last_out ? 'تم تسجيل الانصراف' : 'خارج موقع العمل (لم تسجل حضور بعد)'),
-   next_action_label: isInside ? 'تسجيل الانصراف' : 'تسجيل الحضور'
+   status_label: isInside 
+     ? (todayRecord?.late_minutes > 0 ? `حاضر داخل موقع العمل (تأخير ${todayRecord.late_minutes} دقيقة)` : 'حاضر داخل موقع العمل (في الموعد)') 
+     : (todayRecord?.last_out ? (autoInfo?.status_label || 'تم تسجيل الانصراف') : 'خارج موقع العمل (جاهز لتسجيل الحضور)'),
+   next_action_label: isInside ? 'تسجيل الانصراف' : 'تسجيل الحضور',
+   exit_reason_label: autoInfo?.exit_reason_label || (isInside ? 'قيد الدوام (على رأس العمل)' : '—')
  };
- respond(res,{records,shift,account:safeAccount(req.user),automatic_status});
+ const enhancedRecords = records.map(r => {
+   const res = resolveRecordStatus(r);
+   return { ...r, ...res, counted_minutes: countedMinutes(r) };
+ });
+ respond(res,{records:enhancedRecords,shift,account:safeAccount(req.user),automatic_status});
 }));
 // Offline evidence is never promoted directly to approved attendance.
 app.post('/api/attendance/offline',employee,wrap(async(req,res)=>{
@@ -520,11 +610,18 @@ app.post('/api/attendance/offline',employee,wrap(async(req,res)=>{
 
 async function recordsFor(user,from,to){
  const broad=['super_admin','hr_admin'].includes(user.role);
- return (await db.query("SELECT r.*,a.name,a.identifier,b.name AS branch_name,s.name AS shift_name FROM duty_records r JOIN accounts a ON a.id=r.employee_id JOIN branches b ON b.id=r.branch_id JOIN shifts s ON s.id=r.shift_id WHERE ($1::boolean OR r.branch_id=$2) AND (r.shift_start AT TIME ZONE 'Asia/Aden')::date BETWEEN $3::date AND $4::date ORDER BY r.shift_start DESC LIMIT 5000",[broad,user.branch_id,from,to])).rows;
+ return (await db.query("SELECT r.*,a.name,a.identifier,b.name AS branch_name,s.name AS shift_name,s.start_time,s.end_time,s.grace_minutes FROM duty_records r JOIN accounts a ON a.id=r.employee_id JOIN branches b ON b.id=r.branch_id JOIN shifts s ON s.id=r.shift_id WHERE ($1::boolean OR r.branch_id=$2) AND (r.shift_start AT TIME ZONE 'Asia/Aden')::date BETWEEN $3::date AND $4::date ORDER BY r.shift_start DESC LIMIT 5000",[broad,user.branch_id,from,to])).rows;
 }
 function dateRange(req){const today=policy.localDay();const from=req.query.from||today,to=req.query.to||today;for(const d of [from,to])if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!Number.isFinite(Date.parse(d)))error('DATE','تاريخ غير صالح');if(from>to||Date.parse(to)-Date.parse(from)>366*86400000)error('DATE','الفترة لا تتجاوز سنة');return [from,to];}
 function countedMinutes(r){if(r.state==='inside'||!r.last_out)return null;return Math.max(0,Math.floor((new Date(r.last_out)-new Date(r.first_in))/60000)-(r.deduct_away?Math.floor(r.away_seconds/60):0));}
-app.get('/api/admin/records',admin,wrap(async(req,res)=>respond(res,(await recordsFor(req.user,...dateRange(req))).map(r=>({...r,counted_minutes:countedMinutes(r)})))));
+app.get('/api/admin/records',admin,wrap(async(req,res)=>{
+ const rows=await recordsFor(req.user,...dateRange(req));
+ respond(res,rows.map(r=>({
+  ...r,
+  counted_minutes:countedMinutes(r),
+  ...resolveRecordStatus(r)
+ })));
+}));
 app.patch('/api/admin/records/:id',admin,allow('attendance.edit'),wrap(async(req,res)=>{
  const recordId=id(req.params.id),b=req.body,reason=string(b.reason,500);
  respond(res,await db.transaction(async c=>{
@@ -576,18 +673,22 @@ app.get('/api/admin/reports.csv',admin,allow('reports.export'),wrap(async(req,re
  const [from,to]=dateRange(req);
  const rows=await recordsFor(req.user,from,to);
  const cell=v=>'"'+String(v??'').replace(/^[=+@\-\t\r]/,"'$&").replaceAll('"','""')+'"';
- const header=['الرقم الوظيفي','الموظف','الفرع','تاريخ الدوام','أول دخول (صنعاء)','آخر خروج (صنعاء)','الحالة','الدقائق المحتسبة','خصم فترات المغادرة'];
- const lines=rows.map(r=>[
-  r.identifier,
-  r.name,
-  r.branch_name,
-  new Date(r.shift_start).toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'}),
-  new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}),
-  r.last_out?new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'قيد الدوام',
-  r.state==='inside'?'حاضر':(r.state==='closed'?'مغلق':'منصرف'),
-  countedMinutes(r)||0,
-  r.deduct_away?'نعم':'لا'
- ]);
+ const header=['الرقم الوظيفي','الموظف','الفرع','تاريخ الدوام','أول دخول (صنعاء)','آخر خروج (صنعاء)','الحالة التلقائية','سبب الخروج التلقائي','الدقائق المحتسبة','خصم فترات المغادرة'];
+ const lines=rows.map(r=>{
+  const auto=resolveRecordStatus(r);
+  return [
+   r.identifier,
+   r.name,
+   r.branch_name,
+   new Date(r.shift_start).toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'}),
+   new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}),
+   r.last_out?new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'قيد الدوام',
+   auto.status_label,
+   auto.exit_reason_label,
+   countedMinutes(r)||0,
+   r.deduct_away?'نعم':'لا'
+  ];
+ });
  await audit(db,req.user,'reports.export','attendance','تصدير CSV',{count:rows.length});
  res.type('text/csv').attachment(`asas-attendance-${from}-${to}.csv`).send('\uFEFF'+[header,...lines].map(row=>row.map(cell).join(',')).join('\r\n'));
 }));
@@ -596,27 +697,29 @@ app.get('/api/admin/reports.txt',admin,allow('reports.export'),wrap(async(req,re
  const [from,to]=dateRange(req);
  const rows=await recordsFor(req.user,from,to);
  const nowStr=new Date().toLocaleString('ar-YE',{timeZone:'Asia/Aden'});
- let content=`========================================================================================\r\n`;
- content+=`                      تقرير الحضور والانصراف - نظام أساس\r\n`;
- content+=`                        توقيت صنعاء، الجمهورية اليمنية\r\n`;
- content+=`                       الفترة: من ${from} إلى ${to}\r\n`;
- content+=`========================================================================================\r\n`;
+ let content=`========================================================================================================================\r\n`;
+ content+=`                                      تقرير الحضور والانصراف - نظام أساس\r\n`;
+ content+=`                                        توقيت صنعاء، الجمهورية اليمنية\r\n`;
+ content+=`                                       الفترة: من ${from} إلى ${to}\r\n`;
+ content+=`========================================================================================================================\r\n`;
  content+=`تاريخ ووقت الإصدار : ${nowStr} (بتوقيت صنعاء)\r\n`;
  content+=`إجمالي السجلات     : ${rows.length}\r\n`;
- content+=`----------------------------------------------------------------------------------------\r\n`;
- content+=`الموظف               الرقم الوظيفي   الفرع          الدخول       الخروج       الدقائق  الحالة\r\n`;
- content+=`----------------------------------------------------------------------------------------\r\n`;
+ content+=`------------------------------------------------------------------------------------------------------------------------\r\n`;
+ content+=`الموظف               الرقم الوظيفي   الفرع          الدخول       الخروج       الحالة                سبب الخروج                     الدقائق\r\n`;
+ content+=`------------------------------------------------------------------------------------------------------------------------\r\n`;
  for(const r of rows){
+  const auto=resolveRecordStatus(r);
   const name=(r.name||'').padEnd(20).slice(0,20);
   const id=(r.identifier||'').padEnd(14).slice(0,14);
   const branch=(r.branch_name||'').padEnd(14).slice(0,14);
   const inTime=new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}).padEnd(12);
   const outTime=(r.last_out?new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'قيد الدوام').padEnd(12);
+  const state=(auto.status_label||'').padEnd(20).slice(0,20);
+  const reason=(auto.exit_reason_label||'').padEnd(30).slice(0,30);
   const mins=String(countedMinutes(r)||0).padEnd(8);
-  const state=r.state==='inside'?'حاضر':(r.state==='closed'?'مغلق':'منصرف');
-  content+=`${name} ${id} ${branch} ${inTime} ${outTime} ${mins} ${state}\r\n`;
+  content+=`${name} ${id} ${branch} ${inTime} ${outTime} ${state} ${reason} ${mins}\r\n`;
  }
- content+=`========================================================================================\r\n`;
+ content+=`========================================================================================================================\r\n`;
  await audit(db,req.user,'reports.export','attendance','تصدير TXT',{count:rows.length});
  res.setHeader('Content-Type','text/plain; charset=utf-8');
  res.attachment(`asas-attendance-${from}-${to}.txt`).send('\uFEFF'+content);
@@ -676,12 +779,15 @@ tr:nth-child(even) { background-color: #faf9f5; }
    <th>تاريخ الدوام</th>
    <th>وقت الدخول</th>
    <th>وقت الخروج</th>
+   <th>الحالة التلقائية</th>
+   <th>سبب الخروج التلقائي</th>
    <th>الدقائق المحتسبة</th>
-   <th>الحالة</th>
   </tr>
  </thead>
  <tbody>
-  ${rows.map(r=>`
+  ${rows.map(r=>{
+   const auto=resolveRecordStatus(r);
+   return `
   <tr>
    <td><strong>${r.identifier}</strong></td>
    <td>${r.name}</td>
@@ -689,9 +795,11 @@ tr:nth-child(even) { background-color: #faf9f5; }
    <td>${new Date(r.shift_start).toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'})}</td>
    <td style='color:#2d6a4f; font-weight:bold;'>${new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'})}</td>
    <td>${r.last_out?new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'<span class="badge badge-in">قيد الدوام</span>'}</td>
+   <td><span class='badge ${auto.status_key.includes('inside')?'badge-in':'badge-out'}'>${auto.status_label}</span></td>
+   <td style='color:#775b24; font-weight:500;'>${auto.exit_reason_label}</td>
    <td><strong>${countedMinutes(r)||0} د</strong></td>
-   <td><span class='badge ${r.state==='inside'?'badge-in':'badge-out'}'>${r.state==='inside'?'حاضر':(r.state==='closed'?'مغلق':'منصرف')}</span></td>
-  </tr>`).join('')}
+  </tr>`;
+  }).join('')}
  </tbody>
 </table>
 <div class='footer'>
