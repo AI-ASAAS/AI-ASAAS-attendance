@@ -516,16 +516,6 @@ export default function AttendPage({ forcedAction = null }) {
                   onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
                 />
               </label>
-              <label style={styles.label}>
-                رقم الجوال (لحفظه وتأكيد ربط الجهاز)
-                <input
-                  style={styles.input}
-                  type="tel"
-                  placeholder="+967 77xxxxxxx"
-                  value={loginForm.phone}
-                  onChange={e => setLoginForm({ ...loginForm, phone: e.target.value })}
-                />
-              </label>
               <button type="submit" disabled={busy} style={styles.primaryButton}>
                 {busy ? 'جارٍ التحقق…' : 'تسجيل الدخول ومتابعة الحضور'}
                 <LogIn size={16} />
@@ -1083,23 +1073,13 @@ export default function AttendPage({ forcedAction = null }) {
                   />
                 </label>
                 <label style={styles.label}>
-                  الاسم الكامل (اختياري - يظهر في سجلات الحضور)
+                  اسم المستخدم أو الاسم الكامل
                   <input
                     style={styles.input}
                     type="text"
-                    placeholder="مثال: أنس الأغبري"
+                    placeholder="مثال: anas أو أنس الأغبري"
                     value={googleName}
                     onChange={e => setGoogleName(e.target.value)}
-                  />
-                </label>
-                <label style={styles.label}>
-                  رقم الجوال (اختياري لربط الهاتف)
-                  <input
-                    style={styles.input}
-                    type="tel"
-                    placeholder="+967 77xxxxxxx"
-                    value={loginForm.phone}
-                    onChange={e => setLoginForm({ ...loginForm, phone: e.target.value })}
                   />
                 </label>
                 <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
