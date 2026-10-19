@@ -70,10 +70,10 @@ async function notifyAccountCreated(account, deviceName) {
           <p style="margin: 4px 0;"><strong>الجهاز المقترن للحماية:</strong> ${deviceName || 'جهازك الحالي'}</p>
         </div>
 
-        <p style="font-size: 13px; color: #775b24;">🛡️ <strong>حماية الحساب:</strong> تم ربط حسابك بهذا الهاتف تلقائياً لمنع تسجيل الحضور بالنيابة، ويمكنك الآن مسح رمز الـ QR اليومي للتحضير مباشرة.</p>
+        <p style="font-size: 13px; color: #775b24;">🛡️ <strong>حماية الحساب:</strong> تم ربط حسابك بهذا الهاتف تلقائياً لمنع تسجيل الحضور بالنيابة، ويمكنك الآن مسح رمز الـ QR المعتمد للتحضير مباشرة.</p>
       </div>
       <div style="background: #f8f7f4; padding: 14px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0;">
-        هذا إشعار تلقائي من نظام أساس لإدارة الموارد البشرية · توقيت عدن
+        هذا إشعار تلقائي من نظام أساس لإدارة الموارد البشرية · توقيت صنعاء (اليمن)
       </div>
     </div>
   `;
@@ -95,7 +95,7 @@ async function notifyCheckIn(account, branchName, timeStr) {
         <p>تم تسجيل حضورك وبدء احتساب ساعات دوامك الرسمي لليوم بنجاح وفق التفاصيل التالية:</p>
 
         <div style="background: #f4faf6; border: 1px solid #b8dfcb; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 4px 0;">⏰ <strong>وقت الحضور:</strong> ${timeStr}</p>
+          <p style="margin: 4px 0;">⏰ <strong>وقت الحضور:</strong> ${timeStr} (توقيت صنعاء)</p>
           <p style="margin: 4px 0;">🏢 <strong>مقر الفرع:</strong> ${branchName || 'مقر الفرع المعتمد'}</p>
           <p style="margin: 4px 0;">📍 <strong>التحقق الجغرافي:</strong> تم التوثيق بنجاح داخل النطاق المسموح (GPS Verified)</p>
           <p style="margin: 4px 0;">📱 <strong>الجهاز المستخدم:</strong> ${account.bound_device_name || 'جهازك المعتمد'}</p>
@@ -104,7 +104,7 @@ async function notifyCheckIn(account, branchName, timeStr) {
         <p style="font-size: 12.5px; color: #52796f;">نتمنى لك يوماً موفقاً ومثمراً!</p>
       </div>
       <div style="background: #f8f7f4; padding: 12px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0;">
-        نظام أساس للحضور · توقيت عدن الرسمي
+        نظام أساس للحضور · توقيت صنعاء الرسمي (اليمن)
       </div>
     </div>
   `;
@@ -130,7 +130,7 @@ async function notifyCheckOut(account, branchName, timeStr, workingMinutes) {
         <p>تم إنهاء مناوبتك وتوثيق خروجك بنجاح وفق التفاصيل التالية:</p>
 
         <div style="background: #fdfaf4; border: 1px solid #ebdcc0; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 4px 0;">⏰ <strong>وقت الانصراف:</strong> ${timeStr}</p>
+          <p style="margin: 4px 0;">⏰ <strong>وقت الانصراف:</strong> ${timeStr} (توقيت صنعاء)</p>
           <p style="margin: 4px 0;">⏱️ <strong>إجمالي ساعات العمل المحتسبة:</strong> <span style="color: #2d6a4f; font-weight: 700;">${durationText}</span></p>
           <p style="margin: 4px 0;">🏢 <strong>مقر الفرع:</strong> ${branchName || 'مقر الفرع المعتمد'}</p>
         </div>
@@ -138,7 +138,7 @@ async function notifyCheckOut(account, branchName, timeStr, workingMinutes) {
         <p style="font-size: 12.5px; color: #736d65;">شكراً لجهودك اليوم وتقبل خالص التحية!</p>
       </div>
       <div style="background: #f8f7f4; padding: 12px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0;">
-        نظام أساس للحضور · توقيت عدن الرسمي
+        نظام أساس للحضور · توقيت صنعاء الرسمي (اليمن)
       </div>
     </div>
   `;

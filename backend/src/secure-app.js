@@ -496,11 +496,135 @@ app.get('/api/admin/dashboard',admin,wrap(async(req,res)=>{
  respond(res,{total:accounts.length,present:new Set(records.map(r=>r.employee_id)).size,inside:fresh,uncertain:active.length-fresh,late:records.filter(r=>r.late_minutes>0).length,records:records.map(r=>({...r,counted_minutes:countedMinutes(r)}))});
 }));
 app.get('/api/admin/reports.csv',admin,allow('reports.export'),wrap(async(req,res)=>{
- const rows=await recordsFor(req.user,...dateRange(req));
+ const [from,to]=dateRange(req);
+ const rows=await recordsFor(req.user,from,to);
  const cell=v=>'"'+String(v??'').replace(/^[=+@\-\t\r]/,"'$&").replaceAll('"','""')+'"';
- const header=['الرقم الوظيفي','الموظف','الفرع','بداية الدوام','أول دخول','آخر خروج','الحالة','الدقائق المحتسبة','خصم فترات المغادرة'];
- const lines=rows.map(r=>[r.identifier,r.name,r.branch_name,new Date(r.shift_start).toISOString(),new Date(r.first_in).toISOString(),r.last_out?new Date(r.last_out).toISOString():'',r.state,countedMinutes(r),r.deduct_away?'نعم':'لا']);
- await audit(db,req.user,'reports.export','attendance','تصدير CSV',{count:rows.length});res.type('text/csv').attachment('asas-attendance.csv').send('\uFEFF'+[header,...lines].map(row=>row.map(cell).join(',')).join('\r\n'));
+ const header=['الرقم الوظيفي','الموظف','الفرع','تاريخ الدوام','أول دخول (صنعاء)','آخر خروج (صنعاء)','الحالة','الدقائق المحتسبة','خصم فترات المغادرة'];
+ const lines=rows.map(r=>[
+  r.identifier,
+  r.name,
+  r.branch_name,
+  new Date(r.shift_start).toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'}),
+  new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}),
+  r.last_out?new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'قيد الدوام',
+  r.state==='inside'?'حاضر':(r.state==='closed'?'مغلق':'منصرف'),
+  countedMinutes(r)||0,
+  r.deduct_away?'نعم':'لا'
+ ]);
+ await audit(db,req.user,'reports.export','attendance','تصدير CSV',{count:rows.length});
+ res.type('text/csv').attachment(`asas-attendance-${from}-${to}.csv`).send('\uFEFF'+[header,...lines].map(row=>row.map(cell).join(',')).join('\r\n'));
+}));
+
+app.get('/api/admin/reports.txt',admin,allow('reports.export'),wrap(async(req,res)=>{
+ const [from,to]=dateRange(req);
+ const rows=await recordsFor(req.user,from,to);
+ const nowStr=new Date().toLocaleString('ar-YE',{timeZone:'Asia/Aden'});
+ let content=`========================================================================================\r\n`;
+ content+=`                      تقرير الحضور والانصراف - نظام أساس\r\n`;
+ content+=`                        توقيت صنعاء، الجمهورية اليمنية\r\n`;
+ content+=`                       الفترة: من ${from} إلى ${to}\r\n`;
+ content+=`========================================================================================\r\n`;
+ content+=`تاريخ ووقت الإصدار : ${nowStr} (بتوقيت صنعاء)\r\n`;
+ content+=`إجمالي السجلات     : ${rows.length}\r\n`;
+ content+=`----------------------------------------------------------------------------------------\r\n`;
+ content+=`الموظف               الرقم الوظيفي   الفرع          الدخول       الخروج       الدقائق  الحالة\r\n`;
+ content+=`----------------------------------------------------------------------------------------\r\n`;
+ for(const r of rows){
+  const name=(r.name||'').padEnd(20).slice(0,20);
+  const id=(r.identifier||'').padEnd(14).slice(0,14);
+  const branch=(r.branch_name||'').padEnd(14).slice(0,14);
+  const inTime=new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}).padEnd(12);
+  const outTime=(r.last_out?new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'قيد الدوام').padEnd(12);
+  const mins=String(countedMinutes(r)||0).padEnd(8);
+  const state=r.state==='inside'?'حاضر':(r.state==='closed'?'مغلق':'منصرف');
+  content+=`${name} ${id} ${branch} ${inTime} ${outTime} ${mins} ${state}\r\n`;
+ }
+ content+=`========================================================================================\r\n`;
+ await audit(db,req.user,'reports.export','attendance','تصدير TXT',{count:rows.length});
+ res.setHeader('Content-Type','text/plain; charset=utf-8');
+ res.attachment(`asas-attendance-${from}-${to}.txt`).send('\uFEFF'+content);
+}));
+
+app.get('/api/admin/reports.doc',admin,allow('reports.export'),wrap(async(req,res)=>{
+ const [from,to]=dateRange(req);
+ const rows=await recordsFor(req.user,from,to);
+ const nowStr=new Date().toLocaleString('ar-YE',{timeZone:'Asia/Aden'});
+ const html=`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset='utf-8'>
+<title>تقرير الحضور والانصراف - نظام أساس</title>
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100</w:Zoom>
+<w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; margin: 24px; color: #231f20; }
+.header { text-align: center; border-bottom: 2px solid #b59045; padding-bottom: 12px; margin-bottom: 20px; }
+.header h1 { margin: 0 0 6px; color: #231f20; font-size: 24px; }
+.header p { margin: 2px 0; color: #775b24; font-size: 13px; font-weight: bold; }
+.meta { margin-bottom: 16px; font-size: 13px; color: #474143; }
+.meta strong { color: #231f20; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+th { background-color: #231f20; color: #ffffff; padding: 10px 8px; border: 1px solid #1a1718; text-align: right; }
+td { padding: 8px; border: 1px solid #e0dacb; text-align: right; }
+tr:nth-child(even) { background-color: #faf9f5; }
+.badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+.badge-in { background-color: #eaf4ee; color: #2d6a4f; }
+.badge-out { background-color: #f5f3f0; color: #474143; }
+.footer { margin-top: 24px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0; padding-top: 10px; }
+</style>
+</head>
+<body>
+<div class='header'>
+ <h1>نظام أساس للحضور والانصراف</h1>
+ <p>ASAS Attendance Management System</p>
+ <p>تقرير الحضور والانصراف الرسمي · توقيت صنعاء (اليمن)</p>
+</div>
+<div class='meta'>
+ <div><strong>الفترة المحددة:</strong> من ${from} إلى ${to}</div>
+ <div><strong>تاريخ الإصدار:</strong> ${nowStr} (بتوقيت صنعاء)</div>
+ <div><strong>إجمالي السجلات:</strong> ${rows.length} سجل</div>
+</div>
+<table>
+ <thead>
+  <tr>
+   <th>الرقم الوظيفي</th>
+   <th>اسم الموظف</th>
+   <th>الفرع</th>
+   <th>تاريخ الدوام</th>
+   <th>وقت الدخول</th>
+   <th>وقت الخروج</th>
+   <th>الدقائق المحتسبة</th>
+   <th>الحالة</th>
+  </tr>
+ </thead>
+ <tbody>
+  ${rows.map(r=>`
+  <tr>
+   <td><strong>${r.identifier}</strong></td>
+   <td>${r.name}</td>
+   <td>${r.branch_name}</td>
+   <td>${new Date(r.shift_start).toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'})}</td>
+   <td style='color:#2d6a4f; font-weight:bold;'>${new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'})}</td>
+   <td>${r.last_out?new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'<span class="badge badge-in">قيد الدوام</span>'}</td>
+   <td><strong>${countedMinutes(r)||0} د</strong></td>
+   <td><span class='badge ${r.state==='inside'?'badge-in':'badge-out'}'>${r.state==='inside'?'حاضر':(r.state==='closed'?'مغلق':'منصرف')}</span></td>
+  </tr>`).join('')}
+ </tbody>
+</table>
+<div class='footer'>
+ تم استخراج هذا التقرير آلياً وموثق بواسطة نظام أساس للحضور والانصراف · توقيت صنعاء، الجمهورية اليمنية
+</div>
+</body>
+</html>`;
+ await audit(db,req.user,'reports.export','attendance','تصدير Word',{count:rows.length});
+ res.setHeader('Content-Type','application/msword; charset=utf-8');
+ res.attachment(`asas-attendance-${from}-${to}.doc`).send('\uFEFF'+html);
 }));
 app.get('/api/admin/audit',admin,allow('audit.read'),wrap(async(req,res)=>{
  if(req.user.role!=='super_admin')error('FORBIDDEN','سجل النظام لمدير النظام فقط',403);

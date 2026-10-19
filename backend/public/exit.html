@@ -713,8 +713,8 @@
     function updateAdenTime() {
       const now = new Date();
       document.getElementById('adenTime').textContent = now.toLocaleTimeString('ar-YE', {
-        hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Aden'
-      }) + ' · توقيت عدن';
+        hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Aden'
+      }) + ' · توقيت صنعاء (اليمن)';
     }
     setInterval(updateAdenTime, 1000);
     updateAdenTime();

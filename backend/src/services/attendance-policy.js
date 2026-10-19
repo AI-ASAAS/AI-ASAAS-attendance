@@ -14,7 +14,7 @@ function key(secret) {
 }
 
 function issueQr(branch, secret, now = new Date(), action = null) {
-  const data = { v: 1, branch: String(branch.id), day: localDay(now), revision: branch.qr_revision };
+  const data = { v: 1, branch: String(branch.id), permanent: true, revision: branch.qr_revision };
   if (action && (action === 'enter' || action === 'exit')) data.action = action;
   const payload = Buffer.from(JSON.stringify(data)).toString('base64url');
   const signature = createHmac('sha256', key(secret)).update(payload).digest('base64url');
@@ -36,8 +36,8 @@ function verifyQr(token, branch, secret, now = new Date(), expectedAction = null
   } catch {
     fail('QR_INVALID', 'رمز الحضور غير صالح');
   }
-  if (!data || data.v !== 1 || data.branch !== String(branch.id) || data.day !== localDay(now) || data.revision !== branch.qr_revision) {
-    fail('QR_INVALID', 'انتهت صلاحية الرمز أو لا ينتمي لهذا الفرع');
+  if (!data || data.v !== 1 || data.branch !== String(branch.id) || data.revision !== branch.qr_revision) {
+    fail('QR_INVALID', 'رمز الحضور ملغى أو لا ينتمي لهذا الفرع');
   }
   if (data.action && expectedAction && data.action !== expectedAction) {
     fail('QR_ACTION_MISMATCH', data.action === 'enter' ? 'هذا الرمز مخصص لتسجيل الدخول فقط' : 'هذا الرمز مخصص لتسجيل الخروج فقط');

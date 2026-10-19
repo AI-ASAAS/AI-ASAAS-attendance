@@ -78,8 +78,20 @@ export default function AttendPage({ forcedAction = null }) {
   const [googleModal, setGoogleModal] = useState(false);
   const [googleEmail, setGoogleEmail] = useState('');
   const [googleName, setGoogleName] = useState('');
+  const [liveTime, setLiveTime] = useState('');
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+
+  // Live Sana'a Clock Ticker (updated every second)
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      setLiveTime(now.toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Aden' }));
+    };
+    updateClock();
+    const timer = setInterval(updateClock, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Parse QR token and action from URL hash, pathname, or query params
   const parseUrlParams = useCallback(() => {
@@ -121,6 +133,22 @@ export default function AttendPage({ forcedAction = null }) {
       // not logged in or cannot fetch active qr
     }
   }, [forcedAction, actionHint]);
+
+  // Real-time instant auto-refresh polling (every 6 seconds and on visibility change)
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      loadUserData();
+    }, 6000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') loadUserData();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [user, loadUserData]);
 
   useEffect(() => {
     parseUrlParams();
@@ -446,9 +474,9 @@ export default function AttendPage({ forcedAction = null }) {
       {/* iOS App Top Bar */}
       <header style={styles.header}>
         <Brand />
-        <div style={styles.badgeAden}>
+        <div style={styles.badgeAden} title="توقيت صنعاء، الجمهورية اليمنية">
           <Clock size={13} style={{ marginInlineEnd: 4 }} />
-          <span>{new Date().toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Aden' })}</span>
+          <span>{liveTime || '…'} · صنعاء</span>
         </div>
       </header>
 
@@ -592,6 +620,33 @@ export default function AttendPage({ forcedAction = null }) {
               <div style={isInside ? styles.statusBadgeInside : styles.statusBadgeOutside}>
                 <span style={isInside ? styles.dotInside : styles.dotOutside} />
                 {isInside ? 'حضور مفتوح' : 'خارج الموقع'}
+              </div>
+            </div>
+
+            {/* Live Attendance & Exit Time Summary Card (توقيت صنعاء) */}
+            <div style={{ background: '#ffffff', border: '1px solid #ebdcc0', borderRadius: 16, padding: '14px 16px', marginBottom: 16, boxShadow: '0 2px 8px rgba(35,31,32,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, borderBottom: '1px solid #f4efe6', paddingBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Clock size={16} color="#b59045" />
+                  <strong style={{ fontSize: 13.5, color: '#231f20' }}>ساعات ودوام اليوم · توقيت صنعاء</strong>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#775b24' }}>
+                  {liveTime || '…'}
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ background: '#f4faf6', border: '1px solid #b8dfcb', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 11.5, color: '#2d6a4f', fontWeight: 600 }}>🟢 وقت تسجيل الحضور</div>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: '#2d6a4f', marginTop: 4 }}>
+                    {currentRecord?.first_in ? new Date(currentRecord.first_in).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Aden' }) : 'لم يسجل بعد'}
+                  </div>
+                </div>
+                <div style={{ background: '#faf9f5', border: '1px solid #e0dacb', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 11.5, color: '#736d65', fontWeight: 600 }}>🔴 وقت تسجيل الانصراف</div>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: '#231f20', marginTop: 4 }}>
+                    {currentRecord?.last_out ? new Date(currentRecord.last_out).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Aden' }) : (isInside ? 'قيد المناوبة' : 'لم يسجل')}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -781,7 +836,7 @@ export default function AttendPage({ forcedAction = null }) {
                     <span style={{ background: '#eaf4ee', color: '#2d6a4f', padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <LogIn size={14} /> كود تسجيل الدخول والعودة المعتمد
                     </span>
-                    <span style={{ fontSize: 11.5, color: '#736d65' }}>توقيت عدن</span>
+                    <span style={{ fontSize: 11.5, color: '#736d65' }}>توقيت صنعاء (اليمن)</span>
                   </div>
 
                   <div style={styles.cardHeader}>
@@ -796,7 +851,7 @@ export default function AttendPage({ forcedAction = null }) {
                     </div>
                   </div>
 
-                  {/* Prominent Single Enter Button */}
+                  {/* Prominent Single Enter Button with Live Time */}
                   <button
                     onClick={() => handleAction('enter')}
                     disabled={busy}
@@ -816,7 +871,7 @@ export default function AttendPage({ forcedAction = null }) {
                     <div style={{ ...styles.actionBtnIconEnter, width: 48, height: 48, borderRadius: 24, fontSize: 24, margin: '0 auto' }}>
                       <LogIn size={26} />
                     </div>
-                    <strong style={{ fontSize: 18 }}>تسجيل الدخول / العودة الآن</strong>
+                    <strong style={{ fontSize: 18 }}>تسجيل الدخول / العودة الآن {liveTime ? `(${liveTime})` : ''}</strong>
                     <small style={{ fontSize: 12.5, opacity: 0.9 }}>انقر لتفعيل كود الدخول وبدء احتساب ساعات العمل الرسمية</small>
                   </button>
 
@@ -837,7 +892,7 @@ export default function AttendPage({ forcedAction = null }) {
                     <span style={{ background: '#f5f3f0', color: '#474143', padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <LogOut size={14} /> كود تسجيل الخروج والانصراف المعتمد
                     </span>
-                    <span style={{ fontSize: 11.5, color: '#736d65' }}>توقيت عدن</span>
+                    <span style={{ fontSize: 11.5, color: '#736d65' }}>توقيت صنعاء (اليمن)</span>
                   </div>
 
                   <div style={styles.cardHeader}>
@@ -852,7 +907,7 @@ export default function AttendPage({ forcedAction = null }) {
                     </div>
                   </div>
 
-                  {/* Prominent Single Exit Button */}
+                  {/* Prominent Single Exit Button with Live Time */}
                   <button
                     onClick={() => handleAction('exit')}
                     disabled={busy}
@@ -872,7 +927,7 @@ export default function AttendPage({ forcedAction = null }) {
                     <div style={{ ...styles.actionBtnIconExit, width: 48, height: 48, borderRadius: 24, fontSize: 24, margin: '0 auto' }}>
                       <LogOut size={26} />
                     </div>
-                    <strong style={{ fontSize: 18 }}>تسجيل الخروج والانصراف الآن</strong>
+                    <strong style={{ fontSize: 18 }}>تسجيل الخروج والانصراف الآن {liveTime ? `(${liveTime})` : ''}</strong>
                     <small style={{ fontSize: 12.5, opacity: 0.9 }}>انقر لتفعيل كود الخروج وإنهاء مناوبة العمل أو الخروج المؤقت</small>
                   </button>
 

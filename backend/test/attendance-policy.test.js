@@ -5,13 +5,13 @@ const secret='a'.repeat(48);
 const branch={id:1,qr_revision:1,location_revision:1,active:true,latitude:15,longitude:44,entry_radius:80,exit_radius:120,max_accuracy:30,exit_samples:3,exit_delay_seconds:120};
 const now=new Date('2026-10-18T06:00:00Z');
 const fix=(latitude=15,accuracy=5,time=now)=>({latitude,longitude:44,accuracy,captured_at:time.toISOString()});
-test('QR changes at Aden midnight and rejects old, tampered, revoked and other-branch codes',()=>{
+test('QR is permanent and rejects tampered, revoked, and other-branch codes',()=>{
  const before=new Date('2026-10-17T20:59:59Z'),after=new Date('2026-10-17T21:00:00Z');
  const token=issueQr(branch,secret,before);
  assert.equal(localDay(after),'2026-10-18');
  assert.equal(verifyQr(token,branch,secret,before),true);
- for(const [b,t,n] of [[branch,token,after],[branch,token+'x',before],[{...branch,id:2},token,before],[{...branch,qr_revision:2},token,before]]) assert.throws(()=>verifyQr(t,b,secret,n));
- assert.equal(verifyQr(token,branch,secret,before),true); // daily code is reusable
+ assert.equal(verifyQr(token,branch,secret,after),true); // permanent code is valid across different days!
+ for(const [b,t,n] of [[branch,token+'x',before],[{...branch,id:2},token,before],[{...branch,qr_revision:2},token,before]]) assert.throws(()=>verifyQr(t,b,secret,n));
  const enterToken = issueQr(branch, secret, before, 'enter');
  const exitToken = issueQr(branch, secret, before, 'exit');
  assert.equal(verifyQr(enterToken, branch, secret, before, 'enter'), true);
