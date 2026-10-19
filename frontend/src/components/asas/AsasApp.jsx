@@ -102,7 +102,24 @@ export default function AsasApp(){
    {tab==='accounts'&&<><div className="asas-search"><Search size={18}/><input className="asas-input" aria-label="البحث عن موظف" placeholder="ابحث بالاسم أو الرقم الوظيفي أو البريد أو الهاتف…" value={search} onChange={e=>setSearch(e.target.value)}/></div><div className="asas-card asas-table-wrap"><table className="asas-table"><thead><tr><th>الموظف</th><th>البريد والهاتف</th><th>الجهاز المقيد</th><th>الصلاحية</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>{rows.filter(a=>`${a.name} ${a.identifier} ${a.email||''} ${a.phone||''}`.includes(search)).map(a=><tr key={a.id}><td><strong>{a.name}</strong><small>{a.identifier}</small></td><td><div><strong>{a.email||'—'}</strong><small style={{display:'block'}}>{a.phone||'—'}</small></div></td><td>{a.bound_device_id?<div><span className="asas-badge inside" style={{display:'inline-flex',alignItems:'center',gap:4}}><Smartphone size={12}/>{a.bound_device_name||'جوال مقيد'}</span><small style={{display:'block',color:'#736d65',fontSize:10}} dir="ltr">{a.bound_device_id.slice(0,12)}…</small></div>:<span className="asas-badge outside">غير مقيد</span>}</td><td>{roles[a.role]}</td><td>{a.active?'نشط':'معطّل'}</td><td><div className="asas-actions">{can('employees.write')&&<Button onClick={()=>edit('accounts',a)}>إدارة</Button>}{can('employees.write')&&a.bound_device_id&&<Button variant="danger" title="فك ارتباط هذا الجوال ليتمكن الموظف من تسجيل الدخول من جهاز جديد" onClick={async()=>{if(window.confirm(`هل أنت متأكد من فك ارتباط الجهاز للموظف (${a.name})؟ سيتمكن من ربط جوال جديد عند أول تسجيل دخول.`)){try{await api(`/admin/accounts/${a.id}/reset-device`,'POST',{reason:'فك قيد الجهاز بطلب من الإدارة'});setNotice(`تم فك قيد الجهاز للموظف ${a.name} بنجاح`);await load();}catch(e){setError(e.message);}}}}><Unlock size={14}/>فك الجهاز</Button>}</div></td></tr>)}</tbody></table>{!rows.length&&!busy&&<Empty/>}</div></>}
     {tab==='qr'&&<div className="asas-card"><div className="asas-card-head"><h2>رموز الحضور والانصراف المعتمدة</h2><span className="asas-badge">صالح لليوم فقط · توقيت عدن</span></div><div className="asas-card-body"><div className="asas-search"><select className="asas-input" aria-label="الفرع" value={branchId} onChange={e=>setBranchId(e.target.value)}><option value="">اختر الفرع</option>{branches.filter(b=>b.active).map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select><Button variant="primary" onClick={showQr} disabled={!branchId||busy}>عرض رموز اليوم</Button></div>
     {qr ? (
-      <div className="asas-qr-poster">
+       <div className="asas-qr-poster">
+        {(()=>{
+          const fixUrl=(u)=>{
+           if(!u)return '';
+           if(typeof window==='undefined')return u;
+           try{
+            const p=new URL(u,window.location.origin);
+            if(p.hostname==='localhost'||p.hostname==='127.0.0.1'){
+             return `${window.location.origin}${p.pathname}${p.search}${p.hash}`;
+            }
+            return p.toString();
+           }catch(e){return u;}
+          };
+          const enterUrl=fixUrl(qr.enter?.url || qr.url);
+          const exitUrl=fixUrl(qr.exit?.url || qr.url);
+          const enterHtml=fixUrl(qr.enter?.html_url || `/enter.html?branch=${branchId}`);
+          const exitHtml=fixUrl(qr.exit?.html_url || `/exit.html?branch=${branchId}`);
+          return <>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
           <div>
             <Brand/>
@@ -111,9 +128,9 @@ export default function AsasApp(){
           </div>
           <div className="asas-actions">
             <Button icon={Printer} onClick={()=>window.print()}>طباعة الملصق (A4)</Button>
-            <a className="asas-btn" href={qr.enter?.url || `/attend/enter?branch=${branchId}`} target="_blank" rel="noreferrer"><LogIn size={15}/>صفحة كود الدخول</a>
-            <a className="asas-btn" href={qr.exit?.url || `/attend/exit?branch=${branchId}`} target="_blank" rel="noreferrer"><LogOut size={15}/>صفحة كود الخروج</a>
-            <a className="asas-btn" href={`/attend?branch=${branchId}`} target="_blank" rel="noreferrer"><Smartphone size={15}/>صفحة الآيفون العامة</a>
+            <a className="asas-btn" href={enterUrl} target="_blank" rel="noreferrer"><LogIn size={15}/>صفحة كود الدخول</a>
+            <a className="asas-btn" href={exitUrl} target="_blank" rel="noreferrer"><LogOut size={15}/>صفحة كود الخروج</a>
+            <a className="asas-btn" href={fixUrl(`/attend?branch=${branchId}`)} target="_blank" rel="noreferrer"><Smartphone size={15}/>صفحة الآيفون العامة</a>
             <Button variant="danger" onClick={async()=>{const reason=window.prompt('سبب إبطال رموز اليوم:');if(!reason)return;try{await api(`/admin/branches/${branchId}/qr/revoke`,'POST',{reason});setQr(null);setNotice('تم إبطال الرموز بنجاح. اضغط عرض الرموز لإصدار البديل فوراً.');}catch(e){setError(e.message);}}}>إبطال الرموز</Button>
           </div>
         </div>
@@ -125,13 +142,13 @@ export default function AsasApp(){
             <div className="asas-qr-card-title"><LogIn size={20}/>تسجيل الدخول والعودة</div>
             <p className="asas-muted" style={{fontSize:12}}>يُمسح عند بداية يوم العمل أو العودة من المغادرة — يفتح صفحة الدخول المخصصة</p>
             <div className="asas-qr-box">
-              <QRCodeSVG value={qr.enter?.url || qr.url} size={210} level="M" includeMargin/>
+              <QRCodeSVG value={enterUrl} size={210} level="M" includeMargin/>
             </div>
             <strong dir="ltr">{qr.day}</strong>
             <div className="asas-actions" style={{justifyContent:'center',marginTop:8,flexWrap:'wrap',gap:6}}>
-              <a className="asas-btn" href={qr.enter?.url || qr.url} target="_blank" rel="noreferrer"><LogIn size={14}/>فتح صفحة الدخول</a>
-              <a className="asas-btn" href={qr.enter?.html_url || `/enter.html?branch=${branchId}`} target="_blank" rel="noreferrer"><Smartphone size={14}/>HTML للآيفون</a>
-              <Button type="button" onClick={()=>{navigator.clipboard?.writeText(qr.enter?.url || qr.url);setNotice('تم نسخ رابط صفحة كود الدخول');}}>نسخ الرابط</Button>
+              <a className="asas-btn" href={enterUrl} target="_blank" rel="noreferrer"><LogIn size={14}/>فتح صفحة الدخول</a>
+              <a className="asas-btn" href={enterHtml} target="_blank" rel="noreferrer"><Smartphone size={14}/>HTML للآيفون</a>
+              <Button type="button" onClick={()=>{navigator.clipboard?.writeText(enterUrl);setNotice('تم نسخ رابط صفحة كود الدخول');}}>نسخ الرابط</Button>
             </div>
           </div>
 
@@ -141,16 +158,18 @@ export default function AsasApp(){
             <div className="asas-qr-card-title"><LogOut size={20}/>تسجيل الخروج والانصراف</div>
             <p className="asas-muted" style={{fontSize:12}}>يُمسح عند إنهاء الدوام الرسمي أو المغادرة — يفتح صفحة الخروج المخصصة</p>
             <div className="asas-qr-box">
-              <QRCodeSVG value={qr.exit?.url || qr.url} size={210} level="M" includeMargin/>
+              <QRCodeSVG value={exitUrl} size={210} level="M" includeMargin/>
             </div>
             <strong dir="ltr">{qr.day}</strong>
             <div className="asas-actions" style={{justifyContent:'center',marginTop:8,flexWrap:'wrap',gap:6}}>
-              <a className="asas-btn" href={qr.exit?.url || qr.url} target="_blank" rel="noreferrer"><LogOut size={14}/>فتح صفحة الخروج</a>
-              <a className="asas-btn" href={qr.exit?.html_url || `/exit.html?branch=${branchId}`} target="_blank" rel="noreferrer"><Smartphone size={14}/>HTML للآيفون</a>
-              <Button type="button" onClick={()=>{navigator.clipboard?.writeText(qr.exit?.url || qr.url);setNotice('تم نسخ رابط صفحة كود الخروج');}}>نسخ الرابط</Button>
+              <a className="asas-btn" href={exitUrl} target="_blank" rel="noreferrer"><LogOut size={14}/>فتح صفحة الخروج</a>
+              <a className="asas-btn" href={exitHtml} target="_blank" rel="noreferrer"><Smartphone size={14}/>HTML للآيفون</a>
+              <Button type="button" onClick={()=>{navigator.clipboard?.writeText(exitUrl);setNotice('تم نسخ رابط صفحة كود الخروج');}}>نسخ الرابط</Button>
             </div>
           </div>
         </div>
+        </>;
+        })()}
 
         <div className="asas-notice" style={{marginTop:24,textAlign:'right'}}>
           💡 <strong>حماية السجلات:</strong> تم فصل كود الدخول عن كود الخروج لحماية موثوقية العمليات؛ لن يقبل كود الدخول تسجيل الخروج، ولن يقبل كود الخروج تسجيل الدخول. يمكن لموظفي الآيفون مسح الرمز مباشرة بكاميرا الهاتف لفتح صفحة التحضير الميدانية.
