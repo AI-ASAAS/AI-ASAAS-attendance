@@ -74,7 +74,7 @@ export default function AttendPage({ forcedAction = null }) {
   const [leaveModal, setLeaveModal] = useState(false);
   const [leaveForm, setLeaveForm] = useState({ from_date: '', to_date: '', reason: '' });
   const [showHistory, setShowHistory] = useState(false);
-  const [loginForm, setLoginForm] = useState({ identifier: 'emp1', password: '', phone: '' });
+  const [loginForm, setLoginForm] = useState({ identifier: '', password: '', phone: '' });
   const [googleModal, setGoogleModal] = useState(false);
   const [googleEmail, setGoogleEmail] = useState('');
   const [googleName, setGoogleName] = useState('');
@@ -378,7 +378,11 @@ export default function AttendPage({ forcedAction = null }) {
       });
       setUser(d.account);
       setGoogleModal(false);
-      setNotice(`مرحباً ${d.account.name}! تم تسجيل الدخول وربط جهازك (${device_name || 'جوالك'}) بنجاح.`);
+      if (d.is_new) {
+        setNotice(`🎉 أهلاً بك يا ${d.account.name}! رقمك الوظيفي الثابت والمعتمد هو: (${d.account.identifier})، تم ربطه ببريدك (${d.account.email}) وجهازك بنجاح.`);
+      } else {
+        setNotice(`مرحباً بعودتك ${d.account.name}! رقمك الوظيفي المعتمد: (${d.account.identifier})`);
+      }
       await loadUserData();
       await fetchActiveToken();
     } catch (e) {
@@ -532,7 +536,7 @@ export default function AttendPage({ forcedAction = null }) {
                   style={styles.input}
                   required
                   autoComplete="username"
-                  placeholder="emp1@asas.ye أو emp1"
+                  placeholder="001 أو name@company.com"
                   value={loginForm.identifier}
                   onChange={e => setLoginForm({ ...loginForm, identifier: e.target.value })}
                 />
@@ -599,9 +603,10 @@ export default function AttendPage({ forcedAction = null }) {
             </div>
 
             <div style={{ marginTop: 12, padding: 10, background: '#faf9f5', borderRadius: 10, fontSize: 11.5, color: '#736d65', border: '1px solid #e0dacb' }}>
-              💡 <strong>حسابات التجربة الجاهزة:</strong><br/>
-              • المدير: <code>admin@asas.ye</code> (أو <code>admin</code>) / <code>AsasAdmin@2026</code><br/>
-              • الموظف: <code>emp1@asas.ye</code> (أو <code>emp1</code>) / <code>AsasEmployee@2026</code>
+              💡 <strong>حسابات التجربة والتسجيل:</strong><br/>
+              • المدير: <code>admin</code> / <code>AsasAdmin@2026</code><br/>
+              • الموظف المعتمد: <code>001</code> أو <code>002</code> / <code>AsasEmployee@2026</code><br/>
+              • أو سجل بحسابك في Google / Gmail بضغطة واحدة ليصدر لك رقمك الوظيفي الثابت تلقائياً (مثل: <code>003</code>).
             </div>
           </div>
         ) : (
@@ -614,9 +619,14 @@ export default function AttendPage({ forcedAction = null }) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <h3 style={styles.profileName}>{user.name}</h3>
-                <p style={styles.profileDetails}>
-                  {user.identifier} · {user.email || 'بدون بريد'} · {user.phone || 'بدون هاتف'}
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 3 }}>
+                  <span style={{ background: '#231f20', color: '#b59045', padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 700, fontFamily: 'monospace' }}>
+                    الرقم الوظيفي: {user.identifier}
+                  </span>
+                  <span style={{ fontSize: 12, color: '#736d65' }}>
+                    {user.email || 'بدون بريد'}
+                  </span>
+                </div>
                 <div style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, background: '#fbf7ee', border: '1px solid #ebdcc0', padding: '3px 8px', borderRadius: 6, fontSize: 11, color: '#775b24' }}>
                   <Smartphone size={12} />
                   <span>الجوال المقيد: <strong>{user.bound_device_name || 'هذا الجهاز'}</strong></span>
@@ -1267,7 +1277,7 @@ export default function AttendPage({ forcedAction = null }) {
                 <button type="button" onClick={() => setGoogleModal(false)} style={styles.iconButton}>✕</button>
               </div>
               <div style={{ background: '#fbf7ee', border: '1px solid #ebdcc0', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: '#775b24', lineHeight: 1.5 }}>
-                ⚡ <strong>تسجيل فوري وذكي:</strong> أدخل بريد Google الخاص بك. إذا كان حسابك جديداً، سيقوم النظام بإنشاء ملف الموظف وربط جوالك تلقائياً، وإرسال إشعار ترحيبي وتأكيدي إلى بريدك في Google فوراً!
+                ⚡ <strong>تسجيل فوري وذكي:</strong> أدخل بريد Google الخاص بك. إذا كان حسابك جديداً، سيقوم النظام تلقائياً بإصدار رقمك الوظيفي الثابت وربطه بحسابك وجوالك، وإرسال إشعار ترحيبي يتضمن رقمك الوظيفي إلى بريدك فوراً!
               </div>
               <form onSubmit={handleGoogleLogin} style={styles.form}>
                 <label style={styles.label}>

@@ -52,7 +52,7 @@ async function sendMail({ to, subject, html, text }) {
 // ─── 1. Welcome / Auto-Registration Email ─────────────────────────────────
 async function notifyAccountCreated(account, deviceName) {
   if (!account.email) return;
-  const subject = '🎉 مرحباً بك في نظام حضور أساس - تم تفعيل حسابك بنجاح';
+  const subject = `🎉 مرحباً بك في أساس - رقمك الوظيفي الثابت المعتمد (${account.identifier})`;
   const html = `
     <div dir="rtl" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e0dacb; border-radius: 12px; overflow: hidden;">
       <div style="background: #231f20; padding: 24px; text-align: center; color: #ffffff;">
@@ -61,19 +61,25 @@ async function notifyAccountCreated(account, deviceName) {
       </div>
       <div style="padding: 24px; color: #231f20; line-height: 1.6;">
         <h2 style="font-size: 18px; color: #231f20;">أهلاً بك يا ${account.name}،</h2>
-        <p>تم تسجيل وربط حسابك في نظام الحضور والانصراف تلقائياً عبر حساب Google الخاص بك.</p>
+        <p>تم تسجيل وتفعيل حسابك بنجاح في نظام أساس للحضور والانصراف عبر حساب Google الخاص بك.</p>
         
-        <div style="background: #fbf7ee; border: 1px solid #ebdcc0; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 4px 0;"><strong>الاسم:</strong> ${account.name}</p>
-          <p style="margin: 4px 0;"><strong>البريد الإلكتروني:</strong> ${account.email}</p>
-          <p style="margin: 4px 0;"><strong>الرقم الوظيفي:</strong> ${account.identifier}</p>
-          <p style="margin: 4px 0;"><strong>الجهاز المقترن للحماية:</strong> ${deviceName || 'جهازك الحالي'}</p>
+        <div style="background: #fbf7ee; border: 2px solid #b59045; border-radius: 10px; padding: 18px; margin: 18px 0;">
+          <div style="text-align: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #d2c5ac;">
+            <span style="font-size: 13px; color: #775b24; display: block;">رقمك الوظيفي الدائم والمعتمد في النظام</span>
+            <span style="display: inline-block; background: #231f20; color: #b59045; font-size: 26px; font-weight: bold; padding: 4px 20px; border-radius: 8px; font-family: monospace; letter-spacing: 2px; margin-top: 6px;">
+              ${account.identifier}
+            </span>
+          </div>
+          <p style="margin: 6px 0;">👤 <strong>اسم الموظف:</strong> ${account.name}</p>
+          <p style="margin: 6px 0;">📧 <strong>البريد المقترن (Gmail):</strong> ${account.email}</p>
+          <p style="margin: 6px 0;">📱 <strong>الجهاز المقترن للحماية:</strong> ${deviceName || 'جهازك الحالي'}</p>
         </div>
 
-        <p style="font-size: 13px; color: #775b24;">🛡️ <strong>حماية الحساب:</strong> تم ربط حسابك بهذا الهاتف تلقائياً لمنع تسجيل الحضور بالنيابة، ويمكنك الآن مسح رمز الـ QR المعتمد للتحضير مباشرة.</p>
+        <p style="font-size: 13px; color: #231f20;">🔑 <strong>بيانات الدخول:</strong> يمكنك دائماً الدخول إلى النظام باستخدام بريدك الإلكتروني (Gmail) بضغطة زر، أو باستخدام رقمك الوظيفي الثابت (<strong>${account.identifier}</strong>).</p>
+        <p style="font-size: 13px; color: #775b24;">🛡️ <strong>حماية الحساب:</strong> تم تقييد حسابك بجهازك الحالي تلقائياً لمنع تسجيل الحضور بالنيابة وضمان نزاهة وموثوقية السجلات.</p>
       </div>
       <div style="background: #f8f7f4; padding: 14px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0;">
-        هذا إشعار تلقائي من نظام أساس لإدارة الموارد البشرية · توقيت صنعاء (اليمن)
+        هذا إشعار رسمي تلقائي من نظام أساس لإدارة الموارد البشرية · توقيت صنعاء (اليمن)
       </div>
     </div>
   `;

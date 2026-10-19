@@ -83,6 +83,23 @@ app.post('/api/auth/login',rateLimit({windowMs:900000,max:20,standardHeaders:tru
  respond(res,{account:safeAccount(account),...(req.headers['x-asas-client']==='android'?{token}:{})});
 }));
 
+async function generateNextEmployeeIdentifier(client) {
+ const res = await client.query(`
+   SELECT identifier FROM accounts 
+   WHERE identifier ~ '^[0-9]+$' 
+   ORDER BY CAST(identifier AS BIGINT) DESC 
+   LIMIT 1 FOR UPDATE
+ `);
+ let nextNum = 1;
+ if (res.rows.length) {
+   const maxVal = parseInt(res.rows[0].identifier, 10);
+   if (!isNaN(maxVal) && maxVal >= 1) {
+     nextNum = maxVal + 1;
+   }
+ }
+ return String(nextNum).padStart(3, '0');
+}
+
 app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:true,legacyHeaders:false}),wrap(async(req,res)=>{
  const {credential,email:rawEmail,device_id,device_name,phone,name:rawName}=req.body;
  let targetEmail=null;
@@ -104,64 +121,81 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
  const deviceName=device_name?String(device_name).trim().slice(0,150):null;
  const userPhone=phone?String(phone).trim().slice(0,50):null;
 
- const result=await db.query('SELECT * FROM accounts WHERE LOWER(email)=$1 AND active=TRUE',[targetEmail]);
- let account=result.rows[0];
+ let isNew = false;
+ const account = await db.transaction(async c => {
+  const result = await c.query('SELECT * FROM accounts WHERE LOWER(email)=$1 AND active=TRUE FOR UPDATE', [targetEmail]);
+  let acc = result.rows[0];
 
- if(deviceId){
-  const other=(await db.query('SELECT id, name FROM accounts WHERE bound_device_id=$1',[deviceId])).rows;
-  if(other.length&&(!account||other[0].id!==account.id)){
-   error('DEVICE_BOUND_OTHER',`هذا الجوال مقترن بالموظف (${other[0].name}). لا يمكن استخدام نفس الجوال لأكثر من موظف منعاً للتحضير بالنيابة.`,403);
+  if(deviceId){
+   const other = (await c.query('SELECT id, name FROM accounts WHERE bound_device_id=$1', [deviceId])).rows;
+   if(other.length && (!acc || other[0].id !== acc.id)){
+    error('DEVICE_BOUND_OTHER', `هذا الجوال مقترن بالموظف (${other[0].name}). لا يمكن استخدام نفس الجوال لأكثر من موظف منعاً للتحضير بالنيابة.`, 403);
+   }
   }
- }
 
- if(!account){
-  // Auto-register employee account
-  const defaultBranch=(await db.query('SELECT id FROM branches WHERE active=TRUE ORDER BY id ASC LIMIT 1')).rows[0];
-  const defaultShift=(await db.query('SELECT id FROM shifts ORDER BY id ASC LIMIT 1')).rows[0];
-  if(!defaultBranch||!defaultShift){
-   error('SETUP_REQUIRED','يرجى إعداد الفروع وجداول الدوام أولاً في لوحة التحكم',500);
+  if(!acc){
+   // Auto-register employee account with sequential permanent employee ID
+   const defaultBranch=(await c.query('SELECT id FROM branches WHERE active=TRUE ORDER BY id ASC LIMIT 1')).rows[0];
+   const defaultShift=(await c.query('SELECT id FROM shifts ORDER BY id ASC LIMIT 1')).rows[0];
+   if(!defaultBranch||!defaultShift){
+    error('SETUP_REQUIRED','يرجى إعداد الفروع وجداول الدوام أولاً في لوحة التحكم',500);
+   }
+
+   const identifier = await generateNextEmployeeIdentifier(c);
+   const empName = googleName || targetEmail.split('@')[0];
+   const randomPassHash = await security.hashPassword(`Asas@Auto#${Math.random().toString(36).slice(2)}${Date.now()}`);
+
+   const insertRes = await c.query(
+    `INSERT INTO accounts(identifier,name,password_hash,role,branch_id,shift_id,email,phone,bound_device_id,bound_device_name,device_bound_at,active)
+     VALUES($1,$2,$3,'employee',$4,$5,$6,$7,$8,$9,$10,TRUE)
+     RETURNING *`,
+    [
+     identifier,
+     empName,
+     randomPassHash,
+     defaultBranch.id,
+     defaultShift.id,
+     targetEmail,
+     userPhone,
+     deviceId,
+     deviceName||'هاتف ذكي',
+     deviceId ? new Date() : null
+    ]
+   );
+   acc = insertRes.rows[0];
+   isNew = true;
+  } else {
+   if(acc.role==='employee'&&deviceId){
+    if(acc.bound_device_id&&acc.bound_device_id!==deviceId){
+     error('DEVICE_MISMATCH',`حسابك مقترن بجهاز آخر (${acc.bound_device_name||'جوالك السابق'}). يرجى التواصل مع إدارة النظام لفك الارتباط.`,403);
+    }
+    if(!acc.bound_device_id){
+     await c.query('UPDATE accounts SET bound_device_id=$1, bound_device_name=$2, device_bound_at=NOW(), phone=COALESCE(phone,$3) WHERE id=$4',[deviceId,deviceName||'هاتف ذكي',userPhone,acc.id]);
+     acc.bound_device_id=deviceId;
+     acc.bound_device_name=deviceName||'هاتف ذكي';
+     acc.device_bound_at=new Date();
+     if(!acc.phone&&userPhone)acc.phone=userPhone;
+    }
+   }
   }
-  const cleanPrefix=(targetEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g,'')||'emp').slice(0,15);
-  const identifier=`${cleanPrefix}_${Math.floor(1000+Math.random()*9000)}`;
-  const empName=googleName||targetEmail.split('@')[0];
-  const randomPassHash=await security.hashPassword(`Asas@Auto#${Math.random().toString(36).slice(2)}${Date.now()}`);
+  return acc;
+ });
 
-  const insertRes=await db.query(
-   `INSERT INTO accounts(identifier,name,password_hash,role,branch_id,shift_id,email,phone,bound_device_id,bound_device_name,device_bound_at,active)
-    VALUES($1,$2,$3,'employee',$4,$5,$6,$7,$8,$9,$10,TRUE)
-    RETURNING *`,
-   [
-    identifier,
-    empName,
-    randomPassHash,
-    defaultBranch.id,
-    defaultShift.id,
-    targetEmail,
-    userPhone,
-    deviceId,
-    deviceName||'هاتف ذكي',
-    deviceId?new Date():null
-   ]
-  );
-  account=insertRes.rows[0];
+ if(isNew){
   notifications.notifyAccountCreated(account,deviceName).catch(err=>console.error('[Notification Error] Welcome email failed:',err.message));
- }else{
-  if(account.role==='employee'&&deviceId){
-   if(account.bound_device_id&&account.bound_device_id!==deviceId){
-    error('DEVICE_MISMATCH',`حسابك مقترن بجهاز آخر (${account.bound_device_name||'جوالك السابق'}). يرجى التواصل مع إدارة النظام لفك الارتباط.`,403);
-   }
-   if(!account.bound_device_id){
-    await db.query('UPDATE accounts SET bound_device_id=$1, bound_device_name=$2, device_bound_at=NOW(), phone=COALESCE(phone,$3) WHERE id=$4',[deviceId,deviceName||'هاتف ذكي',userPhone,account.id]);
-    account.bound_device_id=deviceId;account.bound_device_name=deviceName||'هاتف ذكي';account.device_bound_at=new Date();
-    if(!account.phone&&userPhone)account.phone=userPhone;
-   }
-  }
  }
 
  const token=security.newToken();
  await db.query("INSERT INTO auth_sessions(token_hash,account_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '8 hours')",[security.digest(token),account.id]);
  res.cookie('asas_session',token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'strict',maxAge:8*3600000,path:'/api'});
- respond(res,{account:safeAccount(account),...(req.headers['x-asas-client']==='android'?{token}:{})});
+ respond(res,{
+  account:safeAccount(account),
+  is_new:isNew,
+  message:isNew
+    ? `🎉 تم تسجيل حسابك بنجاح! رقمك الوظيفي الثابت هو: (${account.identifier})`
+    : `مرحباً بعودتك! رقمك الوظيفي: (${account.identifier})`,
+  ...(req.headers['x-asas-client']==='android'?{token}:{})
+ });
 }));
 app.use('/api',wrap(async(req,res,next)=>{
  const cookie=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('asas_session='))?.slice(13);
@@ -332,7 +366,11 @@ app.post('/api/admin/accounts',admin,allow('employees.write'),wrap(async(req,res
    const dup=(await c.query('SELECT id FROM accounts WHERE LOWER(email)=$1',[email])).rows;
    if(dup.length)error('VALIDATION','البريد الإلكتروني مسجل لموظف آخر بالفعل');
   }
-  const r=await c.query('INSERT INTO accounts(identifier,name,password_hash,role,branch_id,shift_id,permissions,email,phone) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,identifier,name,email,phone,bound_device_id,bound_device_name,device_bound_at,role,branch_id,shift_id,permissions,active',[string(b.identifier,100),string(b.name),hash,role,branchId,shiftId,permissions,email,phone]);
+  let identifier = b.identifier ? string(b.identifier,100).trim() : '';
+  if(!identifier){
+   identifier = await generateNextEmployeeIdentifier(c);
+  }
+  const r=await c.query('INSERT INTO accounts(identifier,name,password_hash,role,branch_id,shift_id,permissions,email,phone) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,identifier,name,email,phone,bound_device_id,bound_device_name,device_bound_at,role,branch_id,shift_id,permissions,active',[identifier,string(b.name),hash,role,branchId,shiftId,permissions,email,phone]);
   await audit(c,req.user,'account.create',r.rows[0].id,'إضافة حساب');return r.rows[0];
  }));
 }));

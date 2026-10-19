@@ -269,7 +269,7 @@ export default function AsasApp(){
    {modal==='accounts'&&<>
      <div className="asas-form-grid">
        <Field label="الاسم الكامل للموظف" required value={form.name} onChange={e=>set('name',e.target.value)}/>
-       <Field label="الرقم الوظيفي / اسم الدخول" required disabled={!!form.id} value={form.identifier} onChange={e=>set('identifier',e.target.value)}/>
+       <Field label="الرقم الوظيفي الثابت" placeholder="اتركه فارغاً للتوليد التلقائي (مثل: 003)" disabled={!!form.id} value={form.identifier||''} onChange={e=>set('identifier',e.target.value)}/>
      </div>
      <div className="asas-form-grid">
        <Field label="البريد الإلكتروني (Gmail / الحساب الرسمي)" type="email" placeholder="name@company.com" value={form.email||''} onChange={e=>set('email',e.target.value)}/>
@@ -346,7 +346,7 @@ function Login({onLogin,initialError}){
 
     <form onSubmit={submit} className="asas-form">
      {error&&<div className="asas-notice error" role="alert">{error}</div>}
-     <Field label="البريد الإلكتروني أو الرقم الوظيفي" value={identifier} onChange={e=>setIdentifier(e.target.value)} autoComplete="username" required placeholder="name@company.com أو emp1"/>
+     <Field label="البريد الإلكتروني أو الرقم الوظيفي" value={identifier} onChange={e=>setIdentifier(e.target.value)} autoComplete="username" required placeholder="001 أو name@company.com"/>
      <Field label="كلمة المرور" type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" required placeholder="••••••••••••"/>
      
      <Button variant="primary" type="submit" disabled={busy}>
@@ -380,7 +380,7 @@ function Login({onLogin,initialError}){
    </div>
   </section>
 
-  {googleModal&&<div className="asas-modal-backdrop" onClick={()=>setGoogleModal(false)}><section className="asas-modal" style={{maxWidth:440}}><div className="asas-card-head"><h2>تسجيل الدخول والتسجيل التلقائي عبر Google</h2><Button icon={X} onClick={()=>setGoogleModal(false)}/></div><form className="asas-form" onSubmit={submitGoogle}><p className="asas-muted" style={{background:'#fbf7ee',padding:10,borderRadius:6,border:'1px solid #ebdcc0',color:'#775b24',fontSize:12.5,lineHeight:1.5}}>⚡ <strong>تسجيل فوري وذكي:</strong> أدخل بريد Google الخاص بك. إذا كان حسابك جديداً، سيتم إنشاؤه وتفعيله تلقائياً وربطه بجهازك فوراً وإرسال إشعار ترحيبي إلى بريدك!</p><Field label="بريد Gmail أو بريد العمل" type="email" required autoFocus value={googleEmail} onChange={e=>setGoogleEmail(e.target.value)} placeholder="your.name@gmail.com"/><Field label="اسم المستخدم أو الاسم الكامل" type="text" value={googleName} onChange={e=>setGoogleName(e.target.value)} placeholder="مثال: anas أو أنس الأغبري"/><div className="asas-modal-footer"><Button type="button" onClick={()=>setGoogleModal(false)}>إلغاء</Button><Button variant="primary" type="submit" disabled={busy}>{busy?'جارٍ التحقق والتسجيل…':'دخول / تسجيل تلقائي'}</Button></div></form></section></div>}
+  {googleModal&&<div className="asas-modal-backdrop" onClick={()=>setGoogleModal(false)}><section className="asas-modal" style={{maxWidth:440}}><div className="asas-card-head"><h2>تسجيل الدخول والتسجيل التلقائي عبر Google</h2><Button icon={X} onClick={()=>setGoogleModal(false)}/></div><form className="asas-form" onSubmit={submitGoogle}><p className="asas-muted" style={{background:'#fbf7ee',padding:10,borderRadius:6,border:'1px solid #ebdcc0',color:'#775b24',fontSize:12.5,lineHeight:1.5}}>⚡ <strong>تسجيل فوري وذكي:</strong> أدخل بريد Google الخاص بك. إذا كان حسابك جديداً، سيتم إصدار رقمك الوظيفي الثابت تلقائياً (مثل: 003) وربطه ببريدك وجوالك فوراً وإرسال إشعار ترحيبي إلى بريدك!</p><Field label="بريد Gmail أو بريد العمل" type="email" required autoFocus value={googleEmail} onChange={e=>setGoogleEmail(e.target.value)} placeholder="your.name@gmail.com"/><Field label="اسم المستخدم أو الاسم الكامل" type="text" value={googleName} onChange={e=>setGoogleName(e.target.value)} placeholder="مثال: anas أو أنس الأغبري"/><div className="asas-modal-footer"><Button type="button" onClick={()=>setGoogleModal(false)}>إلغاء</Button><Button variant="primary" type="submit" disabled={busy}>{busy?'جارٍ التحقق والتسجيل…':'دخول / تسجيل تلقائي'}</Button></div></form></section></div>}
  </div>;
 }
 
@@ -440,7 +440,11 @@ function Employee({user,logout}){
   <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
    <div>
     <h1>مرحباً، {user.name}</h1>
-    <p className="asas-muted">{user.identifier} · {user.email||'بدون بريد'} · {user.phone||'بدون هاتف'}</p>
+    <p className="asas-muted" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginTop:4}}>
+     <span style={{background:'#231f20',color:'#b59045',padding:'2px 8px',borderRadius:4,fontWeight:'bold',fontSize:12.5,fontFamily:'monospace'}}>الرقم الوظيفي: {user.identifier}</span>
+     <span>{user.email||'بدون بريد'}</span>
+     {user.phone&&<span>· {user.phone}</span>}
+    </p>
    </div>
    <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
     <div style={{display:'flex',alignItems:'center',gap:6,background:'#231f20',color:'#efe9d8',padding:'6px 14px',borderRadius:20,fontSize:12,fontWeight:600}}>
