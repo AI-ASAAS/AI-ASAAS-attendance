@@ -20,8 +20,8 @@ start "خادم أساس - Backend" cmd /k "cd /d ""%~dp0backend"" && npm run de
 
 timeout /t 3 /nobreak >nul
 
-echo [3/3] جارٍ تشغيل الواجهة الأمامية (Frontend) على المنفذ 3000...
-start "واجهة أساس - Frontend" cmd /k "cd /d ""%~dp0frontend"" && npm run dev"
+echo [3/3] جارٍ تشغيل الواجهة الأمامية (Frontend) بالنمط السريع على المنفذ 3000...
+start "واجهة أساس - Frontend" cmd /k "cd /d ""%~dp0frontend"" && npm start"
 
 timeout /t 3 /nobreak >nul
 start http://localhost:3000/asas
