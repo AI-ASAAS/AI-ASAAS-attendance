@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: ai-asaas-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node src/asas-server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: HOST
+        value: 0.0.0.0
+      - key: DB_SSL
+        value: true
+      - key: DATABASE_URL
+        sync: false
+      - key: QR_SECRET
+        generateValue: true
+      - key: WEB_ORIGIN
+        sync: false

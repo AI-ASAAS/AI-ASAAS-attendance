@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+chcp 65001 >nul
 title تشغيل خادم أساس - Backend API
 
 echo ========================================================
@@ -28,6 +29,15 @@ if %errorlevel% neq 0 (
 if not exist "node_modules" (
     echo [معلومات] جارٍ تثبيت حزم الخادم...
     call npm install
+)
+
+netstat -ano | findstr :5433 >nul 2>nul
+if %errorlevel% neq 0 (
+    if exist "%USERPROFILE%\asas_pgdata" (
+        echo [معلومات] جارٍ تشغيل خدمة قاعدة البيانات المحلية PostgreSQL على المنفذ 5433...
+        start "" /b "C:\Program Files\PostgreSQL\18\bin\postgres.exe" -D "%USERPROFILE%\asas_pgdata" -p 5433
+        timeout /t 2 /nobreak >nul
+    )
 )
 
 echo [معلومات] جارٍ بدء خدمة أساس على المنفذ 5000...

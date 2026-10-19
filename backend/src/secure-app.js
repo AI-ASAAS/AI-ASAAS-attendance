@@ -11,6 +11,15 @@ const app=express();
 const wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
 const error=(code,message,status=400)=>{throw new AppError(code,message,status);};
 const origin=()=>process.env.WEB_ORIGIN||'http://localhost:3000';
+const isAllowedOrigin=(orig)=>{
+ if(!orig) return true;
+ const configured=(process.env.WEB_ORIGIN||'').split(',').map(s=>s.trim()).filter(Boolean);
+ if(configured.includes('*')||process.env.NODE_ENV!=='production') return true;
+ if(configured.includes(orig)||orig===origin()) return true;
+ if(orig==='http://localhost:3000'||orig==='http://127.0.0.1:3000') return true;
+ if(orig.endsWith('.trycloudflare.com')||orig.endsWith('.loca.lt')||orig.endsWith('.vercel.app')) return true;
+ return false;
+};
 const string=(value,max=150)=>{if(typeof value!=='string'||!value.trim()||value.length>max)error('VALIDATION','تحقق من الحقول المطلوبة');return value.trim();};
 const integer=(value,min,max)=>{if(!Number.isInteger(value)||value<min||value>max)error('VALIDATION','قيمة رقمية خارج الحدود');return value;};
 const id=value=>{const n=Number(value);if(!Number.isSafeInteger(n)||n<1)error('VALIDATION','معرف غير صالح');return n;};
@@ -24,7 +33,7 @@ const audit=(client,user,action,target,reason,details={})=>client.query('INSERT 
 const respond=(res,data)=>res.json({success:true,data});
 app.disable('x-powered-by');
 app.use(helmet());
-app.use(cors({origin:origin(),credentials:true}));
+app.use(cors({origin:(orig,cb)=>cb(null,isAllowedOrigin(orig)),credentials:true}));
 app.use(express.json({limit:'64kb'}));
 const path=require('node:path');
 app.use(express.static(path.join(__dirname,'../public')));
@@ -33,7 +42,7 @@ app.use((req,res,next)=>{
  res.set('Cache-Control','no-store');
  if(!['GET','HEAD','OPTIONS'].includes(req.method)){
   if(!req.is('application/json'))return next(new AppError('CONTENT_TYPE','يلزم JSON',415));
-  if(req.headers.origin && req.headers.origin!==origin())return next(new AppError('ORIGIN','مصدر الطلب غير مسموح',403));
+  if(req.headers.origin && !isAllowedOrigin(req.headers.origin))return next(new AppError('ORIGIN','مصدر الطلب غير مسموح',403));
   // Browser requests require an Origin; Android uses Authorization, including login protocol.
   if(!req.headers.origin&&!req.headers.authorization&&req.headers['x-asas-client']!=='android')return next(new AppError('ORIGIN','مصدر الطلب مفقود',403));
  }
