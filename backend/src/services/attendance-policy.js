@@ -39,7 +39,7 @@ function verifyQr(token, branch, secret, now = new Date(), expectedAction = null
   if (!data || data.v !== 1 || data.branch !== String(branch.id) || data.revision !== branch.qr_revision) {
     fail('QR_INVALID', 'رمز الحضور ملغى أو لا ينتمي لهذا الفرع');
   }
-  if (data.action && expectedAction && data.action !== expectedAction) {
+  if (expectedAction && expectedAction !== 'auto' && data.action && data.action !== expectedAction) {
     fail('QR_ACTION_MISMATCH', data.action === 'enter' ? 'هذا الرمز مخصص لتسجيل الدخول فقط' : 'هذا الرمز مخصص لتسجيل الخروج فقط');
   }
   return true;

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MapPin, CheckCircle2, AlertCircle, LogIn, LogOut, RefreshCw,
   QrCode, Clock, ShieldCheck, ArrowRight, User, Building, FileText,
-  Smartphone, Camera, ChevronDown, Check, Send, Navigation, Mail, Phone, ShieldAlert, Unlock
+  Smartphone, Camera, ChevronDown, Check, Send, Navigation, Mail, Phone, ShieldAlert, Unlock, Zap
 } from 'lucide-react';
 import { getDeviceId, getDeviceName } from '../../utils/device';
 
@@ -65,7 +65,7 @@ export default function AttendPage({ forcedAction = null }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [token, setToken] = useState('');
-  const [actionHint, setActionHint] = useState(forcedAction || ''); // 'enter' | 'exit'
+  const [actionHint, setActionHint] = useState(forcedAction || 'auto'); // 'auto' | 'enter' | 'exit'
   const [branchInfo, setBranchInfo] = useState(null);
   const [attendanceData, setAttendanceData] = useState(null);
   const [gpsStatus, setGpsStatus] = useState(null); // { state, distance, accuracy, fix }
@@ -100,7 +100,7 @@ export default function AttendPage({ forcedAction = null }) {
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const t = hash.get('qr') || url.searchParams.get('token') || url.searchParams.get('qr') || '';
     const pathAction = window.location.pathname.includes('/enter') ? 'enter' : (window.location.pathname.includes('/exit') ? 'exit' : '');
-    const act = forcedAction || url.searchParams.get('action') || pathAction || '';
+    const act = forcedAction || url.searchParams.get('action') || pathAction || 'auto';
     if (t) setToken(t);
     if (act) setActionHint(act);
   }, [forcedAction]);
@@ -280,16 +280,17 @@ export default function AttendPage({ forcedAction = null }) {
     }
   };
 
-  // Handle Attendance Action (Enter / Exit)
+  // Handle Attendance Action (Enter / Exit / Auto)
   const handleAction = async (actionType) => {
     setBusy(true);
     setError('');
     setNotice('');
     try {
-      // Always ensure we have a fresh, valid token matching this exact action
+      // Always ensure we have a fresh, valid token matching this action
       let currentToken = token;
       try {
-        const activeData = await api(`/attendance/active-qr?action=${actionType}`);
+        const queryAct = actionType === 'auto' ? '' : actionType;
+        const activeData = await api(`/attendance/active-qr?action=${queryAct}`);
         if (activeData && activeData.token) {
           currentToken = activeData.token;
           setToken(currentToken);
@@ -314,11 +315,12 @@ export default function AttendPage({ forcedAction = null }) {
         fix
       });
 
+      const effectiveAction = result.action || (actionType === 'auto' ? (isInside ? 'exit' : 'enter') : actionType);
       if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      setNotice(result.message || (actionType === 'enter' ? 'تم تسجيل الحضور بنجاح' : 'تم تسجيل الخروج بنجاح'));
+      setNotice(result.message || (effectiveAction === 'enter' ? 'تم تسجيل الحضور بنجاح' : 'تم تسجيل الخروج بنجاح'));
       setActionSuccess({
-        action: actionType,
-        message: result.message || (actionType === 'enter' ? 'تم توثيق حضورك وبدء فترة العمل الرسمية' : 'تم إنهاء المناوبة وتوثيق انصرافك بنجاح'),
+        action: effectiveAction,
+        message: result.message || (effectiveAction === 'enter' ? 'تم توثيق حضورك وبدء فترة العمل الرسمية' : 'تم إنهاء المناوبة وتوثيق انصرافك بنجاح'),
         record: result.record,
         fix,
         time: new Date()
@@ -466,7 +468,8 @@ export default function AttendPage({ forcedAction = null }) {
 
   // Current duty record
   const currentRecord = attendanceData?.records?.[0];
-  const isInside = currentRecord?.state === 'inside';
+  const autoStatus = attendanceData?.automatic_status;
+  const isInside = autoStatus ? autoStatus.is_inside : (currentRecord?.state === 'inside');
   const isAdmin = user && ['super_admin', 'hr_admin', 'branch_manager'].includes(user.role);
 
   return (
@@ -782,55 +785,172 @@ export default function AttendPage({ forcedAction = null }) {
             ) : (
             <div style={styles.card}>
               {/* Separate Page Switcher Tabs if no forced action */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 6, marginBottom: 16 }}>
                 <button
                   type="button"
-                  onClick={() => { setActionHint('enter'); fetchActiveToken('enter'); }}
+                  onClick={() => { setActionHint('auto'); fetchActiveToken('auto'); }}
                   style={{
-                    padding: '10px 12px',
+                    padding: '10px 8px',
                     borderRadius: 12,
-                    border: (actionHint === 'enter' || (!actionHint && !isInside)) ? '2px solid #2d6a4f' : '1px solid #d2c5ac',
-                    background: (actionHint === 'enter' || (!actionHint && !isInside)) ? '#f4faf6' : '#fff',
-                    color: (actionHint === 'enter' || (!actionHint && !isInside)) ? '#2d6a4f' : '#736d65',
+                    border: (actionHint === 'auto' || !actionHint) ? '2px solid #b59045' : '1px solid #d2c5ac',
+                    background: (actionHint === 'auto' || !actionHint) ? '#fbf8f2' : '#fff',
+                    color: (actionHint === 'auto' || !actionHint) ? '#775b24' : '#736d65',
                     fontWeight: 700,
-                    fontSize: 13,
+                    fontSize: 12.5,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 6,
+                    gap: 5,
                     transition: 'all 0.2s'
                   }}
                 >
-                  <LogIn size={16} />
-                  <span>صفحة كود الدخول</span>
+                  <Zap size={15} color="#b59045" />
+                  <span>⚡ تلقائي ذكي</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setActionHint('enter'); fetchActiveToken('enter'); }}
+                  style={{
+                    padding: '10px 8px',
+                    borderRadius: 12,
+                    border: actionHint === 'enter' ? '2px solid #2d6a4f' : '1px solid #d2c5ac',
+                    background: actionHint === 'enter' ? '#f4faf6' : '#fff',
+                    color: actionHint === 'enter' ? '#2d6a4f' : '#736d65',
+                    fontWeight: 700,
+                    fontSize: 12.5,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 5,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <LogIn size={15} />
+                  <span>كود الدخول</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => { setActionHint('exit'); fetchActiveToken('exit'); }}
                   style={{
-                    padding: '10px 12px',
+                    padding: '10px 8px',
                     borderRadius: 12,
-                    border: (actionHint === 'exit' || (!actionHint && isInside)) ? '2px solid #231f20' : '1px solid #d2c5ac',
-                    background: (actionHint === 'exit' || (!actionHint && isInside)) ? '#f5f3f0' : '#fff',
-                    color: (actionHint === 'exit' || (!actionHint && isInside)) ? '#231f20' : '#736d65',
+                    border: actionHint === 'exit' ? '2px solid #231f20' : '1px solid #d2c5ac',
+                    background: actionHint === 'exit' ? '#f5f3f0' : '#fff',
+                    color: actionHint === 'exit' ? '#231f20' : '#736d65',
                     fontWeight: 700,
-                    fontSize: 13,
+                    fontSize: 12.5,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 6,
+                    gap: 5,
                     transition: 'all 0.2s'
                   }}
                 >
-                  <LogOut size={16} />
-                  <span>صفحة كود الخروج</span>
+                  <LogOut size={15} />
+                  <span>كود الخروج</span>
                 </button>
               </div>
 
-              {/* DEDICATED VIEW: ENTER CODE */}
-              {(actionHint === 'enter' || (!actionHint && !isInside)) ? (
+              {/* DEDICATED VIEW: AUTO SMART ATTENDANCE */}
+              {(actionHint === 'auto' || !actionHint) ? (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #f2ede4' }}>
+                    <span style={{
+                      background: isInside ? '#eaf4ee' : '#fdf6e9',
+                      color: isInside ? '#2d6a4f' : '#8a6518',
+                      padding: '4px 10px',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: isInside ? '#2d6a4f' : '#b59045', display: 'inline-block' }} />
+                      {isInside ? 'حاضر الآن في الدوام' : 'خارج الدوام حالياً'}
+                    </span>
+                    <span style={{ fontSize: 11.5, color: '#736d65' }}>توقيت صنعاء (اليمن)</span>
+                  </div>
+
+                  <div style={styles.cardHeader}>
+                    <div style={{ ...styles.iconCircle, background: '#fbf8f2', color: '#b59045' }}>
+                      <Zap size={22} color="#b59045" />
+                    </div>
+                    <div>
+                      <h3 style={styles.cardTitle}>التحضير التلقائي الذكي</h3>
+                      <p style={styles.cardSubtitle}>
+                        {isInside
+                          ? 'حالتك الحالية: داخل الدوام. يكتشف النظام حضورك ويسجل انصرافك تلقائياً.'
+                          : 'حالتك الحالية: خارج الدوام. يكتشف النظام حالتك ويسجل حضورك تلقائياً.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Prominent Smart Auto Button with Live Time */}
+                  <button
+                    onClick={() => handleAction('auto')}
+                    disabled={busy}
+                    style={{
+                      ...styles.actionBtn,
+                      ...(isInside ? styles.actionBtnActiveExit : styles.actionBtnActiveEnter),
+                      width: '100%',
+                      padding: '20px 16px',
+                      margin: '12px 0 16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 8,
+                      boxShadow: isInside ? '0 4px 16px rgba(35,31,32,0.18)' : '0 4px 16px rgba(45,106,79,0.18)'
+                    }}
+                  >
+                    <div style={{
+                      ...(isInside ? styles.actionBtnIconExit : styles.actionBtnIconEnter),
+                      width: 48,
+                      height: 48,
+                      borderRadius: 24,
+                      fontSize: 24,
+                      margin: '0 auto',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {isInside ? <LogOut size={26} /> : <LogIn size={26} />}
+                    </div>
+                    <strong style={{ fontSize: 18 }}>
+                      {isInside
+                        ? `⚡ تسجيل الانصراف التلقائي الآن ${liveTime ? `(${liveTime})` : ''}`
+                        : `⚡ تسجيل الحضور التلقائي الآن ${liveTime ? `(${liveTime})` : ''}`}
+                    </strong>
+                    <small style={{ fontSize: 12.5, opacity: 0.9 }}>
+                      {isInside
+                        ? 'يكتشف النظام حالتك تلقائياً ويوثق انصرافك وإنهاء فترة العمل'
+                        : 'يكتشف النظام حالتك تلقائياً ويوثق حضورك وبدء فترة العمل'}
+                    </small>
+                  </button>
+
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 16, paddingTop: 8, borderTop: '1px dashed #e8e4db' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setActionHint('enter'); fetchActiveToken('enter'); }}
+                      style={{ background: 'none', border: 'none', color: '#2d6a4f', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <LogIn size={13} /> صفحة كود الدخول
+                    </button>
+                    <span style={{ color: '#d2c5ac' }}>|</span>
+                    <button
+                      type="button"
+                      onClick={() => { setActionHint('exit'); fetchActiveToken('exit'); }}
+                      style={{ background: 'none', border: 'none', color: '#231f20', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <LogOut size={13} /> صفحة كود الخروج
+                    </button>
+                  </div>
+                </div>
+              ) : actionHint === 'enter' ? (
+                /* DEDICATED VIEW: ENTER CODE */
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #edf6f2' }}>
                     <span style={{ background: '#eaf4ee', color: '#2d6a4f', padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -868,20 +988,28 @@ export default function AttendPage({ forcedAction = null }) {
                       boxShadow: '0 4px 16px rgba(45,106,79,0.18)'
                     }}
                   >
-                    <div style={{ ...styles.actionBtnIconEnter, width: 48, height: 48, borderRadius: 24, fontSize: 24, margin: '0 auto' }}>
+                    <div style={{ ...styles.actionBtnIconEnter, width: 48, height: 48, borderRadius: 24, fontSize: 24, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <LogIn size={26} />
                     </div>
                     <strong style={{ fontSize: 18 }}>تسجيل الدخول / العودة الآن {liveTime ? `(${liveTime})` : ''}</strong>
                     <small style={{ fontSize: 12.5, opacity: 0.9 }}>انقر لتفعيل كود الدخول وبدء احتساب ساعات العمل الرسمية</small>
                   </button>
 
-                  <div style={{ textAlign: 'center', paddingTop: 8, borderTop: '1px dashed #e8e4db' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 16, paddingTop: 8, borderTop: '1px dashed #e8e4db' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setActionHint('auto'); fetchActiveToken('auto'); }}
+                      style={{ background: 'none', border: 'none', color: '#b59045', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Zap size={14} /> العودة للتحضير التلقائي الذكي ⚡
+                    </button>
+                    <span style={{ color: '#d2c5ac' }}>|</span>
                     <button
                       type="button"
                       onClick={() => { setActionHint('exit'); fetchActiveToken('exit'); }}
-                      style={{ background: 'none', border: 'none', color: '#775b24', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      style={{ background: 'none', border: 'none', color: '#231f20', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                     >
-                      <LogOut size={14} /> الانتقال إلى صفحة كود الخروج والانصراف ←
+                      <LogOut size={13} /> صفحة كود الخروج ←
                     </button>
                   </div>
                 </div>
@@ -924,20 +1052,28 @@ export default function AttendPage({ forcedAction = null }) {
                       boxShadow: '0 4px 16px rgba(35,31,32,0.18)'
                     }}
                   >
-                    <div style={{ ...styles.actionBtnIconExit, width: 48, height: 48, borderRadius: 24, fontSize: 24, margin: '0 auto' }}>
+                    <div style={{ ...styles.actionBtnIconExit, width: 48, height: 48, borderRadius: 24, fontSize: 24, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <LogOut size={26} />
                     </div>
                     <strong style={{ fontSize: 18 }}>تسجيل الخروج والانصراف الآن {liveTime ? `(${liveTime})` : ''}</strong>
                     <small style={{ fontSize: 12.5, opacity: 0.9 }}>انقر لتفعيل كود الخروج وإنهاء مناوبة العمل أو الخروج المؤقت</small>
                   </button>
 
-                  <div style={{ textAlign: 'center', paddingTop: 8, borderTop: '1px dashed #e8e4db' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 16, paddingTop: 8, borderTop: '1px dashed #e8e4db' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setActionHint('auto'); fetchActiveToken('auto'); }}
+                      style={{ background: 'none', border: 'none', color: '#b59045', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Zap size={14} /> العودة للتحضير التلقائي الذكي ⚡
+                    </button>
+                    <span style={{ color: '#d2c5ac' }}>|</span>
                     <button
                       type="button"
                       onClick={() => { setActionHint('enter'); fetchActiveToken('enter'); }}
-                      style={{ background: 'none', border: 'none', color: '#2d6a4f', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      style={{ background: 'none', border: 'none', color: '#2d6a4f', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                     >
-                      <LogIn size={14} /> الانتقال إلى صفحة كود الدخول والعودة ←
+                      <LogIn size={13} /> صفحة كود الدخول ←
                     </button>
                   </div>
                 </div>

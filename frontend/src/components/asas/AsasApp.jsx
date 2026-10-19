@@ -115,7 +115,7 @@ export default function AsasApp(){
    {tab==='records'&&<><div className="asas-search" style={{flexWrap:'wrap',gap:8}}><Field label="من تاريخ" type="date" value={from} onChange={e=>setFrom(e.target.value)}/><Field label="إلى تاريخ" type="date" value={to} onChange={e=>setTo(e.target.value)}/>{can('reports.export')&&<div className="asas-actions" style={{display:'inline-flex',gap:6,alignItems:'flex-end'}}><Button icon={Download} disabled={busy} onClick={exportCsv}>تصدير Excel/CSV</Button><Button icon={FileText} disabled={busy} onClick={exportWord}>تصدير Word</Button><Button icon={File} disabled={busy} onClick={exportTxt}>تصدير نصي (TXT)</Button></div>}</div><div className="asas-card"><Records rows={rows} onEdit={r=>edit('records',r)} canEdit={can('attendance.edit')}/></div></>}
     {tab==='branches'&&<div className="asas-form-grid">{rows.map(b=><article className="asas-card" key={b.id}><div className="asas-card-head"><h2>{b.name}</h2><span className="asas-badge">{b.active?'مفعل':'متوقف'}</span></div><div className="asas-card-body"><div className="asas-mini-row"><span>نطاق الدخول / الخروج</span><strong>{b.entry_radius} / {b.exit_radius} م</strong></div><div className="asas-mini-row"><span>أقصى هامش خطأ</span><strong>{b.max_accuracy} م</strong></div><div className="asas-mini-row"><span>تأكيد المغادرة</span><strong>{b.exit_samples} قراءات / {b.exit_delay_seconds} ثانية</strong></div><p className="asas-help" dir="ltr">{b.latitude}, {b.longitude}</p><iframe className="asas-map" src={`https://maps.google.com/maps?q=${b.latitude},${b.longitude}&hl=ar&z=17&output=embed`} loading="lazy" title={`خريطة Google - ${b.name}`} allowFullScreen/><div className="asas-actions" style={{marginTop:15}}>{can('locations.write')&&<Button icon={MapPin} variant="gold" onClick={async()=>{if(!navigator.geolocation)return setError('خدمة تحديد الموقع غير مدعومة');setBusy(true);setError('');navigator.geolocation.getCurrentPosition(async(pos)=>{try{await api(`/admin/branches/${b.id}`,'PUT',{...b,latitude:pos.coords.latitude,longitude:pos.coords.longitude,reason:'تحديث إحداثيات الفرع إلى موقع الجهاز الحالي'});setNotice(`تم تعيين موقع الفرع بنجاح على إحداثيات جهازك الحالية (${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)})`);await load();}catch(e){setError(e.message);}finally{setBusy(false);}},(err)=>{setError('تعذر قراءة الموقع: '+err.message);setBusy(false);},{enableHighAccuracy:true,timeout:15000});}}>تعيين الفرع على موقعي الحالي</Button>}{can('locations.write')&&<Button icon={Settings2} onClick={()=>edit('branches',b)}>تعديل الموقع</Button>}<a className="asas-btn" href={`https://www.google.com/maps?q=${b.latitude},${b.longitude}`} target="_blank" rel="noreferrer">فتح في Google Maps</a></div></div></article>)}{!rows.length&&!busy&&<Empty>أضف موقع الشركة الفعلي للبدء. لا توجد إحداثيات تجريبية.</Empty>}</div>}
    {tab==='shifts'&&<><div className="asas-notice">تغيير سياسة الإغلاق أو الخصم يطبّق على المناوبات الجديدة؛ تحتفظ المناوبات السابقة بسياستها الأصلية.</div><div className="asas-form-grid">{rows.map(s=><article className="asas-card" key={s.id}><div className="asas-card-head"><h2>{s.name}</h2><Clock3 size={18}/></div><div className="asas-card-body"><div className="asas-mini-row"><span>وقت الدوام</span><strong dir="ltr">{s.start_time.slice(0,5)} — {s.end_time.slice(0,5)}</strong></div><div className="asas-mini-row"><span>نهاية الدوام</span><strong>{s.close_policy==='scheduled'?'إغلاق تلقائي':'انتظار الخروج الفعلي'}</strong></div><div className="asas-mini-row"><span>خصم مدد المغادرة</span><strong>{s.deduct_away?'مفعّل':'غير مفعّل'}</strong></div>{can('shifts.write')&&<Button onClick={()=>edit('shifts',s)}>تعديل السياسة</Button>}</div></article>)}{!rows.length&&!busy&&<Empty>أضف جدول الدوام وحدد سياسة الاحتساب.</Empty>}</div></>}
-   {tab==='accounts'&&<><div className="asas-search"><Search size={18}/><input className="asas-input" aria-label="البحث عن موظف" placeholder="ابحث بالاسم أو الرقم الوظيفي أو البريد أو الهاتف…" value={search} onChange={e=>setSearch(e.target.value)}/></div><div className="asas-card asas-table-wrap"><table className="asas-table"><thead><tr><th>الموظف</th><th>البريد والهاتف</th><th>الجهاز المقيد</th><th>الصلاحية</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>{rows.filter(a=>`${a.name} ${a.identifier} ${a.email||''} ${a.phone||''}`.includes(search)).map(a=><tr key={a.id}><td><strong>{a.name}</strong><small>{a.identifier}</small></td><td><div><strong>{a.email||'—'}</strong><small style={{display:'block'}}>{a.phone||'—'}</small></div></td><td>{a.bound_device_id?<div><span className="asas-badge inside" style={{display:'inline-flex',alignItems:'center',gap:4}}><Smartphone size={12}/>{a.bound_device_name||'جوال مقيد'}</span><small style={{display:'block',color:'#736d65',fontSize:10}} dir="ltr">{a.bound_device_id.slice(0,12)}…</small></div>:<span className="asas-badge outside">غير مقيد</span>}</td><td>{roles[a.role]}</td><td>{a.active?'نشط':'معطّل'}</td><td><div className="asas-actions">{can('employees.write')&&<Button onClick={()=>edit('accounts',a)}>إدارة</Button>}{can('employees.write')&&a.bound_device_id&&<Button variant="danger" title="فك ارتباط هذا الجوال ليتمكن الموظف من تسجيل الدخول من جهاز جديد" onClick={async()=>{if(window.confirm(`هل أنت متأكد من فك ارتباط الجهاز للموظف (${a.name})؟ سيتمكن من ربط جوال جديد عند أول تسجيل دخول.`)){try{await api(`/admin/accounts/${a.id}/reset-device`,'POST',{reason:'فك قيد الجهاز بطلب من الإدارة'});setNotice(`تم فك قيد الجهاز للموظف ${a.name} بنجاح`);await load();}catch(e){setError(e.message);}}}}><Unlock size={14}/>فك الجهاز</Button>}</div></td></tr>)}</tbody></table>{!rows.length&&!busy&&<Empty/>}</div></>}
+   {tab==='accounts'&&<><div className="asas-search"><Search size={18}/><input className="asas-input" aria-label="البحث عن موظف" placeholder="ابحث بالاسم أو الرقم الوظيفي أو البريد أو الهاتف…" value={search} onChange={e=>setSearch(e.target.value)}/></div><div className="asas-card asas-table-wrap"><table className="asas-table"><thead><tr><th>الموظف</th><th>حالة الحضور اليوم</th><th>البريد والهاتف</th><th>الجهاز المقيد</th><th>الصلاحية</th><th>الحساب</th><th>الإجراء</th></tr></thead><tbody>{rows.filter(a=>`${a.name} ${a.identifier} ${a.email||''} ${a.phone||''}`.includes(search)).map(a=><tr key={a.id}><td><strong>{a.name}</strong><small>{a.identifier}</small></td><td>{a.attendance_status==='inside'?(<div><span className="asas-badge inside" style={{display:'inline-flex',alignItems:'center',gap:4}}><CheckCircle2 size={12}/>حاضر الآن</span>{a.today_first_in&&<small style={{display:'block',color:'#2d6a4f',fontSize:10}}>دخول: {time(a.today_first_in)}</small>}</div>):a.attendance_status==='outside'?(<div><span className="asas-badge outside" style={{display:'inline-flex',alignItems:'center',gap:4}}><LogOut size={12}/>تم الانصراف</span>{a.today_last_out&&<small style={{display:'block',color:'#736d65',fontSize:10}}>خروج: {time(a.today_last_out)}</small>}</div>):a.attendance_status==='leave'?(<span className="asas-badge pending" style={{display:'inline-flex',alignItems:'center',gap:4}}><CalendarDays size={12}/>في إجازة</span>):(<span className="asas-badge" style={{background:'#f5f3f0',color:'#736d65',display:'inline-flex',alignItems:'center',gap:4}}><AlertCircle size={12}/>لم يسجل اليوم</span>)}</td><td><div><strong>{a.email||'—'}</strong><small style={{display:'block'}}>{a.phone||'—'}</small></div></td><td>{a.bound_device_id?<div><span className="asas-badge inside" style={{display:'inline-flex',alignItems:'center',gap:4}}><Smartphone size={12}/>{a.bound_device_name||'جوال مقيد'}</span><small style={{display:'block',color:'#736d65',fontSize:10}} dir="ltr">{a.bound_device_id.slice(0,12)}…</small></div>:<span className="asas-badge outside">غير مقيد</span>}</td><td>{roles[a.role]}</td><td><span className={`asas-badge ${a.active?'inside':'outside'}`}>{a.active?'نشط':'معطّل'}</span></td><td><div className="asas-actions">{can('employees.write')&&<Button onClick={()=>edit('accounts',a)}>إدارة</Button>}{can('employees.write')&&a.bound_device_id&&<Button variant="danger" title="فك ارتباط هذا الجوال ليتمكن الموظف من تسجيل الدخول من جهاز جديد" onClick={async()=>{if(window.confirm(`هل أنت متأكد من فك ارتباط الجهاز للموظف (${a.name})؟ سيتمكن من ربط جوال جديد عند أول تسجيل دخول.`)){try{await api(`/admin/accounts/${a.id}/reset-device`,'POST',{reason:'فك قيد الجهاز بطلب من الإدارة'});setNotice(`تم فك قيد الجهاز للموظف ${a.name} بنجاح`);await load();}catch(e){setError(e.message);}}}}><Unlock size={14}/>فك الجهاز</Button>}</div></td></tr>)}</tbody></table>{!rows.length&&!busy&&<Empty/>}</div></>}
     {tab==='qr'&&<div className="asas-card"><div className="asas-card-head"><h2>رموز الحضور والانصراف المعتمدة</h2><span className="asas-badge">رمز دائم وثابت · توقيت صنعاء (اليمن)</span></div><div className="asas-card-body"><div className="asas-search"><select className="asas-input" aria-label="الفرع" value={branchId} onChange={e=>setBranchId(e.target.value)}><option value="">اختر الفرع</option>{branches.filter(b=>b.active).map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select><Button variant="primary" onClick={showQr} disabled={!branchId||busy}>عرض الرموز المعتمدة</Button></div>
     {qr ? (
        <div className="asas-qr-poster">
@@ -131,6 +131,8 @@ export default function AsasApp(){
             return p.toString();
            }catch(e){return u;}
           };
+          const autoUrl=fixUrl(qr.auto?.url || qr.url);
+          const autoHtml=fixUrl(qr.auto?.html_url || `/attend.html?branch=${branchId}`);
           const enterUrl=fixUrl(qr.enter?.url || qr.url);
           const exitUrl=fixUrl(qr.exit?.url || qr.url);
           const enterHtml=fixUrl(qr.enter?.html_url || `/enter.html?branch=${branchId}`);
@@ -144,6 +146,7 @@ export default function AsasApp(){
           </div>
           <div className="asas-actions">
             <Button icon={Printer} onClick={()=>window.print()}>طباعة الملصق (A4)</Button>
+            <a className="asas-btn primary" href={autoUrl} target="_blank" rel="noreferrer"><QrCode size={15}/>الكود الموحد الذكي</a>
             <a className="asas-btn" href={enterUrl} target="_blank" rel="noreferrer"><LogIn size={15}/>صفحة كود الدخول</a>
             <a className="asas-btn" href={exitUrl} target="_blank" rel="noreferrer"><LogOut size={15}/>صفحة كود الخروج</a>
             <a className="asas-btn" href={fixUrl(`/attend?branch=${branchId}`)} target="_blank" rel="noreferrer"><Smartphone size={15}/>صفحة الآيفون العامة</a>
@@ -152,6 +155,23 @@ export default function AsasApp(){
         </div>
 
         <div className="asas-qr-grid">
+          {/* Smart Unified Auto QR Card */}
+          <div className="asas-qr-card auto" style={{gridColumn:'1 / -1',background:'linear-gradient(180deg,#faf7f0 0%,#ffffff 100%)',border:'2px solid #b59045',boxShadow:'0 4px 14px rgba(181,144,69,0.12)'}}>
+            <div className="asas-qr-badge" style={{background:'#b59045',color:'#fff',fontSize:12.5,padding:'4px 14px'}}>⭐ الكود الموحد التلقائي الذكي (دخول وخروج تلقائي بحسب حالة الموظف)</div>
+            <div className="asas-qr-card-title" style={{fontSize:19,marginTop:8}}><QrCode size={22} color="#b59045"/>كود الحضور والانصراف الموحد التلقائي</div>
+            <p className="asas-muted" style={{fontSize:12.5,maxWidth:520,margin:'0 auto 10px'}}>
+              يطبع ويعلق في مدخل ومخرج المنشأة: يمسحه الموظف فيتعرف النظام على حالته تلقائياً؛ إذا كان خارج العمل يسجل له <strong>حضور</strong>، وإذا كان مسجلاً دخول يسجل له <strong>انصراف</strong> فوراً دون الحاجة لكودين منفصلين!
+            </p>
+            <div className="asas-qr-box" style={{borderColor:'#b59045',padding:10}}>
+              <QRCodeSVG value={autoUrl} size={220} level="M" includeMargin/>
+            </div>
+            <span className="asas-badge" style={{background:'#b59045',color:'#fff',marginTop:6}}>رمز موحد تلقائي دائم ومستمر</span>
+            <div className="asas-actions" style={{justifyContent:'center',marginTop:8,flexWrap:'wrap',gap:6}}>
+              <a className="asas-btn primary" href={autoUrl} target="_blank" rel="noreferrer"><Smartphone size={14}/>فتح صفحة التحضير التلقائية</a>
+              <a className="asas-btn" href={autoHtml} target="_blank" rel="noreferrer"><Smartphone size={14}/>HTML للآيفون</a>
+              <Button type="button" onClick={()=>{navigator.clipboard?.writeText(autoUrl);setNotice('تم نسخ رابط كود الحضور التلقائي الموحد');}}>نسخ الرابط</Button>
+            </div>
+          </div>
           {/* Check-In QR Card */}
           <div className="asas-qr-card enter">
             <div className="asas-qr-badge">كود الدخول والعودة المعتمد الدائم</div>
@@ -356,16 +376,25 @@ function Employee({user,logout}){
  async function act(action){
   setBusy(true);setError('');
   try{
+   let currentToken = token;
+   if(!currentToken){
+    try{
+     const qrData = await api(`/attendance/active-qr?action=${action==='auto'?'':action}`);
+     if(qrData?.token) currentToken = qrData.token;
+    }catch(err){}
+   }
+   if(!currentToken) throw new Error('يرجى مسح رمز QR الخاص بالشركة أو النقر على الرابط المعتمد');
    const p=await new Promise((resolve,reject)=>{if(!navigator.geolocation)return reject(new Error('الموقع غير متاح'));navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:20000,maximumAge:0});});
    const fix={latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,captured_at:new Date(p.timestamp).toISOString()};
    const device_id=getDeviceId();
-   const r=await api('/attendance/action','POST',{action,token,request_id:crypto.randomUUID(),device_id,fix});
-   setMessage(r.message||'أنت مسجل بالفعل');
+   const r=await api('/attendance/action','POST',{action,token:currentToken,request_id:crypto.randomUUID(),device_id,fix});
+   setMessage(r.message||'تم توثيق الحضور بنجاح');
    await load();
   }catch(e){setError(e.message);}finally{setBusy(false);}
  }
 
  const todayRecord = data?.records?.[0];
+ const isInside = todayRecord?.state === 'inside';
 
  return <div className="asas-app"><main className="asas-employee">
   <div className="asas-heading"><Brand/><Button onClick={logout} icon={LogOut}>خروج</Button></div>
@@ -397,6 +426,20 @@ function Employee({user,logout}){
     {todayRecord&&<Badge state={todayRecord.state}/>}
    </div>
    <div className="asas-card-body">
+    {/* Automatic Status Banner */}
+    <div style={{background: isInside ? '#edf7ed' : '#faf6ee', border: `1px solid ${isInside ? '#bfe5bf' : '#ebdcc0'}`, padding: '12px 16px', borderRadius: 10, marginBottom: 14, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8}}>
+      <div>
+        <span style={{fontSize:12, color:'#736d65', display:'block'}}>حالتك الحالية حسب النظام:</span>
+        <strong style={{fontSize:15, color: isInside ? '#1e7e34' : '#775b24', display:'flex', alignItems:'center', gap:6}}>
+          {isInside ? <CheckCircle2 size={16}/> : <AlertCircle size={16}/>}
+          {isInside ? 'داخل موقع العمل (حضور مفتوح)' : (todayRecord?.last_out ? 'تم تسجيل الانصراف وإنهاء الدوام' : 'خارج موقع العمل (جاهز لتسجيل الحضور)')}
+        </strong>
+      </div>
+      <span className="asas-badge" style={{background: isInside ? '#c3e6cb' : '#ffeeba', color: isInside ? '#155724' : '#856404', fontWeight:700}}>
+        الإجراء التلقائي: {isInside ? 'تسجيل الانصراف' : 'تسجيل الحضور'}
+      </span>
+    </div>
+
     <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:14}}>
      <div style={{background:'#fcfbf7',border:'1px solid #d2c5ac',padding:12,borderRadius:8,textAlign:'center'}}>
       <div style={{fontSize:12,color:'#736d65',marginBottom:4}}>وقت أول دخول (حضور)</div>
@@ -414,16 +457,41 @@ function Employee({user,logout}){
       <small style={{color:'#736d65',fontSize:11}}>توقيت صنعاء (محدّث لحظياً)</small>
      </div>
     </div>
-    <p className="asas-muted" style={{fontSize:12}}>امسح رمز الشركة بكاميرا هاتفك لفتح هذه الصفحة، ثم اضغط الزر المناسب لتسجيل الحضور أو الانصراف مع توثيق الوقت فوراً.</p>
-    {!token&&<p className="asas-help">لم يصل رمز صالح. افتح رابط QR الخاص بالشركة مجدداً.</p>}
-    <div className="asas-actions">
-     <Button variant="primary" disabled={!token||busy} onClick={()=>act('enter')}>
-      <LogIn size={15}/>
-      تسجيل الدخول / العودة الآن {liveTime?`(${liveTime})`:''}
+
+    {/* Primary Smart Auto-Button */}
+    <Button
+      variant="primary"
+      disabled={busy}
+      onClick={()=>act('auto')}
+      style={{
+        width:'100%',
+        padding:'16px 20px',
+        fontSize:16,
+        fontWeight:700,
+        marginBottom:12,
+        background: isInside ? '#842029' : '#198754',
+        borderColor: isInside ? '#701a22' : '#146c43',
+        color:'#fff',
+        display:'flex',
+        justifyContent:'center',
+        alignItems:'center',
+        gap:10
+      }}
+    >
+      {isInside ? <LogOut size={18}/> : <LogIn size={18}/>}
+      {isInside
+        ? `⚡ تسجيل الانصراف التلقائي الآن ${liveTime?`(${liveTime})`:''}`
+        : `⚡ تسجيل الحضور التلقائي الآن ${liveTime?`(${liveTime})`:''}`}
+    </Button>
+
+    <div className="asas-actions" style={{justifyContent:'center',gap:8}}>
+     <Button disabled={busy} onClick={()=>act('enter')} style={{fontSize:12}}>
+      <LogIn size={13}/>
+      دخول يدوي
      </Button>
-     <Button disabled={!token||busy} onClick={()=>act('exit')}>
-      <LogOut size={15}/>
-      تسجيل الخروج والانصراف الآن {liveTime?`(${liveTime})`:''}
+     <Button disabled={busy} onClick={()=>act('exit')} style={{fontSize:12}}>
+      <LogOut size={13}/>
+      انصراف يدوي
      </Button>
     </div>
    </div>

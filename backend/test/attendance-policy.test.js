@@ -18,6 +18,9 @@ test('QR is permanent and rejects tampered, revoked, and other-branch codes',()=
  assert.equal(verifyQr(exitToken, branch, secret, before, 'exit'), true);
  assert.throws(() => verifyQr(enterToken, branch, secret, before, 'exit'), err => err.code === 'QR_ACTION_MISMATCH');
  assert.throws(() => verifyQr(exitToken, branch, secret, before, 'enter'), err => err.code === 'QR_ACTION_MISMATCH');
+ assert.equal(verifyQr(enterToken, branch, secret, before, 'auto'), true);
+ assert.equal(verifyQr(exitToken, branch, secret, before, 'auto'), true);
+ assert.equal(verifyQr(token, branch, secret, before, 'auto'), true);
 });
 test('GPS requires fresh finite coordinates and respects accuracy bounds',()=>{
  assert.equal(classifyFix(fix(),branch,now).state,'inside');

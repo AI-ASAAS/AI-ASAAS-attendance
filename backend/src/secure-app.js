@@ -220,6 +220,13 @@ app.get('/api/admin/branches/:id/qr',admin,allow('qr.manage'),wrap(async(req,res
   branch_id:branch.id,
   token:tokenGeneral,
   url:`${base}/attend?branch=${branch.id}#qr=${tokenGeneral}`,
+  auto:{
+   token:tokenGeneral,
+   action:'auto',
+   label:'رمز الحضور والانصراف الموحد التلقائي',
+   url:`${base}/attend?branch=${branch.id}#qr=${tokenGeneral}`,
+   html_url:`${base}/attend.html?branch=${branch.id}#qr=${tokenGeneral}`
+  },
   enter:{
    token:tokenEnter,
    action:'enter',
@@ -257,7 +264,56 @@ app.put('/api/admin/shifts/:id',admin,allow('shifts.write'),wrap(async(req,res)=
 }));
 app.get('/api/admin/accounts',admin,allow('employees.read'),wrap(async(req,res)=>{
  const broad=['super_admin','hr_admin'].includes(req.user.role);
- respond(res,(await db.query('SELECT id,identifier,name,email,phone,bound_device_id,bound_device_name,device_bound_at,role,branch_id,shift_id,department_id,permissions,active FROM accounts WHERE ($1::boolean OR branch_id=$2) ORDER BY name LIMIT 1000',[broad,req.user.branch_id])).rows);
+ const rows=(await db.query(`
+   SELECT 
+     a.id, a.identifier, a.name, a.email, a.phone, a.bound_device_id, a.bound_device_name, a.device_bound_at,
+     a.role, a.branch_id, a.shift_id, a.department_id, a.permissions, a.active,
+     b.name AS branch_name,
+     s.name AS shift_name,
+     dr.state AS today_state,
+     dr.first_in AS today_first_in,
+     dr.last_out AS today_last_out,
+     dr.late_minutes AS today_late_minutes,
+     lr.id AS active_leave_id
+   FROM accounts a
+   LEFT JOIN branches b ON b.id = a.branch_id
+   LEFT JOIN shifts s ON s.id = a.shift_id
+   LEFT JOIN LATERAL (
+     SELECT state, first_in, last_out, late_minutes
+     FROM duty_records
+     WHERE employee_id = a.id AND (shift_start AT TIME ZONE 'Asia/Aden')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Aden')::date
+     ORDER BY shift_start DESC LIMIT 1
+   ) dr ON TRUE
+   LEFT JOIN LATERAL (
+     SELECT id
+     FROM leave_requests
+     WHERE employee_id = a.id AND status = 'approved' AND (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Aden')::date BETWEEN from_date AND to_date
+     LIMIT 1
+   ) lr ON TRUE
+   WHERE ($1::boolean OR a.branch_id=$2)
+   ORDER BY a.name LIMIT 1000
+ `, [broad, req.user.branch_id])).rows;
+
+ const accounts = rows.map(r => {
+   let attendance_status = 'absent';
+   let attendance_label = 'لم يسجل حضور اليوم';
+   if (r.active_leave_id) {
+     attendance_status = 'leave';
+     attendance_label = 'في إجازة رسمية';
+   } else if (r.today_state === 'inside') {
+     attendance_status = 'inside';
+     attendance_label = 'حاضر الآن';
+   } else if (r.today_state === 'outside' || r.today_state === 'closed') {
+     attendance_status = 'outside';
+     attendance_label = 'تم الانصراف';
+   }
+   return {
+     ...r,
+     attendance_status,
+     attendance_label
+   };
+ });
+ respond(res, accounts);
 }));
 app.post('/api/admin/accounts',admin,allow('employees.write'),wrap(async(req,res)=>{
  const b=req.body,role=b.role||'employee';if(!['employee','viewer','hr_admin','branch_manager','super_admin'].includes(role))error('VALIDATION','دور غير صالح');
@@ -334,10 +390,10 @@ app.get('/api/attendance/active-qr',employee,wrap(async(req,res)=>{
  const now=new Date();
  const action=req.query.action==='exit'?'exit':(req.query.action==='enter'?'enter':null);
  const token=policy.issueQr(branch,process.env.QR_SECRET,now,action);
- respond(res,{token,branch_id:branch.id,branch_name:branch.name,latitude:Number(branch.latitude),longitude:Number(branch.longitude),entry_radius:branch.entry_radius,action:action||'both'});
+ respond(res,{token,branch_id:branch.id,branch_name:branch.name,latitude:Number(branch.latitude),longitude:Number(branch.longitude),entry_radius:branch.entry_radius,action:action||'auto'});
 }));
 app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
- const b=req.body;if(!['enter','exit','location'].includes(b.action))error('VALIDATION','إجراء غير صالح');
+ const b=req.body;if(!['enter','exit','location','auto'].includes(b.action))error('VALIDATION','إجراء غير صالح');
  b.request_id=uuid(b.request_id);
  if(req.user.role==='employee'&&req.user.bound_device_id){
   const actionDev=b.device_id||req.headers['x-device-id'];
@@ -353,12 +409,19 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
   if(replay.rows.length)return {duplicate:true};
   const now=new Date();
   let record=(await c.query("SELECT * FROM duty_records WHERE employee_id=$1 ORDER BY shift_start DESC LIMIT 1 FOR UPDATE",[req.user.id])).rows[0];
+
+  // Smart automatic action resolution based on employee state
+  const isAuto = b.action === 'auto';
+  if(isAuto){
+   b.action = (record && record.state === 'inside') ? 'exit' : 'enter';
+  }
+
   const branchId=record?.state==='inside'?record.branch_id:(req.user.branch_id||1);
   const branch=(await c.query('SELECT * FROM branches WHERE id=$1 FOR SHARE',[branchId])).rows[0];
   if(!branch)error('NO_BRANCH','لم يتم تعيين موقع لك');
   const location=policy.classifyFix(b.fix,branch,now);
   if(b.action!=='location'){
-   policy.verifyQr(b.token,branch,process.env.QR_SECRET,now,b.action);
+   policy.verifyQr(b.token,branch,process.env.QR_SECRET,now,isAuto?'auto':b.action);
    const dist=Math.round(location.distance);
    const maxAccuracy=Math.max(Number(branch.max_accuracy||200),250);
    if(b.fix.accuracy>maxAccuracy){
@@ -375,7 +438,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    location.state='inside';
   }
   if(b.action==='enter'){
-   if(record?.state==='inside')return {already_inside:true,record,message:'أنت مسجل حضور بالفعل ومناوبتك مفتوحة'};
+   if(record?.state==='inside')return {already_inside:true,record,action:'enter',message:'أنت مسجل حضور بالفعل ومناوبتك مفتوحة'};
    let shiftId=req.user.shift_id;
    if(!shiftId){
     const def=(await c.query('SELECT id FROM shifts ORDER BY id ASC LIMIT 1')).rows[0];
@@ -393,12 +456,12 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
     const late=Math.max(0,Math.floor((now-window.start)/60000)-shift.grace_minutes);
     record=(await c.query("INSERT INTO duty_records(employee_id,branch_id,shift_id,shift_start,shift_end,first_in,state,close_policy,deduct_away,late_minutes,last_seen) VALUES($1,$2,$3,$4,$5,$6,'inside',$7,$8,$9,$6) RETURNING *",[req.user.id,branch.id,shift.id,window.start,window.end,now,shift.close_policy,shift.deduct_away,late])).rows[0];
    }
-   await event(c,req.user,record,returning?'return':'enter',b,{location,fix:b.fix,branch_snapshot:branch});
+   await event(c,req.user,record,returning?'return':'enter',b,{location,fix:b.fix,branch_snapshot:branch,is_auto:isAuto});
    if(!returning&&req.user.email){
     const timeStr=new Date(now).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'});
     notifications.notifyCheckIn(req.user,branch.name,timeStr).catch(err=>console.error('[Notification Error] Check-in email failed:',err.message));
    }
-   return {record,message:returning?'تم تسجيل عودتك':'تم تسجيل حضورك'};
+   return {record,action:'enter',automatic:isAuto,message:returning?(isAuto?'تم تسجيل عودتك تلقائياً':'تم تسجيل عودتك'):(isAuto?'تم تسجيل حضورك تلقائياً بحسب حالتك':'تم تسجيل حضورك')};
   }
   if(!record||record.state!=='inside')error('NOT_INSIDE','لا يوجد حضور مفتوح لتسجيل الخروج منه. يرجى تسجيل الدخول أولاً.',409);
   let automatic=false,candidate=null;
@@ -415,13 +478,13 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
   if(b.action==='exit'||automatic){
    const reason=automatic?'geofence':'manual';
    record=(await c.query("UPDATE duty_records SET state='outside',last_out=$1,away_started=$1,exit_reason=$2,exit_candidate=NULL,last_seen=$1,gps_state=$3 WHERE id=$4 RETURNING *",[now,reason,location.state,record.id])).rows[0];
-   await event(c,req.user,record,automatic?'auto_exit':'exit',b,{location,fix:b.fix,branch_snapshot:branch});
+   await event(c,req.user,record,automatic?'auto_exit':'exit',b,{location,fix:b.fix,branch_snapshot:branch,is_auto:isAuto});
    if(req.user.email){
     const timeStr=new Date(now).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'});
     const workingMinutes=countedMinutes(record);
     notifications.notifyCheckOut(req.user,branch.name,timeStr,workingMinutes).catch(err=>console.error('[Notification Error] Check-out email failed:',err.message));
    }
-   return {record,automatic:!!automatic,message:automatic?'تم تسجيل خروجك التلقائي بنجاح لمغادرتك نطاق الفرع':'تم تسجيل الخروج'};
+   return {record,action:'exit',automatic:automatic||isAuto,message:automatic?'تم تسجيل خروجك التلقائي بنجاح لمغادرتك نطاق الفرع':(isAuto?'تم تسجيل انصرافك تلقائياً بحسب حالتك':'تم تسجيل الخروج')};
   }
   await event(c,req.user,record,'location',b,{location,accuracy:b.fix.accuracy,revision:branch.location_revision});
   return {record:{...record,gps_state:location.state,last_seen:now},pending_exit:candidate?.count||0};
@@ -431,7 +494,21 @@ app.get('/api/attendance/me',employee,wrap(async(req,res)=>{
  await closeScheduled();
  const records=(await db.query('SELECT * FROM duty_records WHERE employee_id=$1 ORDER BY shift_start DESC LIMIT 31',[req.user.id])).rows;
  const shift=(await db.query('SELECT * FROM shifts WHERE id=$1',[req.user.shift_id])).rows[0]||null;
- respond(res,{records,shift,account:safeAccount(req.user)});
+ const todayRecord = records.find(r => {
+   try {
+     const recDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden' }).format(new Date(r.shift_start));
+     const nowDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden' }).format(new Date());
+     return recDate === nowDate;
+   } catch { return false; }
+ }) || records[0] || null;
+ const isInside = todayRecord && todayRecord.state === 'inside';
+ const automatic_status = {
+   is_inside: Boolean(isInside),
+   suggested_action: isInside ? 'exit' : 'enter',
+   status_label: isInside ? 'حاضر داخل موقع العمل' : (todayRecord?.last_out ? 'تم تسجيل الانصراف' : 'خارج موقع العمل (لم تسجل حضور بعد)'),
+   next_action_label: isInside ? 'تسجيل الانصراف' : 'تسجيل الحضور'
+ };
+ respond(res,{records,shift,account:safeAccount(req.user),automatic_status});
 }));
 // Offline evidence is never promoted directly to approved attendance.
 app.post('/api/attendance/offline',employee,wrap(async(req,res)=>{
