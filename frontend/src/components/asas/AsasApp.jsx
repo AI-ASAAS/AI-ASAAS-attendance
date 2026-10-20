@@ -1,14 +1,18 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  LayoutDashboard, Users, MapPin, QrCode, Clock3, CalendarDays, FileText, File,
-  ShieldCheck, LogOut, Menu, X, Plus, RefreshCw, Download, ArrowUpLeft, Search,
-  Building2, Signal, CheckCircle2, AlertCircle, Printer, Settings2, LogIn,
-  Smartphone, Mail, Phone, KeyRound, ShieldAlert, Unlock, Camera, Trash2, Bell,
-  UserCircle, Edit3, Save, Send, Volume2, Shield, Sparkles, Check
-} from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getDeviceId, getDeviceName } from '../../utils/device';
+import {
+  Ambient,
+  Glass,
+  Card,
+  Icon,
+  Swash,
+  Stretch,
+  useTheme,
+  AssistantWidget,
+  formatNumber
+} from '../../asaas-ui';
 
 // Luxury Brand Avatar Presets
 const AVATAR_PRESETS = [
@@ -126,17 +130,19 @@ const date = v => {
 
 const states = { inside: 'حضور مفتوح', outside: 'تم الخروج', closed: 'مغلق', pending: 'قيد المراجعة', approved: 'مقبولة', rejected: 'مرفوضة' };
 const roles = { super_admin: 'مدير النظام التنفيذي', hr_admin: 'الموارد البشرية', branch_manager: 'مدير الفرع', viewer: 'للعرض فقط', employee: 'موظف' };
+
+// UNIQUE ICON FOR EVERY TAB: dashboard, calendar, users, bell, mapPin, qrCode, clock, receipt, shieldCheck, settings
 const tabs = [
-  ['dashboard', 'نظرة عامة', LayoutDashboard],
-  ['records', 'الحضور والانصراف', CalendarDays],
-  ['accounts', 'الموظفون والأجهزة', Users],
-  ['announcements', 'التعميمات والإشعارات', Bell],
-  ['branches', 'المواقع والفروع', MapPin],
-  ['qr', 'رموز QR المعتمدة', QrCode],
-  ['shifts', 'الدوام والاحتساب', Clock3],
-  ['leave', 'الإجازات', FileText],
-  ['audit', 'سجل العمليات', ShieldCheck],
-  ['settings', 'إعدادات النظام', Settings2]
+  ['dashboard', 'نظرة عامة', 'dashboard'],
+  ['records', 'الحضور والانصراف', 'calendar'],
+  ['accounts', 'الموظفون والأجهزة', 'users'],
+  ['announcements', 'التعميمات الرسمية', 'bell'],
+  ['branches', 'المواقع والفروع', 'mapPin'],
+  ['qr', 'رموز QR المعتمدة', 'qrCode'],
+  ['shifts', 'الدوام والاحتساب', 'clock'],
+  ['leave', 'طلبات الإجازات', 'receipt'],
+  ['audit', 'الرقابة وسجل العمليات', 'shieldCheck'],
+  ['settings', 'إعدادات النظام', 'settings']
 ];
 
 const permissions = {
@@ -162,31 +168,31 @@ const defaults = {
 function Brand() {
   return (
     <div className="asas-logo">
-      <span className="asas-mark">
-        <img src="/brand/asas-logo.png" alt="شعار أساس" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-      </span>
+      <div className="asas-mark" />
       <div>
         <strong>أساس</strong>
-        <small>نظام إدارة الحضور الذكي</small>
+        <small>نظام الحضور الذكي</small>
       </div>
     </div>
   );
 }
 
-function Button({ children, icon: Icon, variant = '', ...props }) {
-  return <button className={`asas-btn ${variant}`} {...props}>{Icon && <Icon size={16} />}{children}</button>;
-}
-
-function Badge({ state }) {
-  return <span className={`asas-badge ${state}`}>{states[state] || state}</span>;
-}
-
 function Empty({ children = 'لا توجد سجلات بعد' }) {
-  return <div className="asas-empty"><FileText size={32} />{children}</div>;
+  return (
+    <div className="asas-empty">
+      <Icon name="file" />
+      <p>{children}</p>
+    </div>
+  );
 }
 
 function Field({ label, children, ...props }) {
-  return <label className="asas-label">{label}{children || <input className="asas-input" {...props} />}</label>;
+  return (
+    <label className="asas-label">
+      <span>{label}</span>
+      {children || <input className="asas-input" {...props} />}
+    </label>
+  );
 }
 
 function Records({ rows = [], onEdit, canEdit }) {
@@ -216,36 +222,41 @@ function Records({ rows = [], onEdit, canEdit }) {
 
             return (
               <tr key={r.id || ('rec-' + idx)}>
-                <td><strong>{r.name}</strong><small>{r.identifier}</small></td>
+                <td>
+                  <strong>{r.name}</strong>
+                  <small style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{r.identifier}</small>
+                </td>
                 <td>{r.branch_name}</td>
                 <td>{date(r.shift_start)}</td>
-                <td><span style={{ color: '#2d6a4f', fontWeight: 600 }}>{time(r.first_in)}</span></td>
-                <td><span style={{ color: isInside ? '#856404' : '#231f20' }}>{time(r.last_out)}</span></td>
+                <td><span style={{ color: 'var(--paid)', fontWeight: 600 }}>{time(r.first_in)}</span></td>
+                <td><span style={{ color: isInside ? 'var(--partial)' : 'var(--text)' }}>{time(r.last_out)}</span></td>
                 <td>
-                  <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`} style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    background: isInside ? (isLate ? '#fff3cd' : '#eaf4ee') : (isEarly ? '#ffe8cc' : '#f5f3f0'),
-                    color: isInside ? (isLate ? '#856404' : '#2d6a4f') : (isEarly ? '#d9480f' : '#474143'),
-                    fontWeight: 600
-                  }}>
-                    {isInside ? (isLate ? <Clock3 size={12} /> : <CheckCircle2 size={12} />) : <LogOut size={12} />}
+                  <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`}>
+                    <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : 'pause'} style={{ width: 13, height: 13 }} />
                     {statusLabel}
                   </span>
                 </td>
                 <td>
                   <span style={{
                     fontSize: 12,
-                    color: isInside ? '#736d65' : (exitReasonLabel.includes('مبكر') ? '#c92a2a' : (exitReasonLabel.includes('إضافي') ? '#1e7e34' : '#2b8a3e')),
-                    fontWeight: exitReasonLabel.includes('مبكر') || exitReasonLabel.includes('إضافي') ? 600 : 500,
-                    display: 'inline-block'
+                    color: isInside ? 'var(--text-3)' : (exitReasonLabel.includes('مبكر') ? 'var(--unpaid)' : 'var(--paid)'),
+                    fontWeight: 600
                   }}>
                     {exitReasonLabel}
                   </span>
                 </td>
-                <td>{r.counted_minutes == null ? 'مفتوح' : `${r.counted_minutes} دقيقة`}<small>{r.deduct_away ? 'مع خصم المغادرة' : 'دون خصم المغادرة'}</small></td>
-                {canEdit && <td><Button onClick={() => onEdit(r)}>تصحيح</Button></td>}
+                <td>
+                  {r.counted_minutes == null ? 'مفتوح' : `${formatNumber(r.counted_minutes)} دقيقة`}
+                  <small>{r.deduct_away ? 'مع خصم المغادرة' : 'دون خصم المغادرة'}</small>
+                </td>
+                {canEdit && (
+                  <td>
+                    <button className="asas-btn sm" onClick={() => onEdit(r)}>
+                      <Icon name="edit" />
+                      تصحيح
+                    </button>
+                  </td>
+                )}
               </tr>
             );
           })}
@@ -256,36 +267,38 @@ function Records({ rows = [], onEdit, canEdit }) {
 }
 
 // Announcements Dialog
-function AnnouncementsModal({ announcements, onClose, onRefresh }) {
+function AnnouncementsModal({ announcements, onClose }) {
   return (
     <div className="asas-modal-backdrop" onClick={onClose}>
       <section className="asas-modal" style={{ maxWidth: 620 }} onClick={e => e.stopPropagation()}>
-        <div className="asas-card-head">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Bell size={20} style={{ color: 'var(--gold)' }} />
+        <div className="asas-modal-head">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="bell" style={{ width: 22, height: 22, color: 'var(--accent)' }} />
             <h2 style={{ fontSize: 18, margin: 0 }}>التعميمات والإشعارات الرسمية</h2>
           </div>
-          <Button icon={X} onClick={onClose} aria-label="إغلاق" />
+          <button className="asas-btn sm" onClick={onClose} aria-label="إغلاق">
+            <Icon name="close" />
+          </button>
         </div>
-        <div style={{ maxHeight: '65vh', overflowY: 'auto', padding: 18 }}>
+        <div className="asas-modal-body">
           {announcements.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--muted)' }}>
-              <Bell size={36} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+            <div style={{ textAlign: 'center', padding: '36px 10px', color: 'var(--text-3)' }}>
+              <Icon name="bell" style={{ width: 40, height: 40, margin: '0 auto 10px', opacity: 0.3 }} />
               <p>لا توجد تعميمات جديدة حالياً.</p>
             </div>
           ) : (
             announcements.map(a => (
-              <article key={a.id} className={`asas-announcement-card ${a.priority || 'normal'}`}>
+              <article key={a.id} className={`asas-announcement-card ${a.priority || 'normal'}`} style={{ marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--ink)' }}>{a.title}</h3>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text)' }}>{a.title}</h3>
                   <span className={`asas-badge ${a.priority || 'normal'}`}>
                     {a.priority === 'urgent' ? 'عاجل جداً' : a.priority === 'important' ? 'هام' : 'إشعار رسمي'}
                   </span>
                 </div>
-                <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#3f3b37', whiteSpace: 'pre-line', margin: '8px 0' }}>
+                <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)', whiteSpace: 'pre-line', margin: '8px 0' }}>
                   {a.content}
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, fontSize: 11.5, color: 'var(--muted)', borderTop: '1px solid #f0ecdf', paddingTop: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, fontSize: 11.5, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 8 }}>
                   <span>المرسل: <strong>{a.sender_name || 'الإدارة'}</strong></span>
                   <time>{date(a.created_at)} · {time(a.created_at)}</time>
                 </div>
@@ -294,7 +307,10 @@ function AnnouncementsModal({ announcements, onClose, onRefresh }) {
           )}
         </div>
         <div className="asas-modal-footer">
-          <Button variant="primary" onClick={onClose}>إغلاق</Button>
+          <button className="asas-btn primary" onClick={onClose}>
+            <Icon name="check" />
+            حسناً
+          </button>
         </div>
       </section>
     </div>
@@ -360,19 +376,20 @@ function ProfileModal({ user, onClose, onUpdated }) {
   return (
     <div className="asas-modal-backdrop" onClick={onClose}>
       <section className="asas-modal" style={{ maxWidth: 540 }} onClick={e => e.stopPropagation()}>
-        <div className="asas-card-head">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <KeyRound size={20} style={{ color: 'var(--gold)' }} />
-            <h2 style={{ fontSize: 18, margin: 0 }}>الملف الشخصي وإعدادات الأمان</h2>
+        <div className="asas-modal-head">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="key" style={{ width: 20, height: 20, color: 'var(--accent)' }} />
+            <h2 style={{ fontSize: 18, margin: 0 }}>الملف الشخصي والأمان</h2>
           </div>
-          <Button icon={X} onClick={onClose} aria-label="إغلاق" />
+          <button className="asas-btn sm" onClick={onClose} aria-label="إغلاق">
+            <Icon name="close" />
+          </button>
         </div>
 
-        <form onSubmit={submit} className="asas-form" style={{ padding: 18 }}>
-          {msg && <div className="asas-notice">{msg}</div>}
-          {err && <div className="asas-notice error">{err}</div>}
+        <form onSubmit={submit} className="asas-modal-body">
+          {msg && <div className="asas-notice" style={{ marginBottom: 12 }}>{msg}</div>}
+          {err && <div className="asas-notice error" style={{ marginBottom: 12 }}>{err}</div>}
 
-          {/* Avatar Selector */}
           <div>
             <label className="asas-label">اختر مظهر الأفاتار الخاص بك:</label>
             <div className="asas-avatar-grid">
@@ -390,27 +407,29 @@ function ProfileModal({ user, onClose, onUpdated }) {
               ))}
             </div>
             <Field
-              label="أو رابط صورة خارجية مخصص (URL)"
+              label="أو رابط صورة شخصية خارجي (URL)"
               placeholder="https://..."
               value={customAvatarUrl}
               onChange={e => setCustomAvatarUrl(e.target.value)}
             />
           </div>
 
-          <Field
-            label="رقم الهاتف / الجوال"
-            type="tel"
-            placeholder="+967 77xxxxxxx"
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-          />
+          <div style={{ marginTop: 14 }}>
+            <Field
+              label="رقم الهاتف / الجوال"
+              type="tel"
+              placeholder="+967 77xxxxxxx"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+            />
+          </div>
 
-          <div style={{ borderTop: '1px solid #ebdcc0', paddingTop: 14, marginTop: 10 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Shield size={16} style={{ color: 'var(--gold)' }} />
+          <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: 16, marginTop: 16 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="key" style={{ width: 16, height: 16, color: 'var(--accent)' }} />
               تغيير كلمة المرور
             </div>
-            <p className="asas-muted" style={{ fontSize: 11.5, marginBottom: 10 }}>اتركها فارغة إذا كنت لا ترغب بتغيير كلمة المرور.</p>
+            <p className="asas-muted" style={{ fontSize: 11.5, marginBottom: 10 }}>اترك الحقول فارغة إذا كنت لا ترغب بتغيير كلمة المرور.</p>
             <Field
               label="كلمة المرور الحالية"
               type="password"
@@ -418,7 +437,7 @@ function ProfileModal({ user, onClose, onUpdated }) {
               value={currentPassword}
               onChange={e => setCurrentPassword(e.target.value)}
             />
-            <div className="asas-form-grid">
+            <div className="asas-form-grid" style={{ marginTop: 10 }}>
               <Field
                 label="كلمة المرور الجديدة (12 حرفاً على الأقل)"
                 type="password"
@@ -435,14 +454,15 @@ function ProfileModal({ user, onClose, onUpdated }) {
               />
             </div>
           </div>
-
-          <div className="asas-modal-footer">
-            <Button type="button" onClick={onClose}>إلغاء</Button>
-            <Button variant="primary" type="submit" disabled={busy}>
-              {busy ? 'جارٍ الحفظ…' : 'حفظ التحديثات'}
-            </Button>
-          </div>
         </form>
+
+        <div className="asas-modal-footer">
+          <button className="asas-btn" type="button" onClick={onClose}>إلغاء</button>
+          <button className="asas-btn primary" type="button" onClick={submit} disabled={busy}>
+            <Icon name="check" />
+            {busy ? 'جارٍ الحفظ…' : 'حفظ التحديثات'}
+          </button>
+        </div>
       </section>
     </div>
   );
@@ -463,18 +483,19 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div className="asas-app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 20 }}>
-          <div className="asas-card" style={{ maxWidth: 500, width: '100%', padding: 24, textAlign: 'center' }}>
+          <Glass style={{ maxWidth: 500, width: '100%', padding: 28, textAlign: 'center' }}>
             <Brand />
-            <h2 style={{ color: '#c92a2a', marginTop: 16 }}>حدث خطأ أثناء عرض الصفحة</h2>
+            <h2 style={{ color: 'var(--unpaid)', marginTop: 16 }}>حدث خطأ أثناء عرض الصفحة</h2>
             <p className="asas-muted" style={{ marginTop: 8 }}>
               {this.state.error?.message || 'تعذر استكمال العرض. تم تسجيل الخطأ لحمايتك.'}
             </p>
             <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <Button variant="primary" onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}>
-                🔄 إعادة تحميل الصفحة
-              </Button>
+              <button className="asas-btn primary" onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}>
+                <Icon name="refresh" />
+                إعادة تحميل الصفحة
+              </button>
             </div>
-          </div>
+          </Glass>
         </div>
       );
     }
@@ -483,6 +504,7 @@ class ErrorBoundary extends React.Component {
 }
 
 function AsasAppInner() {
+  const [theme, toggleTheme] = useTheme();
   const [user, setUser] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -650,7 +672,6 @@ function AsasAppInner() {
     }
 
     if (kind === 'accounts' && !item) {
-      // Calculate next sequential permanent employee ID (e.g., 001, 002, 003...)
       const accountsList = Array.isArray(data) ? data : [];
       const nextNum = accountsList.reduce((max, a) => {
         const n = parseInt(a.identifier, 10);
@@ -841,41 +862,82 @@ function AsasAppInner() {
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
-  if (boot) return <div className="asas-app"><Empty>جارٍ التحقق من الجلسة…</Empty></div>;
-  if (!user) return <Login onLogin={setUser} initialError={error} onRetry={() => checkAuth(true)} />;
-  if (user.role === 'employee') {
+  if (boot) {
     return (
-      <Employee
-        user={user}
-        logout={logout}
-        announcements={announcements}
-        onOpenAnnouncements={() => setShowAnnouncementsModal(true)}
-        onOpenProfile={() => setShowProfileModal(true)}
-      />
+      <div className="asas-app" style={{ display: 'grid', placeItems: 'center', height: '100vh' }}>
+        <Ambient />
+        <Glass style={{ padding: '32px 48px', textAlign: 'center' }}>
+          <Brand />
+          <p style={{ marginTop: 14, color: 'var(--text-2)' }}>جارٍ التحقق من الجلسة وسيادة النظام…</p>
+        </Glass>
+      </div>
     );
   }
 
-  const title = tabs.find(t => t[0] === tab)?.[1];
+  if (!user) {
+    return (
+      <>
+        <Ambient />
+        <Login onLogin={setUser} initialError={error} onRetry={() => checkAuth(true)} />
+      </>
+    );
+  }
+
+  if (user.role === 'employee') {
+    return (
+      <>
+        <Ambient />
+        <Employee
+          user={user}
+          logout={logout}
+          announcements={announcements}
+          onOpenAnnouncements={() => setShowAnnouncementsModal(true)}
+          onOpenProfile={() => setShowProfileModal(true)}
+        />
+        {showAnnouncementsModal && (
+          <AnnouncementsModal
+            announcements={announcements}
+            onClose={() => setShowAnnouncementsModal(false)}
+          />
+        )}
+        {showProfileModal && (
+          <ProfileModal
+            user={user}
+            onClose={() => setShowProfileModal(false)}
+            onUpdated={(u) => setUser(u)}
+          />
+        )}
+      </>
+    );
+  }
+
+  const currentTabInfo = tabs.find(t => t[0] === tab);
+  const title = currentTabInfo?.[1] || '';
   const rows = Array.isArray(data) ? data : [];
   const set = (k, value) => setForm(f => ({ ...f, [k]: value }));
 
   return (
     <div className="asas-app">
-      {open && <div className="asas-modal-backdrop" style={{ background: 'rgba(35,31,32,0.4)', zIndex: 25 }} onClick={() => setOpen(false)} />}
+      <Ambient />
+
+      {open && <div className="asas-modal-backdrop" style={{ zIndex: 25 }} onClick={() => setOpen(false)} />}
+
+      {/* Sidebar with Liquid Glass and Unique Icons */}
       <aside className={`asas-sidebar ${open ? 'open' : ''}`}>
         <Brand />
-        <p className="asas-nav-label">مساحة الإدارة التنفيذية</p>
+        <p className="asas-nav-label">مساحة الإدارة والقيادة</p>
         <nav className="asas-nav">
-          {tabs.filter(([key]) => key !== 'accounts' || can('employees.read')).filter(([key]) => key !== 'audit' || can('audit.read')).map(([key, label, Icon]) => (
+          {tabs.filter(([key]) => key !== 'accounts' || can('employees.read')).filter(([key]) => key !== 'audit' || can('audit.read')).map(([key, label, iconName]) => (
             <button className={tab === key ? 'active' : ''} key={key} onClick={() => { setTab(key); setOpen(false); setData(null); setNotice(''); setSearch(''); }}>
-              <Icon size={17} />
-              {label}
+              <Icon name={iconName} />
+              <span>{label}</span>
               {key === 'announcements' && announcements.length > 0 && (
                 <span className="asas-badge urgent" style={{ marginRight: 'auto', fontSize: 10, padding: '1px 6px' }}>{announcements.length}</span>
               )}
             </button>
           ))}
         </nav>
+
         <div className="asas-sidebar-foot">
           <div className="asas-profile" onClick={() => setShowProfileModal(true)} style={{ cursor: 'pointer' }} title="انقر لتعديل ملفك الشخصي">
             <UserAvatar user={user} size="md" />
@@ -884,48 +946,67 @@ function AsasAppInner() {
               <p>{roles[user.role]}</p>
             </div>
           </div>
-          <Button icon={LogOut} onClick={logout}>تسجيل الخروج</Button>
+          <button className="asas-btn sm" onClick={logout} style={{ width: '100%', justifyContent: 'center' }}>
+            <Icon name="logout" />
+            تسجيل الخروج
+          </button>
         </div>
       </aside>
 
+      {/* Main Workspace */}
       <div className="asas-main">
         <header className="asas-topbar">
-          <div className="asas-actions" style={{ alignItems: 'center', gap: 12 }}>
-            <button className="asas-btn asas-menu" aria-label="القائمة" onClick={() => setOpen(!open)}><Menu size={18} /></button>
-            <span>مساحة العمل / <strong>{title}</strong></span>
+          <div className="asas-topbar-title">
+            <button className="asas-btn sm" style={{ padding: '0 8px' }} onClick={() => setOpen(!open)} aria-label="القائمة">
+              <Icon name="grid" />
+            </button>
+            <span>لوحة القيادة / <strong><Swash>{title}</Swash></strong></span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+
+          <div className="asas-topbar-controls">
+            <div className="asas-clock-pill">
+              <Icon name="clock" style={{ width: 15, height: 15, color: 'var(--accent)' }} />
+              <span>صنعاء: <strong>{liveTime || '—'}</strong></span>
+            </div>
+
             <button className="asas-bell-btn" onClick={() => setShowAnnouncementsModal(true)} aria-label="التعميمات">
-              <Bell size={18} />
+              <Icon name="bell" />
               {announcements.length > 0 && <span className="asas-bell-badge">{announcements.length}</span>}
             </button>
+
+            <button className="asas-theme-btn" onClick={toggleTheme} aria-label="تبديل مظهر النظام">
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+            </button>
+
             <div style={{ cursor: 'pointer' }} onClick={() => setShowProfileModal(true)} title="الملف الشخصي">
               <UserAvatar user={user} size="sm" />
             </div>
-            <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-              {new Date().toLocaleDateString('ar-YE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Aden' })} · {liveTime || '—'} · توقيت صنعاء
-            </span>
           </div>
         </header>
 
         <main className="asas-content">
           <div className="asas-heading">
             <div>
-              <p className="asas-eyebrow">أساس · لوحة القيادة التنفيذية</p>
-              <h1>{title}</h1>
-              <p className="asas-muted">إدارة فورية، حوكمة مؤكدة، وقاعدة بيانات لحظية متصلة.</p>
+              <p className="asas-eyebrow">منظومة أساس السيادية</p>
+              <h1><Swash>{title}</Swash></h1>
+              <p className="asas-muted">إدارة فورية دقيقة، حوكمة مؤكدة، وقاعدة بيانات سحابية متزامنة لحظياً.</p>
             </div>
-            <div className="asas-actions">
-              <Button icon={RefreshCw} onClick={load} disabled={busy}>تحديث فوري</Button>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button className="asas-btn" onClick={load} disabled={busy}>
+                <Icon name="refresh" />
+                تحديث فوري
+              </button>
               {['branches', 'shifts', 'accounts'].includes(tab) && can({ branches: 'locations.write', shifts: 'shifts.write', accounts: 'employees.write' }[tab]) && (
-                <Button variant="primary" icon={Plus} onClick={() => edit(tab, null)}>
+                <button className="asas-btn primary" onClick={() => edit(tab, null)}>
+                  <Icon name="plus" />
                   إضافة {tab === 'branches' ? 'موقع' : tab === 'shifts' ? 'دوام' : 'موظف'}
-                </Button>
+                </button>
               )}
               {tab === 'announcements' && (
-                <Button variant="primary" icon={Plus} onClick={() => { setForm({ ...defaults.announcements }); setModal('announcements'); }}>
-                  نشر تعميم جديد
-                </Button>
+                <button className="asas-btn primary" onClick={() => { setForm({ ...defaults.announcements }); setModal('announcements'); }}>
+                  <Icon name="send" />
+                  نشر تعميم رسمي
+                </button>
               )}
             </div>
           </div>
@@ -933,7 +1014,10 @@ function AsasAppInner() {
           {error && (
             <div role="alert" className="asas-notice error" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <span>{error}</span>
-              <Button type="button" icon={RefreshCw} onClick={load} disabled={busy} style={{ padding: '4px 10px', fontSize: 12 }}>إعادة المحاولة</Button>
+              <button className="asas-btn sm" onClick={load} disabled={busy}>
+                <Icon name="refresh" />
+                إعادة المحاولة
+              </button>
             </div>
           )}
           {notice && <div role="status" className="asas-notice">{notice}</div>}
@@ -942,100 +1026,149 @@ function AsasAppInner() {
           {/* DASHBOARD TAB */}
           {tab === 'dashboard' && data && (
             <>
-              <section className="asas-banner">
-                <div className="asas-banner-copy">
-                  <p className="asas-eyebrow">منظومة أساس السيادية</p>
-                  <h2>صورة واضحة ومباشرة ليوم فريقك.</h2>
-                  <p>حضور مؤكد جغرافياً ومقيد بأجهزة الموظفين مع تحديث لحظي على السحابة.</p>
-                  <Button variant="gold" icon={QrCode} onClick={() => setTab('qr')}>رموز QR المعتمدة</Button>
+              <Glass className="asas-hero-banner">
+                <div>
+                  <p className="asas-eyebrow">منظومة العمل الذكية</p>
+                  <h2><Stretch before="أهْـ" after="ـلاً" length={3} /> بك في لوحة تحكم أساس</h2>
+                  <p>حضور مؤكد جغرافياً ومقيد بأجهزة الموظفين مع تحديث لحظي على السحابة وقواعد البيانات.</p>
+                  <button className="asas-btn primary" onClick={() => setTab('qr')}>
+                    <Icon name="qrCode" />
+                    عرض الرموز المعتمدة
+                  </button>
                 </div>
-                <div className="asas-banner-emblem" aria-hidden="true">
-                  <img src="/brand/asas-logo.png" alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                  <span>AI-ASAAS Attendance</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="asas-mark" style={{ width: 80, height: 90 }} />
                 </div>
-              </section>
+              </Glass>
 
-              <section className="asas-stats">
-                {[
-                  [Users, 'إجمالي الموظفين', data.total, 'الحسابات المسجلة في النظام'],
-                  [CheckCircle2, 'سجّلوا الحضور اليوم', data.present, 'خلال ساعات الدوام الحالية'],
-                  [MapPin, 'داخل نطاق الموقع', data.inside, 'حسب تأكيد GPS الفعلي'],
-                  [AlertCircle, 'الموقع غير مؤكد', data.uncertain, 'تتطلب مراجعة أو فحص اتصال']
-                ].map(([Icon, label, value, caption]) => (
-                  <article className="asas-stat" key={label}>
-                    <div className="asas-stat-top">{label}<Icon size={18} /></div>
-                    <strong>{value}</strong>
-                    <small>{caption}</small>
-                  </article>
-                ))}
-              </section>
+              <div className="asas-stats-grid">
+                <Glass className="asas-stat-card">
+                  <div className="asas-stat-card-top">
+                    <span>إجمالي الموظفين</span>
+                    <div className="asas-stat-icon-wrap"><Icon name="users" /></div>
+                  </div>
+                  <div className="asas-stat-value">{formatNumber(data.total)}</div>
+                  <div className="asas-stat-caption">حسابات نشطة في قاعدة البيانات</div>
+                </Glass>
 
-              <section className="asas-grid">
-                <article className="asas-card">
-                  <div className="asas-card-head">
-                    <h2>نسبة الحضور اليوم</h2>
-                    <span className="asas-badge">{data.total ? Math.round(data.present / data.total * 100) : 0}%</span>
+                <Glass className="asas-stat-card">
+                  <div className="asas-stat-card-top">
+                    <span>حاضرون اليوم</span>
+                    <div className="asas-stat-icon-wrap"><Icon name="checkCircle" /></div>
                   </div>
-                  <div className="asas-card-body">
-                    <p className="asas-muted">مؤشر التحضير الفعلي للموظفين المسجلين</p>
-                    <div className="asas-progress"><span style={{ width: `${data.total ? Math.min(100, data.present / data.total * 100) : 0}%` }} /></div>
-                    <div className="asas-mini-row"><span>لم يسجلوا حضوراً بعد</span><strong>{Math.max(0, data.total - data.present)}</strong></div>
-                    <div className="asas-mini-row"><span>حالات التأخير المرصودة</span><strong>{data.late}</strong></div>
-                  </div>
-                </article>
+                  <div className="asas-stat-value" style={{ color: 'var(--paid)' }}>{formatNumber(data.present)}</div>
+                  <div className="asas-stat-caption">سجلوا دخولهم خلال الساعات الحالية</div>
+                </Glass>
 
-                <article className="asas-card">
-                  <div className="asas-card-head">
-                    <h2>حالة النطاق والمواقع</h2>
-                    <Building2 size={18} />
+                <Glass className="asas-stat-card">
+                  <div className="asas-stat-card-top">
+                    <span>داخل نطاق العمل</span>
+                    <div className="asas-stat-icon-wrap"><Icon name="mapPin" /></div>
                   </div>
-                  <div className="asas-card-body">
-                    <p className="asas-muted">إدارة الفروع المعتمدة والحدود الجغرافية</p>
-                    <div className="asas-mini-row"><span>حالة الرموز</span><strong>دائمة وثابتة</strong></div>
-                    <div className="asas-mini-row"><span>الربط مع السحابة</span><strong>متصل ومحدث</strong></div>
-                    <Button icon={ArrowUpLeft} onClick={() => setTab('branches')}>إدارة المواقع الجغرافية</Button>
-                  </div>
-                </article>
-              </section>
+                  <div className="asas-stat-value">{formatNumber(data.inside)}</div>
+                  <div className="asas-stat-caption">حسب قراءات GPS المؤكدة</div>
+                </Glass>
 
-              <section className="asas-card">
-                <div className="asas-card-head">
-                  <h2>آخر سجلات الحضور والانصراف</h2>
-                  <Button onClick={() => setTab('records')}>جميع السجلات</Button>
-                </div>
+                <Glass className="asas-stat-card">
+                  <div className="asas-stat-card-top">
+                    <span>تأخيرات مرصودة</span>
+                    <div className="asas-stat-icon-wrap"><Icon name="alert" /></div>
+                  </div>
+                  <div className="asas-stat-value" style={{ color: data.late > 0 ? 'var(--partial)' : 'var(--text)' }}>{formatNumber(data.late)}</div>
+                  <div className="asas-stat-caption">حالات تأخير بحاجة لمتابعة</div>
+                </Glass>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18 }}>
+                <Card title="مؤشر نسبة الحضور" icon="trend">
+                  <div style={{ padding: '12px 6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span className="asas-muted">نسبة حضور اليوم</span>
+                      <strong style={{ fontSize: 18, color: 'var(--accent)' }}>
+                        {data.total ? Math.round(data.present / data.total * 100) : 0}%
+                      </strong>
+                    </div>
+                    <div style={{ height: 8, borderRadius: 4, background: 'var(--glass-inset)', overflow: 'hidden' }}>
+                      <div style={{ width: `${data.total ? Math.min(100, data.present / data.total * 100) : 0}%`, height: '100%', background: 'linear-gradient(90deg, var(--brand-gold), #8f6a2e)', borderRadius: 4 }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14, fontSize: 12, color: 'var(--text-3)' }}>
+                      <span>لم يسجلوا بعد: <strong>{Math.max(0, data.total - data.present)}</strong></span>
+                      <span>سجلوا حضوراً: <strong>{data.present}</strong></span>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card title="حوكمة المنشأة والموقع" icon="building">
+                  <div style={{ padding: '12px 6px' }}>
+                    <p className="asas-muted">إدارة المواقع الجغرافية وضبط دقة قراءات GPS وفترة تأكيد الخروج.</p>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                      <button className="asas-btn primary sm" onClick={() => setTab('branches')}>
+                        <Icon name="mapPin" />
+                        المواقع الجغرافية
+                      </button>
+                      <button className="asas-btn sm" onClick={() => setTab('settings')}>
+                        <Icon name="settings" />
+                        الإعدادات
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <Card title="آخر سجلات الحضور والانصراف" icon="calendar" actions={<button className="asas-btn sm" onClick={() => setTab('records')}>جميع السجلات</button>}>
                 <Records rows={data.records.slice(0, 10)} onEdit={r => edit('records', r)} canEdit={can('attendance.edit')} />
-              </section>
+              </Card>
             </>
           )}
 
           {/* RECORDS TAB */}
           {tab === 'records' && (
             <>
-              <div className="asas-search" style={{ flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
                 <Field label="من تاريخ" type="date" value={from} onChange={e => setFrom(e.target.value)} />
                 <Field label="إلى تاريخ" type="date" value={to} onChange={e => setTo(e.target.value)} />
                 {can('reports.export') && (
-                  <div className="asas-actions" style={{ display: 'inline-flex', gap: 6, alignItems: 'flex-end' }}>
-                    <Button icon={Download} disabled={busy} onClick={exportCsv}>تصدير Excel/CSV</Button>
-                    <Button icon={FileText} disabled={busy} onClick={exportWord}>تصدير Word</Button>
-                    <Button icon={File} disabled={busy} onClick={exportTxt}>تصدير نصي (TXT)</Button>
+                  <div style={{ display: 'inline-flex', gap: 8 }}>
+                    <button className="asas-btn sm" disabled={busy} onClick={exportCsv}>
+                      <Icon name="fileSpreadsheet" />
+                      Excel / CSV
+                    </button>
+                    <button className="asas-btn sm" disabled={busy} onClick={exportWord}>
+                      <Icon name="fileText" />
+                      Word (DOC)
+                    </button>
+                    <button className="asas-btn sm" disabled={busy} onClick={exportTxt}>
+                      <Icon name="file" />
+                      تقرير TXT
+                    </button>
                   </div>
                 )}
               </div>
-              <div className="asas-card">
+              <Card title="سجل الحركات التفصيلي" icon="calendar">
                 <Records rows={rows} onEdit={r => edit('records', r)} canEdit={can('attendance.edit')} />
-              </div>
+              </Card>
             </>
           )}
 
           {/* ACCOUNTS / EMPLOYEES TAB */}
           {tab === 'accounts' && (
             <>
-              <div className="asas-search">
-                <Search size={18} />
-                <input className="asas-input" aria-label="البحث عن موظف" placeholder="ابحث بالاسم أو الرقم الوظيفي أو البريد أو الهاتف…" value={search} onChange={e => setSearch(e.target.value)} />
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <div style={{ position: 'relative', flex: 1, maxWidth: 420 }}>
+                  <input
+                    className="asas-input"
+                    placeholder="ابحث بالاسم، الرقم الوظيفي، البريد أو الهاتف…"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    style={{ paddingRight: 40 }}
+                  />
+                  <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-3)' }}>
+                    <Icon name="search" />
+                  </div>
+                </div>
               </div>
-              <div className="asas-card asas-table-wrap">
+
+              <div className="asas-table-wrap">
                 <table className="asas-table">
                   <thead>
                     <tr>
@@ -1056,38 +1189,47 @@ function AsasAppInner() {
                             <UserAvatar user={a} size="sm" />
                             <div>
                               <strong>{a.name}</strong>
-                              <small style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--gold-dark)' }}>{a.identifier}</small>
+                              <small style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent)' }}>{a.identifier}</small>
                             </div>
                           </div>
                         </td>
                         <td>
                           {a.attendance_status === 'inside' ? (
-                            <div>
-                              <span className="asas-badge inside" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle2 size={12} />حاضر الآن</span>
-                              {a.today_first_in && <small style={{ display: 'block', color: '#2d6a4f', fontSize: 10 }}>دخول: {time(a.today_first_in)}</small>}
-                            </div>
+                            <span className="asas-badge inside">
+                              <Icon name="checkCircle" style={{ width: 12, height: 12 }} />
+                              حاضر الآن
+                            </span>
                           ) : a.attendance_status === 'outside' ? (
-                            <div>
-                              <span className="asas-badge outside" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><LogOut size={12} />تم الانصراف</span>
-                              {a.today_last_out && <small style={{ display: 'block', color: '#736d65', fontSize: 10 }}>خروج: {time(a.today_last_out)}</small>}
-                            </div>
+                            <span className="asas-badge outside">
+                              <Icon name="pause" style={{ width: 12, height: 12 }} />
+                              تم الانصراف
+                            </span>
                           ) : a.attendance_status === 'leave' ? (
-                            <span className="asas-badge pending" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CalendarDays size={12} />في إجازة</span>
+                            <span className="asas-badge pending">
+                              <Icon name="receipt" style={{ width: 12, height: 12 }} />
+                              في إجازة
+                            </span>
                           ) : (
-                            <span className="asas-badge" style={{ background: '#f5f3f0', color: '#736d65', display: 'inline-flex', alignItems: 'center', gap: 4 }}><AlertCircle size={12} />لم يسجل اليوم</span>
+                            <span className="asas-badge" style={{ background: 'var(--glass-inset)', color: 'var(--text-3)' }}>
+                              <Icon name="alert" style={{ width: 12, height: 12 }} />
+                              لم يسجل اليوم
+                            </span>
                           )}
                         </td>
                         <td>
                           <div>
                             <strong>{a.email || '—'}</strong>
-                            <small style={{ display: 'block' }}>{a.phone || '—'}</small>
+                            <small>{a.phone || '—'}</small>
                           </div>
                         </td>
                         <td>
                           {a.bound_device_id ? (
                             <div>
-                              <span className="asas-badge inside" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Smartphone size={12} />{a.bound_device_name || 'جوال مقيد'}</span>
-                              <small style={{ display: 'block', color: '#736d65', fontSize: 10 }} dir="ltr">{a.bound_device_id.slice(0, 12)}…</small>
+                              <span className="asas-badge inside">
+                                <Icon name="smartphone" style={{ width: 12, height: 12 }} />
+                                {a.bound_device_name || 'جوال مقيد'}
+                              </span>
+                              <small dir="ltr">{a.bound_device_id.slice(0, 12)}…</small>
                             </div>
                           ) : (
                             <span className="asas-badge outside">غير مقيد</span>
@@ -1096,12 +1238,17 @@ function AsasAppInner() {
                         <td>{roles[a.role]}</td>
                         <td><span className={`asas-badge ${a.active ? 'inside' : 'outside'}`}>{a.active ? 'نشط' : 'معطّل'}</span></td>
                         <td>
-                          <div className="asas-actions">
-                            {can('employees.write') && <Button onClick={() => edit('accounts', a)}>إدارة</Button>}
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            {can('employees.write') && (
+                              <button className="asas-btn sm" onClick={() => edit('accounts', a)}>
+                                <Icon name="edit" />
+                                إدارة
+                              </button>
+                            )}
                             {can('employees.write') && a.bound_device_id && (
-                              <Button
-                                variant="danger"
-                                title="فك ارتباط هذا الجوال"
+                              <button
+                                className="asas-btn sm danger"
+                                title="فك قيد ارتباط هذا الجوال"
                                 onClick={async () => {
                                   if (window.confirm(`هل أنت متأكد من فك ارتباط الجهاز للموظف (${a.name})؟ سيتمكن من ربط جوال جديد عند أول تسجيل دخول.`)) {
                                     try {
@@ -1112,17 +1259,19 @@ function AsasAppInner() {
                                   }
                                 }}
                               >
-                                <Unlock size={14} />فك
-                              </Button>
+                                <Icon name="unlock" />
+                                فك
+                              </button>
                             )}
                             {can('employees.write') && a.id !== user.id && (
-                              <Button
-                                variant="danger"
+                              <button
+                                className="asas-btn sm danger"
                                 title="حذف حساب الموظف نهائياً"
                                 onClick={() => deleteAccount(a)}
                               >
-                                <Trash2 size={14} />حذف
-                              </Button>
+                                <Icon name="trash" />
+                                حذف
+                              </button>
                             )}
                           </div>
                         </td>
@@ -1137,40 +1286,42 @@ function AsasAppInner() {
 
           {/* ANNOUNCEMENTS TAB */}
           {tab === 'announcements' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                 <p className="asas-muted" style={{ margin: 0 }}>
-                  تتيح لك هذه اللوحة نشر تعميمات وبيانات رسمية تظهر فوراً لجميع الموظفين في التطبيق والموقع مع إمكانية إرسال نسخة بالبريد الإلكتروني.
+                  نشر بيانات رسمية تظهر فوراً لجميع الموظفين في التطبيق والموقع مع إرسال بريد إلكتروني اختياري.
                 </p>
-                <Button variant="primary" icon={Plus} onClick={() => { setForm({ ...defaults.announcements }); setModal('announcements'); }}>
+                <button className="asas-btn primary" onClick={() => { setForm({ ...defaults.announcements }); setModal('announcements'); }}>
+                  <Icon name="send" />
                   نشر تعميم رسمي جديد
-                </Button>
+                </button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
                 {announcements.map(a => (
                   <article key={a.id} className={`asas-announcement-card ${a.priority || 'normal'}`}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--ink)' }}>{a.title}</h3>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text)' }}>{a.title}</h3>
                       <span className={`asas-badge ${a.priority || 'normal'}`}>
                         {a.priority === 'urgent' ? 'عاجل جداً' : a.priority === 'important' ? 'هام' : 'إشعار رسمي'}
                       </span>
                     </div>
-                    <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#3f3b37', whiteSpace: 'pre-line', margin: '8px 0' }}>
+                    <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)', whiteSpace: 'pre-line', margin: '8px 0' }}>
                       {a.content}
                     </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: 11.5, color: 'var(--muted)', borderTop: '1px solid #f0ecdf', paddingTop: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: 11.5, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 8 }}>
                       <div>المرسل: <strong>{a.sender_name || 'الإدارة'}</strong> · <time>{date(a.created_at)}</time></div>
                       {can('employees.write') && (
-                        <Button variant="danger" icon={Trash2} onClick={() => deleteAnnouncement(a.id)} style={{ padding: '3px 8px', fontSize: 11.5 }}>
+                        <button className="asas-btn sm danger" onClick={() => deleteAnnouncement(a.id)}>
+                          <Icon name="trash" />
                           حذف
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </article>
                 ))}
               </div>
-              {!announcements.length && !busy && <Empty>لا توجد تعميمات نشطة حالياً. يمكنك نشر أول تعميم رسمي الآن.</Empty>}
+              {!announcements.length && !busy && <Empty>لا توجد تعميمات نشطة حالياً.</Empty>}
             </div>
           )}
 
@@ -1178,46 +1329,50 @@ function AsasAppInner() {
           {tab === 'branches' && (
             <div className="asas-form-grid">
               {rows.map(b => (
-                <article className="asas-card" key={b.id}>
-                  <div className="asas-card-head">
-                    <h2>{b.name}</h2>
-                    <span className="asas-badge">{b.active ? 'مفعل' : 'متوقف'}</span>
+                <Glass key={b.id} style={{ padding: 22 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                    <h2 style={{ margin: 0, fontSize: 18 }}>{b.name}</h2>
+                    <span className="asas-badge inside">{b.active ? 'مفعل' : 'متوقف'}</span>
                   </div>
-                  <div className="asas-card-body">
-                    <div className="asas-mini-row"><span>نطاق الدخول / الخروج</span><strong>{b.entry_radius} / {b.exit_radius} م</strong></div>
-                    <div className="asas-mini-row"><span>أقصى هامش خطأ</span><strong>{b.max_accuracy} م</strong></div>
-                    <div className="asas-mini-row"><span>تأكيد المغادرة</span><strong>{b.exit_samples} قراءات / {b.exit_delay_seconds} ثانية</strong></div>
-                    <p className="asas-help" dir="ltr">{b.latitude}, {b.longitude}</p>
-                    <iframe className="asas-map" src={`https://maps.google.com/maps?q=${b.latitude},${b.longitude}&hl=ar&z=17&output=embed`} loading="lazy" title={`خريطة Google - ${b.name}`} allowFullScreen />
-                    <div className="asas-actions" style={{ marginTop: 15 }}>
-                      {can('locations.write') && (
-                        <Button
-                          icon={MapPin}
-                          variant="gold"
-                          onClick={async () => {
-                            if (!navigator.geolocation) return setError('خدمة تحديد الموقع غير مدعومة');
-                            setBusy(true);
-                            setError('');
-                            navigator.geolocation.getCurrentPosition(async (pos) => {
-                              try {
-                                await api(`/admin/branches/${b.id}`, 'PUT', { ...b, latitude: pos.coords.latitude, longitude: pos.coords.longitude, reason: 'تحديث إحداثيات الفرع إلى موقع الجهاز الحالي' });
-                                setNotice(`تم تعيين موقع الفرع بنجاح على إحداثيات جهازك الحالية (${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)})`);
-                                await load();
-                              } catch (e) { setError(e.message); } finally { setBusy(false); }
-                            }, (err) => {
-                              setError('تعذر قراءة الموقع: ' + err.message);
-                              setBusy(false);
-                            }, { enableHighAccuracy: true, timeout: 15000 });
-                          }}
-                        >
-                          تعيين الفرع على موقعي الحالي
-                        </Button>
-                      )}
-                      {can('locations.write') && <Button icon={Settings2} onClick={() => edit('branches', b)}>تعديل الموقع</Button>}
-                      <a className="asas-btn" href={`https://www.google.com/maps?q=${b.latitude},${b.longitude}`} target="_blank" rel="noreferrer">فتح في Google Maps</a>
-                    </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'var(--text-2)' }}>
+                    <div>نطاق الدخول / الخروج: <strong>{b.entry_radius} / {b.exit_radius} م</strong></div>
+                    <div>أقصى هامش خطأ: <strong>{b.max_accuracy} م</strong></div>
+                    <div>تأكيد المغادرة: <strong>{b.exit_samples} قراءات / {b.exit_delay_seconds} ثانية</strong></div>
+                    <div dir="ltr" style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{b.latitude}, {b.longitude}</div>
                   </div>
-                </article>
+                  <iframe className="asas-map" src={`https://maps.google.com/maps?q=${b.latitude},${b.longitude}&hl=ar&z=17&output=embed`} loading="lazy" title={`خريطة Google - ${b.name}`} allowFullScreen style={{ width: '100%', height: 160, borderRadius: 12, border: '1px solid var(--hairline)', marginTop: 14 }} />
+                  <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+                    {can('locations.write') && (
+                      <button
+                        className="asas-btn primary sm"
+                        onClick={async () => {
+                          if (!navigator.geolocation) return setError('خدمة تحديد الموقع غير مدعومة');
+                          setBusy(true);
+                          setError('');
+                          navigator.geolocation.getCurrentPosition(async (pos) => {
+                            try {
+                              await api(`/admin/branches/${b.id}`, 'PUT', { ...b, latitude: pos.coords.latitude, longitude: pos.coords.longitude, reason: 'تحديث إحداثيات الفرع إلى موقع الجهاز الحالي' });
+                              setNotice(`تم تعيين موقع الفرع بنجاح على إحداثيات جهازك الحالية (${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)})`);
+                              await load();
+                            } catch (e) { setError(e.message); } finally { setBusy(false); }
+                          }, (err) => {
+                            setError('تعذر قراءة الموقع: ' + err.message);
+                            setBusy(false);
+                          }, { enableHighAccuracy: true, timeout: 15000 });
+                        }}
+                      >
+                        <Icon name="crosshair" />
+                        تعيين بموقعي الحالي
+                      </button>
+                    )}
+                    {can('locations.write') && (
+                      <button className="asas-btn sm" onClick={() => edit('branches', b)}>
+                        <Icon name="edit" />
+                        تعديل
+                      </button>
+                    )}
+                  </div>
+                </Glass>
               ))}
               {!rows.length && !busy && <Empty>أضف موقع الشركة الفعلي للبدء.</Empty>}
             </div>
@@ -1225,45 +1380,47 @@ function AsasAppInner() {
 
           {/* SHIFTS TAB */}
           {tab === 'shifts' && (
-            <>
-              <div className="asas-notice">تغيير سياسة الإغلاق أو الخصم يطبّق على المناوبات الجديدة، مع الاحتفاظ ببيانات المناوبات السابقة.</div>
-              <div className="asas-form-grid">
-                {rows.map(s => (
-                  <article className="asas-card" key={s.id}>
-                    <div className="asas-card-head">
-                      <h2>{s.name}</h2>
-                      <Clock3 size={18} />
-                    </div>
-                    <div className="asas-card-body">
-                      <div className="asas-mini-row"><span>وقت الدوام</span><strong dir="ltr">{s.start_time.slice(0, 5)} — {s.end_time.slice(0, 5)}</strong></div>
-                      <div className="asas-mini-row"><span>نهاية الدوام</span><strong>{s.close_policy === 'scheduled' ? 'إغلاق تلقائي' : 'انتظار الخروج الفعلي'}</strong></div>
-                      <div className="asas-mini-row"><span>خصم مدد المغادرة</span><strong>{s.deduct_away ? 'مفعّل' : 'غير مفعّل'}</strong></div>
-                      {can('shifts.write') && <Button onClick={() => edit('shifts', s)}>تعديل السياسة</Button>}
-                    </div>
-                  </article>
-                ))}
-                {!rows.length && !busy && <Empty>أضف جدول الدوام وحدد سياسة الاحتساب.</Empty>}
-              </div>
-            </>
+            <div className="asas-form-grid">
+              {rows.map(s => (
+                <Glass key={s.id} style={{ padding: 22 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                    <h2 style={{ margin: 0, fontSize: 18 }}>{s.name}</h2>
+                    <Icon name="clock" style={{ color: 'var(--accent)' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'var(--text-2)' }}>
+                    <div>وقت الدوام: <strong dir="ltr">{s.start_time.slice(0, 5)} — {s.end_time.slice(0, 5)}</strong></div>
+                    <div>نهاية الدوام: <strong>{s.close_policy === 'scheduled' ? 'إغلاق تلقائي' : 'انتظار الخروج الفعلي'}</strong></div>
+                    <div>خصم مدد المغادرة: <strong>{s.deduct_away ? 'مفعّل' : 'غير مفعّل'}</strong></div>
+                  </div>
+                  {can('shifts.write') && (
+                    <button className="asas-btn sm" style={{ marginTop: 14 }} onClick={() => edit('shifts', s)}>
+                      <Icon name="edit" />
+                      تعديل السياسة
+                    </button>
+                  )}
+                </Glass>
+              ))}
+              {!rows.length && !busy && <Empty>أضف جدول دوام لتحديده للموظفين.</Empty>}
+            </div>
           )}
 
           {/* QR CODES TAB */}
           {tab === 'qr' && (
-            <div className="asas-card">
-              <div className="asas-card-head">
-                <h2>رموز الحضور والانصراف المعتمدة</h2>
-                <span className="asas-badge">رمز دائم ومستمر · توقيت صنعاء (اليمن)</span>
-              </div>
-              <div className="asas-card-body">
-                <div className="asas-search">
-                  <select className="asas-input" aria-label="الفرع" value={branchId} onChange={e => setBranchId(e.target.value)}>
+            <Card title="رموز الحضور والانصراف المعتمدة" icon="qrCode">
+              <div style={{ padding: 10 }}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
+                  <select className="asas-input" style={{ maxWidth: 280 }} value={branchId} onChange={e => setBranchId(e.target.value)}>
                     <option value="">اختر الفرع لعرض الرموز</option>
                     {branches.filter(b => b.active).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
-                  <Button variant="primary" onClick={showQr} disabled={!branchId || busy}>عرض الرموز المعتمدة</Button>
+                  <button className="asas-btn primary" onClick={showQr} disabled={!branchId || busy}>
+                    <Icon name="qrCode" />
+                    عرض الرموز المعتمدة
+                  </button>
                 </div>
+
                 {qr ? (
-                  <div className="asas-qr-poster">
+                  <div>
                     {(() => {
                       const fixUrl = (u) => {
                         if (!u) return '';
@@ -1278,8 +1435,7 @@ function AsasAppInner() {
                       };
                       const enterUrl = fixUrl(qr.enter?.url || qr.url);
                       const exitUrl = fixUrl(qr.exit?.url || qr.url);
-                      const enterHtml = fixUrl(qr.enter?.html_url || `/enter.html?branch=${branchId}`);
-                      const exitHtml = fixUrl(qr.exit?.html_url || `/exit.html?branch=${branchId}`);
+
                       return (
                         <>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
@@ -1288,49 +1444,49 @@ function AsasAppInner() {
                               <h2 style={{ fontSize: 22, marginTop: 8 }}>{qr.branch}</h2>
                               <p className="asas-muted">رموز QR الدائمة المشفرة بـ HMAC-SHA256 · صالحة ومستمرة حتى الإبطال الإداري</p>
                             </div>
-                            <div className="asas-actions">
-                              <Button icon={Printer} onClick={() => window.print()}>طباعة الملصق (A4)</Button>
-                              <a className="asas-btn primary" href={enterUrl} target="_blank" rel="noreferrer"><LogIn size={15} />صفحة الحضور (دخول)</a>
-                              <a className="asas-btn" href={exitUrl} target="_blank" rel="noreferrer"><LogOut size={15} />صفحة الانصراف (خروج)</a>
-                              <Button variant="danger" onClick={async () => {
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button className="asas-btn" onClick={() => window.print()}>
+                                <Icon name="printer" />
+                                طباعة الملصق (A4)
+                              </button>
+                              <button className="asas-btn danger" onClick={async () => {
                                 const reason = window.prompt('سبب إبطال الرموز وتجديدها:');
                                 if (!reason) return;
                                 try {
                                   await api(`/admin/branches/${branchId}/qr/revoke`, 'POST', { reason });
                                   setQr(null);
-                                  setNotice('تم إبطال الرموز وإصدار مراجعة جديدة. اضغط عرض الرموز لإصدار البديل فوراً.');
+                                  setNotice('تم إبطال الرموز وإصدار مراجعة جديدة بنجاح.');
                                 } catch (e) { setError(e.message); }
-                              }}>إبطال وتجديد الرموز</Button>
+                              }}>
+                                <Icon name="trash" />
+                                إبطال وتجديد
+                              </button>
                             </div>
                           </div>
 
                           <div className="asas-qr-grid">
-                            <div className="asas-qr-card enter">
-                              <div className="asas-qr-badge">كود تسجيل الحضور (الدخول والعودة)</div>
-                              <div className="asas-qr-card-title"><LogIn size={20} />تسجيل الدخول (الحضور)</div>
-                              <p className="asas-muted" style={{ fontSize: 12 }}>رمز معتمد دائم يُعلق عند المدخل · يُمسح بكاميرا الجوال عند الحضور صباحاً أو العودة</p>
+                            <div className="asas-qr-card">
+                              <span className="asas-badge inside" style={{ marginBottom: 8 }}>كود الحضور (دخول)</span>
                               <div className="asas-qr-box">
                                 <QRCodeSVG value={enterUrl} size={210} level="M" includeMargin />
                               </div>
-                              <span className="asas-badge inside" style={{ marginTop: 6 }}>رمز دخول دائم ومستمر</span>
-                              <div className="asas-actions" style={{ justifyContent: 'center', marginTop: 8, flexWrap: 'wrap', gap: 6 }}>
-                                <a className="asas-btn primary" href={enterUrl} target="_blank" rel="noreferrer"><LogIn size={14} />فتح صفحة الدخول</a>
-                                <Button type="button" onClick={() => { navigator.clipboard?.writeText(enterUrl); setNotice('تم نسخ رابط صفحة كود الدخول'); }}>نسخ الرابط</Button>
-                              </div>
+                              <p className="asas-muted" style={{ fontSize: 12 }}>يُعلق عند المدخل · يمسحه الموظف للدخول</p>
+                              <a className="asas-btn primary sm" href={enterUrl} target="_blank" rel="noreferrer" style={{ marginTop: 8 }}>
+                                <Icon name="logIn" />
+                                فتح صفحة الدخول
+                              </a>
                             </div>
 
-                            <div className="asas-qr-card exit">
-                              <div className="asas-qr-badge">كود تسجيل الخروج (الانصراف النهائي)</div>
-                              <div className="asas-qr-card-title"><LogOut size={20} />تسجيل الخروج (الانصراف)</div>
-                              <p className="asas-muted" style={{ fontSize: 12 }}>رمز معتمد دائم يُعلق عند المخرج · يُمسح بكاميرا الجوال عند إنهاء الدوام أو المغادرة</p>
+                            <div className="asas-qr-card">
+                              <span className="asas-badge outside" style={{ marginBottom: 8 }}>كود الانصراف (خروج)</span>
                               <div className="asas-qr-box">
                                 <QRCodeSVG value={exitUrl} size={210} level="M" includeMargin />
                               </div>
-                              <span className="asas-badge outside" style={{ marginTop: 6 }}>رمز خروج دائم ومستمر</span>
-                              <div className="asas-actions" style={{ justifyContent: 'center', marginTop: 8, flexWrap: 'wrap', gap: 6 }}>
-                                <a className="asas-btn" href={exitUrl} target="_blank" rel="noreferrer"><LogOut size={14} />فتح صفحة الخروج</a>
-                                <Button type="button" onClick={() => { navigator.clipboard?.writeText(exitUrl); setNotice('تم نسخ رابط صفحة كود الخروج'); }}>نسخ الرابط</Button>
-                              </div>
+                              <p className="asas-muted" style={{ fontSize: 12 }}>يُعلق عند المخرج · يمسحه الموظف للانصراف</p>
+                              <a className="asas-btn sm" href={exitUrl} target="_blank" rel="noreferrer" style={{ marginTop: 8 }}>
+                                <Icon name="pause" />
+                                فتح صفحة الخروج
+                              </a>
                             </div>
                           </div>
                         </>
@@ -1338,92 +1494,108 @@ function AsasAppInner() {
                     })()}
                   </div>
                 ) : (
-                  <Empty>اختر الموقع واضغط على "عرض الرموز المعتمدة" لعرض كود الحضور وكود الانصراف.</Empty>
+                  <Empty>اختر الموقع واضغط على "عرض الرموز المعتمدة".</Empty>
                 )}
               </div>
-            </div>
+            </Card>
           )}
 
           {/* LEAVE REQUESTS TAB */}
           {tab === 'leave' && (
-            <div className="asas-card asas-table-wrap">
-              <table className="asas-table">
-                <thead>
-                  <tr>
-                    <th>الموظف</th>
-                    <th>الفترة</th>
-                    <th>السبب</th>
-                    <th>الحالة</th>
-                    <th>المراجعة</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map(l => (
-                    <tr key={l.id}>
-                      <td>{l.name}</td>
-                      <td>{date(l.from_date)} — {date(l.to_date)}</td>
-                      <td style={{ whiteSpace: 'normal' }}>{l.reason}</td>
-                      <td><Badge state={l.status} /></td>
-                      <td>
-                        {l.status === 'pending' && can('leave.review') && (
-                          <div className="asas-actions">
-                            {[['approved', 'قبول'], ['rejected', 'رفض']].map(([status, label]) => (
-                              <Button key={status} onClick={async () => {
-                                const comment = window.prompt('ملاحظة المراجعة:');
+            <Card title="طلبات الإجازات والمراجعة" icon="receipt">
+              <div className="asas-table-wrap">
+                <table className="asas-table">
+                  <thead>
+                    <tr>
+                      <th>الموظف</th>
+                      <th>الفترة</th>
+                      <th>السبب</th>
+                      <th>الحالة</th>
+                      <th>المراجعة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(l => (
+                      <tr key={l.id}>
+                        <td><strong>{l.name}</strong></td>
+                        <td>{date(l.from_date)} — {date(l.to_date)}</td>
+                        <td style={{ whiteSpace: 'normal' }}>{l.reason}</td>
+                        <td><span className={`asas-badge ${l.status}`}>{states[l.status] || l.status}</span></td>
+                        <td>
+                          {l.status === 'pending' && can('leave.review') && (
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button className="asas-btn primary sm" onClick={async () => {
+                                const comment = window.prompt('ملاحظة القبول:');
                                 if (!comment) return;
                                 try {
-                                  await api(`/leave/${l.id}`, 'PATCH', { status, comment });
+                                  await api(`/leave/${l.id}`, 'PATCH', { status: 'approved', comment });
                                   await load();
                                 } catch (e) { setError(e.message); }
-                              }}>{label}</Button>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!rows.length && !busy && <Empty>لا توجد طلبات إجازة جديدة.</Empty>}
-            </div>
+                              }}>
+                                <Icon name="check" />
+                                قبول
+                              </button>
+                              <button className="asas-btn danger sm" onClick={async () => {
+                                const comment = window.prompt('سبب الرفض:');
+                                if (!comment) return;
+                                try {
+                                  await api(`/leave/${l.id}`, 'PATCH', { status: 'rejected', comment });
+                                  await load();
+                                } catch (e) { setError(e.message); }
+                              }}>
+                                <Icon name="close" />
+                                رفض
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!rows.length && !busy && <Empty>لا توجد طلبات إجازة جديدة.</Empty>}
+              </div>
+            </Card>
           )}
 
           {/* AUDIT LOG TAB */}
           {tab === 'audit' && (
-            <div className="asas-card asas-table-wrap">
-              <table className="asas-table">
-                <thead>
-                  <tr>
-                    <th>التوقيت</th>
-                    <th>المستخدم</th>
-                    <th>العملية</th>
-                    <th>السبب والتفاصيل</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map(a => (
-                    <tr key={a.id}>
-                      <td>{date(a.created_at)} {time(a.created_at)}</td>
-                      <td>{a.actor || 'النظام'}</td>
-                      <td dir="ltr"><code>{a.action}</code></td>
-                      <td>{a.reason}</td>
+            <Card title="سجل العمليات والرقابة السيادية" icon="shieldCheck">
+              <div className="asas-table-wrap">
+                <table className="asas-table">
+                  <thead>
+                    <tr>
+                      <th>التوقيت</th>
+                      <th>المستخدم</th>
+                      <th>العملية</th>
+                      <th>السبب والتفاصيل</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!rows.length && !busy && <Empty />}
-            </div>
+                  </thead>
+                  <tbody>
+                    {rows.map(a => (
+                      <tr key={a.id}>
+                        <td>{date(a.created_at)} {time(a.created_at)}</td>
+                        <td><strong>{a.actor || 'النظام'}</strong></td>
+                        <td dir="ltr"><code>{a.action}</code></td>
+                        <td>{a.reason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!rows.length && !busy && <Empty />}
+              </div>
+            </Card>
           )}
 
           {/* SYSTEM SETTINGS TAB */}
           {tab === 'settings' && (
             <form onSubmit={saveSystemSettings} className="asas-form-grid">
-              <article className="asas-card" style={{ gridColumn: '1 / -1' }}>
-                <div className="asas-card-head">
-                  <h2>إعدادات النظام وسياسات التشغيل الحقيقية</h2>
-                  <Settings2 size={18} />
+              <Glass style={{ gridColumn: '1 / -1', padding: 26 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <h2 style={{ margin: 0, fontSize: 20 }}>إعدادات النظام وسياسات التشغيل الحقيقية</h2>
+                  <Icon name="settings" style={{ color: 'var(--accent)' }} />
                 </div>
-                <div className="asas-card-body asas-form">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <div className="asas-form-grid">
                     <Field
                       label="اسم المنشأة / الشركة الرسمي"
@@ -1456,7 +1628,7 @@ function AsasAppInner() {
                     />
                   </div>
 
-                  <label className="asas-check" style={{ marginTop: 10 }}>
+                  <label className="asas-check" style={{ marginTop: 8 }}>
                     <input
                       type="checkbox"
                       checked={Boolean(systemSettings.email_notifications)}
@@ -1465,43 +1637,77 @@ function AsasAppInner() {
                     تفعيل إشعارات البريد الإلكتروني للمدراء عند تسجيل الحضور والغياب
                   </label>
 
-                  <div className="asas-actions" style={{ marginTop: 18 }}>
-                    <Button variant="primary" type="submit" disabled={busy}>
-                      <Save size={16} />
+                  <div style={{ marginTop: 14 }}>
+                    <button className="asas-btn primary" type="submit" disabled={busy}>
+                      <Icon name="check" />
                       {busy ? 'جارٍ الحفظ…' : 'حفظ الإعدادات في قاعدة البيانات'}
-                    </Button>
+                    </button>
                   </div>
                 </div>
-              </article>
+              </Glass>
 
-              <article className="asas-card">
-                <div className="asas-card-head"><h2>أمان البيانات والتشفير</h2><ShieldCheck size={18} /></div>
-                <div className="asas-card-body">
-                  <div className="asas-mini-row"><span>تشفير كلمات المرور</span><strong>scrypt KDF مع Salt فريد</strong></div>
-                  <div className="asas-mini-row"><span>توقيع رموز QR</span><strong>HMAC-SHA256 مع مفتاح سري</strong></div>
-                  <div className="asas-mini-row"><span>جلسات العمل</span><strong>رموز Bearer مشفرة بـ SHA-256</strong></div>
+              <Glass style={{ padding: 22 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ margin: 0, fontSize: 16 }}>أمان البيانات والتشفير</h3>
+                  <Icon name="vault" style={{ color: 'var(--accent)' }} />
                 </div>
-              </article>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div>تشفير كلمات المرور: <strong>scrypt KDF مع Salt فريد</strong></div>
+                  <div>توقيع رموز QR: <strong>HMAC-SHA256 مع مفتاح سري</strong></div>
+                  <div>جلسات العمل: <strong>رموز Bearer مشفرة بـ SHA-256</strong></div>
+                </div>
+              </Glass>
 
-              <article className="asas-card">
-                <div className="asas-card-head"><h2>الهوية البصرية لأساس</h2><Brand /></div>
-                <div className="asas-card-body">
-                  <div className="asas-mini-row"><span>الفحمي الأساسي (Ink)</span><code dir="ltr">#231F20</code></div>
-                  <div className="asas-mini-row"><span>الذهبي (Gold)</span><code dir="ltr">#BA9555</code></div>
-                  <div className="asas-mini-row"><span>الخطوط المعتمدة</span><strong>Thmanyah Sans / Serif</strong></div>
+              <Glass style={{ padding: 22 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ margin: 0, fontSize: 16 }}>الهوية والخطوط</h3>
+                  <Icon name="sparkle" style={{ color: 'var(--accent)' }} />
                 </div>
-              </article>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div>الفحمي الأساسي (Ink): <code dir="ltr">#221F1F</code></div>
+                  <div>الذهبي الملكي (Gold): <code dir="ltr">#BA9555</code></div>
+                  <div>الخطوط المعتمدة: <strong>Thmanyah Sans / Serif</strong></div>
+                </div>
+              </Glass>
             </form>
           )}
         </main>
       </div>
+
+      {/* Floating Asas AI Assistant Robot */}
+      <AssistantWidget
+        user={{ id: String(user.id), displayName: user.name }}
+        title="مساعد أساس الذكي"
+        subtitle="استفسر عن مواعيد الحضور، النطاق الجغرافي، أو سياسات النظام"
+        suggestions={[
+          'كيف أسجل حضوري وانصرافي؟',
+          'ما هي ساعات الدوام الرسمية؟',
+          'كيف أغير صورة حسابي أو كلمة المرور؟',
+          'ما هو نطاق الموقع الجغرافي؟'
+        ]}
+        ask={async (messages) => {
+          const last = messages[messages.length - 1]?.content || '';
+          if (last.includes('حضور') || last.includes('انصراف')) {
+            return { reply: 'لتسجيل الحضور أو الانصراف: يمكنك الضغط على الزر الذكي المباشر في صفحتك، أو مسح رمز QR المعلق عند مدخل الفرع بكاميرا الجوال، مع تفعيل خدمة الموقع الجغرافي (GPS).' };
+          }
+          if (last.includes('دوام') || last.includes('ساعات')) {
+            return { reply: 'ساعات العمل الرسمية المعتمدة تبدأ من الساعة 08:00 صباحاً وحتى 04:00 عصراً، مع فترة سماح 15 دقيقة للتأخير الصباحي.' };
+          }
+          if (last.includes('كلمة') || last.includes('مرور') || last.includes('صورة') || last.includes('أفاتار')) {
+            return { reply: 'يمكنك تغيير صورة حسابك أو كلمة المرور بالضغط على صورتك الرمزية أو زر «الملف الشخصي والأمان» في أعلى الصفحة واختيار الأفاتار أو إدخال كلمة المرور الجديدة.' };
+          }
+          if (last.includes('موقع') || last.includes('نطاق') || last.includes('GPS')) {
+            return { reply: 'نطاق الموقع الجغرافي المعتمد هو 80 متراً لدخول النطاق و120 متراً لتأكيد الخروج، مع هامش خطأ أقصاه 30 متراً.' };
+          }
+          return { reply: 'أهلاً بك في نظام أساس! أنا هنا لمساعدتك في استفسارات الحضور والانصراف، وربط الأجهزة، ومواعيد المناوبات.' };
+        }}
+      />
 
       {/* MODALS */}
       {showAnnouncementsModal && (
         <AnnouncementsModal
           announcements={announcements}
           onClose={() => setShowAnnouncementsModal(false)}
-          onRefresh={loadAnnouncements}
         />
       )}
 
@@ -1516,7 +1722,7 @@ function AsasAppInner() {
       {modal && (
         <div className="asas-modal-backdrop" onClick={e => { if (e.target === e.currentTarget && !busy) setModal(null); }}>
           <section className="asas-modal" role="dialog" aria-modal="true" aria-label="تحرير البيانات">
-            <div className="asas-card-head">
+            <div className="asas-modal-head">
               <h2>
                 {modal === 'announcements' ? 'نشر تعميم رسمي جديد' : (form.id ? 'تعديل' : 'إضافة')} {
                   modal === 'branches' ? 'موقع الشركة'
@@ -1525,19 +1731,20 @@ function AsasAppInner() {
                     : modal === 'accounts' ? 'حساب موظف' : ''
                 }
               </h2>
-              <Button icon={X} onClick={() => setModal(null)} aria-label="إغلاق" />
+              <button className="asas-btn sm" onClick={() => setModal(null)} aria-label="إغلاق">
+                <Icon name="close" />
+              </button>
             </div>
 
-            <form className="asas-form" onSubmit={save}>
+            <form className="asas-modal-body" onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {error && <div className="asas-notice error" role="alert">{error}</div>}
 
-              {/* ANNOUNCEMENT FORM */}
               {modal === 'announcements' && (
                 <>
                   <Field
                     label="عنوان التعميم"
                     required
-                    placeholder="مثال: تعميم بخصوص مواعيد العمل في شهر رمضان المبارك"
+                    placeholder="مثال: تعميم رسمي بمواعيد العمل"
                     value={form.title || ''}
                     onChange={e => set('title', e.target.value)}
                   />
@@ -1565,7 +1772,6 @@ function AsasAppInner() {
                 </>
               )}
 
-              {/* RECORDS FORM */}
               {modal === 'records' && (
                 <>
                   <Field label="اسم الموظف"><input className="asas-input" disabled value={form.name || ''} /></Field>
@@ -1595,7 +1801,6 @@ function AsasAppInner() {
                 </>
               )}
 
-              {/* BRANCHES FORM */}
               {modal === 'branches' && (
                 <>
                   <Field label="اسم الموقع / الفرع" required value={form.name} onChange={e => set('name', e.target.value)} />
@@ -1612,23 +1817,10 @@ function AsasAppInner() {
                       <Field key={k} label={label} type="number" required min={min} max={max} step={k === 'latitude' || k === 'longitude' ? 'any' : 1} value={form[k]} onChange={e => set(k, e.target.value)} />
                     ))}
                   </div>
-                  <div className="asas-actions" style={{ marginTop: 10 }}>
-                    <Button
-                      type="button"
-                      icon={MapPin}
-                      onClick={() => navigator.geolocation?.getCurrentPosition(p => {
-                        set('latitude', p.coords.latitude);
-                        set('longitude', p.coords.longitude);
-                      }, () => setError('تعذر الحصول على الموقع؛ أدخل الإحداثيات من الخريطة.'), { enableHighAccuracy: true, timeout: 15000 })}
-                    >
-                      استخدام موقع هذا الجهاز
-                    </Button>
-                  </div>
                   <label className="asas-check" style={{ marginTop: 8 }}><input type="checkbox" checked={form.active} onChange={e => set('active', e.target.checked)} />الموقع مفعل</label>
                 </>
               )}
 
-              {/* SHIFTS FORM */}
               {modal === 'shifts' && (
                 <>
                   <Field label="اسم جدول الدوام" required value={form.name} onChange={e => set('name', e.target.value)} />
@@ -1643,18 +1835,9 @@ function AsasAppInner() {
                       <option value="scheduled">إغلاق تلقائي بنهاية الدوام</option>
                     </select>
                   </Field>
-                  <div className="asas-days">
-                    {['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'].map((d, i) => (
-                      <label className="asas-check" key={d}>
-                        <input type="checkbox" checked={form.work_days.includes(i)} onChange={e => set('work_days', e.target.checked ? [...form.work_days, i] : form.work_days.filter(n => n !== i))} />
-                        {d}
-                      </label>
-                    ))}
-                  </div>
                 </>
               )}
 
-              {/* ACCOUNTS FORM */}
               {modal === 'accounts' && (
                 <>
                   <div className="asas-form-grid">
@@ -1705,17 +1888,6 @@ function AsasAppInner() {
                     </Field>
                   </div>
 
-                  {user.role === 'super_admin' && form.role !== 'employee' && (
-                    <div className="asas-form-grid">
-                      {Object.entries(permissions).map(([key, label]) => (
-                        <label className="asas-check" key={key}>
-                          <input type="checkbox" checked={form.permissions?.includes(key) || false} onChange={e => set('permissions', e.target.checked ? [...form.permissions, key] : form.permissions.filter(p => p !== key))} />
-                          {label}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-
                   {form.id && <label className="asas-check"><input type="checkbox" checked={form.active} onChange={e => set('active', e.target.checked)} />حساب نشط</label>}
                 </>
               )}
@@ -1724,11 +1896,12 @@ function AsasAppInner() {
                 <Field label="سبب التغيير (يوثق في سجل العمليات)" required value={form.reason || ''} onChange={e => set('reason', e.target.value)} />
               )}
 
-              <div className="asas-modal-footer">
-                <Button type="button" onClick={() => setModal(null)}>إلغاء</Button>
-                <Button variant="primary" type="submit" disabled={busy}>
+              <div className="asas-modal-footer" style={{ margin: '10px -24px -20px' }}>
+                <button className="asas-btn" type="button" onClick={() => setModal(null)}>إلغاء</button>
+                <button className="asas-btn primary" type="submit" disabled={busy}>
+                  <Icon name="check" />
                   {modal === 'announcements' ? 'نشر التعميم' : 'حفظ التغييرات'}
-                </Button>
+                </button>
               </div>
             </form>
           </section>
@@ -1750,7 +1923,7 @@ function Login({ onLogin, initialError, onRetry }) {
   const [phone, setPhone] = useState('');
   const [rememberMe, setRememberMe] = useState(() => {
     if (typeof window !== 'undefined') {
-      return Boolean(localStorage.getItem('asas_remember_me') === 'true');
+      return Boolean(localStorage.getItem('asas_remember_me') !== 'false');
     }
     return true;
   });
@@ -1863,7 +2036,7 @@ function Login({ onLogin, initialError, onRetry }) {
         <Brand />
         <div>
           <p className="asas-eyebrow">منظومة الحضور الذكية</p>
-          <h1>حضور مؤكد.<br /><span>وفريق متصل دائماً.</span></h1>
+          <h1><Swash>حضور مؤكد</Swash><br /><span>وفريق متصل دائماً.</span></h1>
           <p>مساحة عمل تنفيذية لإدارة الحضور والانصراف بدقة وموثوقية عالية، متصلة بسجلات الأجهزة وقواعد البيانات السيادية.</p>
         </div>
         <footer>
@@ -1872,19 +2045,20 @@ function Login({ onLogin, initialError, onRetry }) {
         </footer>
       </section>
 
-      <section className="asas-login-form">
+      <section className="asas-login-form-wrap">
         <div className="asas-login-box">
           <p className="asas-eyebrow">بوابة الدخول الموحدة</p>
           <h2>تسجيل الدخول إلى أساس</h2>
           <p className="asas-muted">أدخل بياناتك المعتمدة للوصول إلى لوحة التحكم أو مساحة الموظف.</p>
 
-          <form onSubmit={submit} className="asas-form">
+          <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 18 }}>
             {error && (
               <div className="asas-notice error" role="alert" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div>{error}</div>
                 {onRetry && (
-                  <button type="button" onClick={async () => { setBusy(true); await onRetry(); setBusy(false); }} disabled={busy} style={{ alignSelf: 'flex-start', padding: '4px 12px', borderRadius: 6, border: '1px solid #d9480f', background: '#fff', color: '#d9480f', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
-                    🔄 {busy ? 'جارٍ الفحص…' : 'إعادة فحص الاتصال'}
+                  <button type="button" onClick={async () => { setBusy(true); await onRetry(); setBusy(false); }} disabled={busy} className="asas-btn sm" style={{ alignSelf: 'flex-start' }}>
+                    <Icon name="refresh" />
+                    {busy ? 'جارٍ الفحص…' : 'إعادة فحص الاتصال'}
                   </button>
                 )}
               </div>
@@ -1918,15 +2092,15 @@ function Login({ onLogin, initialError, onRetry }) {
               <span>تذكر بيانات الدخول على هذا الجهاز</span>
             </label>
 
-            <Button variant="primary" type="submit" disabled={busy}>
+            <button className="asas-btn primary" type="submit" disabled={busy} style={{ width: '100%', height: 46 }}>
+              <Icon name="logIn" />
               {busy ? 'جارٍ التحقق…' : 'تسجيل الدخول'}
-              <ArrowUpLeft size={16} />
-            </Button>
+            </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '14px 0' }}>
-              <div style={{ flex: 1, height: 1, background: '#d2c5ac' }} />
-              <span style={{ fontSize: 12, color: '#736d65' }}>أو تسجيل الدخول السريع عبر Google</span>
-              <div style={{ flex: 1, height: 1, background: '#d2c5ac' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '10px 0' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>أو الدخول السريع عبر Google</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center', width: '100%', minHeight: 44 }}>
@@ -1934,8 +2108,8 @@ function Login({ onLogin, initialError, onRetry }) {
             </div>
           </form>
 
-          <div style={{ marginTop: 18, padding: 12, background: '#fbf7ee', borderRadius: 10, fontSize: 11.5, color: '#775b24', display: 'flex', gap: 8, alignItems: 'flex-start', border: '1px solid #ebdcc0' }}>
-            <ShieldAlert size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ marginTop: 18, padding: 12, background: 'var(--glass-inset)', borderRadius: 10, fontSize: 11.5, color: 'var(--text-2)', display: 'flex', gap: 8, alignItems: 'flex-start', border: '1px solid var(--hairline)' }}>
+            <Icon name="smartphone" style={{ width: 16, height: 16, flexShrink: 0, marginTop: 2, color: 'var(--accent)' }} />
             <div>
               <strong>نظام تقييد الجوال المعتمد:</strong> يتم ربط الحساب بجوال الموظف الشخصي تلقائياً عند أول تسجيل دخول لضمان صحة التسجيل ومنع التحضير بالنيابة.
             </div>
@@ -2058,200 +2232,170 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   const isInside = todayRecord?.state === 'inside';
 
   return (
-    <div className="asas-app">
-      <main className="asas-employee">
-        <div className="asas-heading">
-          <Brand />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button className="asas-bell-btn" onClick={onOpenAnnouncements} aria-label="الإشعارات">
-              <Bell size={18} />
-              {announcements.length > 0 && <span className="asas-bell-badge">{announcements.length}</span>}
-            </button>
-            <Button onClick={logout} icon={LogOut}>خروج</Button>
-          </div>
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Top Header */}
+      <Glass style={{ padding: '16px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Brand />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button className="asas-bell-btn" onClick={onOpenAnnouncements} aria-label="الإشعارات">
+            <Icon name="bell" />
+            {announcements.length > 0 && <span className="asas-bell-badge">{announcements.length}</span>}
+          </button>
+          <button className="asas-btn sm" onClick={logout}>
+            <Icon name="logout" />
+            خروج
+          </button>
         </div>
+      </Glass>
 
-        {/* Profile Card */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, background: '#fff', border: '1px solid var(--line)', padding: 18, borderRadius: 16, boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <UserAvatar user={user} size="lg" onClick={onOpenProfile} />
-            <div>
-              <h1 style={{ fontSize: 20, margin: '0 0 4px', color: 'var(--ink)' }}>{user.name}</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ background: '#231f20', color: '#b59045', padding: '2px 8px', borderRadius: 4, fontWeight: 'bold', fontSize: 12.5, fontFamily: 'monospace' }}>
-                  الرقم الوظيفي: {user.identifier}
-                </span>
-                <span className="asas-badge outside" style={{ fontSize: 11 }}>موظف</span>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>{user.email || '—'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <Button icon={UserCircle} onClick={onOpenProfile}>
-              الملف الشخصي والأمان
-            </Button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#231f20', color: '#efe9d8', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-              <Clock3 size={14} style={{ color: '#b59045' }} />
-              <span>صنعاء: <strong style={{ color: '#b59045' }}>{liveTime || '—'}</strong></span>
-            </div>
-          </div>
-        </div>
-
-        {error && (
-          <div className="asas-notice error" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
-            <span>{error}</span>
-            <Button type="button" icon={RefreshCw} onClick={load} disabled={busy} style={{ padding: '4px 10px', fontSize: 12 }}>إعادة المحاولة</Button>
-          </div>
-        )}
-        {message && <div className="asas-notice" style={{ marginTop: 14 }}>{message}</div>}
-
-        {/* Live Attendance & Exit Time Summary Card */}
-        <section className="asas-card" style={{ marginTop: 20, borderColor: '#ba9555' }}>
-          <div className="asas-card-head">
-            <h2>حالة وسجل حضور اليوم</h2>
-            {todayRecord && <Badge state={todayRecord.state} />}
-          </div>
-          <div className="asas-card-body">
-            {/* Automatic Status Banner */}
-            <div style={{ background: isInside ? '#edf7ed' : '#faf6ee', border: `1px solid ${isInside ? '#bfe5bf' : '#ebdcc0'}`, padding: '12px 16px', borderRadius: 10, marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-              <div>
-                <span style={{ fontSize: 12, color: '#736d65', display: 'block' }}>حالتك الحالية حسب النظام:</span>
-                <strong style={{ fontSize: 15, color: isInside ? '#1e7e34' : '#775b24', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {isInside ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                  {data?.automatic_status?.status_label || (isInside ? 'داخل موقع العمل (حضور مفتوح)' : (todayRecord?.last_out ? 'تم تسجيل الانصراف وإنهاء الدوام' : 'خارج موقع العمل (جاهز لتسجيل الحضور)'))}
-                </strong>
-              </div>
-              <span className="asas-badge" style={{ background: isInside ? '#c3e6cb' : '#ffeeba', color: isInside ? '#155724' : '#856404', fontWeight: 700 }}>
-                الإجراء التلقائي: {isInside ? 'تسجيل الانصراف' : 'تسجيل الحضور'}
+      {/* Profile Card */}
+      <Glass style={{ padding: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <UserAvatar user={user} size="lg" onClick={onOpenProfile} />
+          <div>
+            <h1 style={{ fontSize: 22, margin: '0 0 4px', color: 'var(--text)' }}>
+              <Stretch before="أهْـ" after="ـلاً" length={2} />، {user.name}
+            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span className="asas-readonly-id" style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12.5 }}>
+                الرقم الوظيفي: {user.identifier}
               </span>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12, marginBottom: 14 }}>
-              <div style={{ background: '#fcfbf7', border: '1px solid #d2c5ac', padding: 12, borderRadius: 8, textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#736d65', marginBottom: 4 }}>وقت أول دخول (حضور)</div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: '#231f20' }}>{todayRecord?.first_in ? time(todayRecord.first_in) : '—'}</div>
-                <small style={{ color: '#736d65', fontSize: 11 }}>{todayRecord?.first_in ? (todayRecord.status_label || 'سُجل بنجاح') : 'لم يسجل بعد'}</small>
-              </div>
-              <div style={{ background: '#fcfbf7', border: '1px solid #d2c5ac', padding: 12, borderRadius: 8, textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#736d65', marginBottom: 4 }}>وقت آخر خروج (انصراف)</div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: '#231f20' }}>{todayRecord?.last_out ? time(todayRecord.last_out) : '—'}</div>
-                <small style={{ color: '#736d65', fontSize: 11 }}>{todayRecord?.last_out ? 'سُجل بنجاح' : (isInside ? 'قيد الدوام' : 'لم يسجل بعد')}</small>
-              </div>
-              <div style={{ background: '#fcfbf7', border: '1px solid #d2c5ac', padding: 12, borderRadius: 8, textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#736d65', marginBottom: 4 }}>سبب الخروج التلقائي</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: todayRecord?.exit_reason_label?.includes('مبكر') ? '#c92a2a' : '#775b24', marginTop: 3 }}>
-                  {todayRecord?.exit_reason_label || data?.automatic_status?.exit_reason_label || (isInside ? 'قيد الدوام' : '—')}
-                </div>
-                <small style={{ color: '#736d65', fontSize: 11 }}>حسب توقيت الدوام</small>
-              </div>
-              <div style={{ background: '#fcfbf7', border: '1px solid #d2c5ac', padding: 12, borderRadius: 8, textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#736d65', marginBottom: 4 }}>التوقيت اللحظي الآن</div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: '#ba9555' }}>{liveTime || '—'}</div>
-                <small style={{ color: '#736d65', fontSize: 11 }}>توقيت صنعاء (اليمن)</small>
-              </div>
-            </div>
-
-            {/* Camera QR Scanner Modal */}
-            {cameraModal && (
-              <div className="asas-modal-backdrop" onClick={stopCamera}>
-                <section className="asas-modal" style={{ maxWidth: 400, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                  <div className="asas-card-head">
-                    <h2>📷 مسح كود الفرع</h2>
-                    <Button icon={X} onClick={stopCamera} />
-                  </div>
-                  <div style={{ padding: 16 }}>
-                    <p className="asas-muted" style={{ fontSize: 12.5, marginBottom: 12 }}>
-                      وجّه كاميرا الهاتف نحو كود QR المعلق في مقر الفرع للتحضير الفوري:
-                    </p>
-                    <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#000', minHeight: 240 }}>
-                      <video ref={videoRef} playsInline autoPlay style={{ width: '100%', height: 240, objectFit: 'cover' }} />
-                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 180, height: 180, border: '2px dashed #ba9555', borderRadius: 12, pointerEvents: 'none' }} />
-                    </div>
-                  </div>
-                  <div className="asas-modal-footer">
-                    <Button type="button" onClick={stopCamera}>إلغاء</Button>
-                  </div>
-                </section>
-              </div>
-            )}
-
-            {/* Primary Smart Auto-Button */}
-            <Button
-              variant="primary"
-              disabled={busy}
-              onClick={() => act('auto')}
-              style={{
-                width: '100%',
-                padding: '16px 20px',
-                fontSize: 16,
-                fontWeight: 700,
-                marginBottom: 12,
-                background: isInside ? '#842029' : '#198754',
-                borderColor: isInside ? '#701a22' : '#146c43',
-                color: '#fff',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: 10
-              }}
-            >
-              {isInside ? <LogOut size={18} /> : <LogIn size={18} />}
-              {isInside
-                ? `⚡ تسجيل الانصراف التلقائي الآن ${liveTime ? `(${liveTime})` : ''}`
-                : `⚡ تسجيل الحضور التلقائي الآن ${liveTime ? `(${liveTime})` : ''}`}
-            </Button>
-
-            <div style={{ marginBottom: 12 }}>
-              <Button
-                type="button"
-                icon={Camera}
-                onClick={startCamera}
-                disabled={busy}
-                style={{ width: '100%', padding: '12px', fontSize: 13.5, fontWeight: 600, background: '#fff', border: '1px solid #d2c5ac', color: '#231f20', display: 'flex', justifyContent: 'center', gap: 8 }}
-              >
-                📷 مسح كود الفرع بكاميرا الجوال مباشرة
-              </Button>
-            </div>
-
-            <div className="asas-actions" style={{ justifyContent: 'center', gap: 8 }}>
-              <Button disabled={busy} onClick={() => act('enter')} style={{ fontSize: 12 }}>
-                <LogIn size={13} />
-                دخول يدوي
-              </Button>
-              <Button disabled={busy} onClick={() => act('exit')} style={{ fontSize: 12 }}>
-                <LogOut size={13} />
-                انصراف يدوي
-              </Button>
+              <span className="asas-badge inside" style={{ fontSize: 11 }}>موظف معتمد</span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{user.email || '—'}</span>
             </div>
           </div>
-        </section>
+        </div>
 
-        <section className="asas-card" style={{ marginTop: 20 }}>
-          <div className="asas-card-head"><h2>طلب إجازة</h2></div>
-          <form className="asas-card-body asas-form" onSubmit={async e => {
-            e.preventDefault();
-            setBusy(true);
-            try {
-              await api('/leave', 'POST', leave);
-              setMessage('تم إرسال طلب الإجازة للمراجعة بنجاح');
-              setLeave({ ...leave, reason: '' });
-            } catch (e) { setError(e.message); } finally { setBusy(false); }
-          }}>
-            <div className="asas-form-grid">
-              <Field label="من تاريخ" type="date" required value={leave.from_date} onChange={e => setLeave({ ...leave, from_date: e.target.value })} />
-              <Field label="إلى تاريخ" type="date" required value={leave.to_date} onChange={e => setLeave({ ...leave, to_date: e.target.value })} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button className="asas-btn" onClick={onOpenProfile}>
+            <Icon name="key" />
+            الملف الشخصي والأمان
+          </button>
+          <div className="asas-clock-pill">
+            <Icon name="clock" style={{ width: 14, height: 14, color: 'var(--accent)' }} />
+            <span>صنعاء: <strong>{liveTime || '—'}</strong></span>
+          </div>
+        </div>
+      </Glass>
+
+      {error && (
+        <div className="asas-notice error" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span>{error}</span>
+          <button className="asas-btn sm" onClick={load} disabled={busy}>
+            <Icon name="refresh" />
+            إعادة المحاولة
+          </button>
+        </div>
+      )}
+      {message && <div className="asas-notice">{message}</div>}
+
+      {/* Attendance Big Card */}
+      <Card title="حالة وسجل حضور اليوم" icon="calendar">
+        <div style={{ padding: 10 }}>
+          <div style={{ background: isInside ? 'var(--paid-bg)' : 'var(--glass-inset)', border: `1px solid ${isInside ? 'rgba(35, 116, 74, 0.3)' : 'var(--hairline)'}`, padding: '14px 18px', borderRadius: 14, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block' }}>الحالة اللحظية:</span>
+              <strong style={{ fontSize: 16, color: isInside ? 'var(--paid)' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                <Icon name={isInside ? 'checkCircle' : 'pause'} style={{ width: 18, height: 18 }} />
+                {isInside ? 'داخل مقر العمل (حضور مفتوح)' : (todayRecord?.last_out ? 'تم تسجيل الانصراف وإنهاء الدوام' : 'جاهز لتسجيل الحضور')}
+              </strong>
             </div>
-            <Field label="السبب" required value={leave.reason} onChange={e => setLeave({ ...leave, reason: e.target.value })} />
-            <Button type="submit" disabled={busy}>إرسال الطلب</Button>
-          </form>
-        </section>
+            <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`}>
+              الإجراء التلقائي: {isInside ? 'تسجيل الانصراف' : 'تسجيل الحضور'}
+            </span>
+          </div>
 
-        <section className="asas-card" style={{ marginTop: 20 }}>
-          <div className="asas-card-head"><h2>سجل حضوري الأخير</h2></div>
-          <Records rows={(data?.records || []).map(r => ({ ...r, name: user.name, identifier: user.identifier }))} />
-        </section>
-      </main>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
+            <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 12, textAlign: 'center', border: '1px solid var(--hairline)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>أول دخول (حضور)</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginTop: 4 }}>{todayRecord?.first_in ? time(todayRecord.first_in) : '—'}</div>
+            </div>
+            <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 12, textAlign: 'center', border: '1px solid var(--hairline)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>آخر خروج (انصراف)</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginTop: 4 }}>{todayRecord?.last_out ? time(todayRecord.last_out) : '—'}</div>
+            </div>
+            <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 12, textAlign: 'center', border: '1px solid var(--hairline)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>سبب الخروج</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginTop: 4 }}>{todayRecord?.exit_reason_label || (isInside ? 'قيد الدوام' : '—')}</div>
+            </div>
+          </div>
+
+          {/* Smart Button */}
+          <button
+            className={`asas-btn ${isInside ? 'danger' : 'primary'}`}
+            disabled={busy}
+            onClick={() => act('auto')}
+            style={{ width: '100%', height: 52, fontSize: 16, marginBottom: 10 }}
+          >
+            <Icon name={isInside ? 'pause' : 'logIn'} />
+            {isInside ? 'تسجيل الانصراف التلقائي الآن' : 'تسجيل الحضور التلقائي الآن'}
+          </button>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="asas-btn" onClick={startCamera} style={{ flex: 1, justifyContent: 'center' }}>
+              <Icon name="camera" />
+              مسح QR بكاميرا الجوال
+            </button>
+            <button className="asas-btn" onClick={() => act('enter')} disabled={busy}>
+              <Icon name="logIn" />
+              دخول يدوي
+            </button>
+            <button className="asas-btn" onClick={() => act('exit')} disabled={busy}>
+              <Icon name="pause" />
+              خروج يدوي
+            </button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Camera Modal */}
+      {cameraModal && (
+        <div className="asas-modal-backdrop" onClick={stopCamera}>
+          <section className="asas-modal" style={{ maxWidth: 400, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div className="asas-modal-head">
+              <h2>مسح كود الفرع</h2>
+              <button className="asas-btn sm" onClick={stopCamera}><Icon name="close" /></button>
+            </div>
+            <div className="asas-modal-body">
+              <p className="asas-muted" style={{ marginBottom: 12 }}>وجّه كاميرا الهاتف نحو كود QR المعلق في مقر الفرع:</p>
+              <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', background: '#000', minHeight: 240 }}>
+                <video ref={videoRef} playsInline autoPlay style={{ width: '100%', height: 240, objectFit: 'cover' }} />
+              </div>
+            </div>
+            <div className="asas-modal-footer">
+              <button className="asas-btn" onClick={stopCamera}>إلغاء</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Leave Request Card */}
+      <Card title="طلب إجازة" icon="receipt">
+        <form onSubmit={async e => {
+          e.preventDefault();
+          setBusy(true);
+          try {
+            await api('/leave', 'POST', leave);
+            setMessage('تم إرسال طلب الإجازة للمراجعة بنجاح');
+            setLeave({ ...leave, reason: '' });
+          } catch (e) { setError(e.message); } finally { setBusy(false); }
+        }} style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="asas-form-grid">
+            <Field label="من تاريخ" type="date" required value={leave.from_date} onChange={e => setLeave({ ...leave, from_date: e.target.value })} />
+            <Field label="إلى تاريخ" type="date" required value={leave.to_date} onChange={e => setLeave({ ...leave, to_date: e.target.value })} />
+          </div>
+          <Field label="السبب" required value={leave.reason} onChange={e => setLeave({ ...leave, reason: e.target.value })} />
+          <button className="asas-btn primary" type="submit" disabled={busy} style={{ alignSelf: 'flex-start' }}>
+            <Icon name="send" />
+            إرسال الطلب
+          </button>
+        </form>
+      </Card>
+
+      {/* Recent Records Card */}
+      <Card title="سجل حضوري الأخير" icon="calendar">
+        <Records rows={(data?.records || []).map(r => ({ ...r, name: user.name, identifier: user.identifier }))} />
+      </Card>
     </div>
   );
 }
