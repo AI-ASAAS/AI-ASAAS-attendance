@@ -1,5 +1,5 @@
 'use client';
-import {useState,useEffect,useCallback,useRef} from 'react';
+import React, {useState,useEffect,useCallback,useRef} from 'react';
 import {LayoutDashboard,Users,MapPin,QrCode,Clock3,CalendarDays,FileText,File,ShieldCheck,LogOut,Menu,X,Plus,RefreshCw,Download,ArrowUpLeft,Search,Building2,Signal,CheckCircle2,AlertCircle,Printer,Settings2,LogIn,Smartphone,Mail,Phone,KeyRound,ShieldAlert,Unlock} from 'lucide-react';
 import {QRCodeSVG} from 'qrcode.react';
 import {getDeviceId,getDeviceName} from '../../utils/device';
@@ -51,9 +51,26 @@ async function api(path, method = 'GET', body, retries = 2) {
     }
   }
 }
-const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Aden'}).format(new Date());
-const time=v=>v?new Date(v).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'—';
-const date=v=>v?new Date(v).toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'}):'—';
+const today=()=>{
+ try { return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Aden'}).format(new Date()); }
+ catch(_) { return new Date().toISOString().slice(0,10); }
+};
+const time=v=>{
+ if(!v) return '—';
+ try {
+  const d = new Date(v);
+  if(isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'});
+ } catch(_) { return '—'; }
+};
+const date=v=>{
+ if(!v) return '—';
+ try {
+  const d = new Date(v);
+  if(isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'});
+ } catch(_) { return '—'; }
+};
 const states={inside:'حضور مفتوح',outside:'تم الخروج',closed:'مغلق',pending:'قيد المراجعة',approved:'مقبولة',rejected:'مرفوضة'};
 const roles={super_admin:'مدير النظام',hr_admin:'الموارد البشرية',branch_manager:'مدير الفرع',viewer:'للعرض فقط',employee:'موظف'};
 const tabs=[['dashboard','نظرة عامة',LayoutDashboard],['records','الحضور والانصراف',CalendarDays],['accounts','الموظفون والأجهزة',Users],['branches','المواقع والفروع',MapPin],['qr','رموز QR المعتمدة',QrCode],['shifts','الدوام والاحتساب',Clock3],['leave','الإجازات',FileText],['audit','سجل العمليات',ShieldCheck],['settings','إعدادات النظام',Settings2]];
@@ -64,14 +81,18 @@ function Button({children,icon:Icon,variant='',...props}){return <button classNa
 function Badge({state}){return <span className={`asas-badge ${state}`}>{states[state]||state}</span>;}
 function Empty({children='لا توجد سجلات بعد'}){return <div className="asas-empty"><FileText/>{children}</div>;}
 function Field({label,children,...props}){return <label className="asas-label">{label}{children||<input className="asas-input" {...props}/>}</label>;}
-function Records({rows,onEdit,canEdit}){return rows.length?<div className="asas-table-wrap"><table className="asas-table"><thead><tr>{['الموظف','الفرع','الدوام','أول دخول','آخر خروج','الحالة التلقائية','سبب الخروج التلقائي','الاحتساب',...(canEdit?['إجراء']:[] )].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{rows.map(r=>{
+function Records({rows=[],onEdit,canEdit}){
+ const list = Array.isArray(rows) ? rows : [];
+ if (!list.length) return <Empty/>;
+ return <div className="asas-table-wrap"><table className="asas-table"><thead><tr>{['الموظف','الفرع','الدوام','أول دخول','آخر خروج','الحالة التلقائية','سبب الخروج التلقائي','الاحتساب',...(canEdit?['إجراء']:[] )].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{list.map((r, idx)=>{
  const isInside = r.state === 'inside';
  const isEarly = r.status_key === 'early_exit';
- const isLate = r.status_key && r.status_key.startsWith('late');
+ const isLate = r.status_key && typeof r.status_key === 'string' && r.status_key.startsWith('late');
  const statusLabel = r.status_label || (isInside ? 'حاضر في الموعد' : 'تم الانصراف');
- const exitReasonLabel = r.exit_reason_label || (isInside ? 'قيد الدوام (على رأس العمل)' : ({geofence:'مغادرة نطاق الموقع تلقائياً (GPS)',manual:'انتهاء ساعات الدوام الرسمي في الموعد',scheduled:'انتهاء فترة المناوبة المجدولة تلقائياً',admin_correction:'تصحيح إداري'}[r.exit_reason]||r.exit_reason||'انتهاء الدوام الرسمي'));
+ const rawExitReason = r.exit_reason_label || (isInside ? 'قيد الدوام (على رأس العمل)' : ({geofence:'مغادرة نطاق الموقع تلقائياً (GPS)',manual:'انتهاء ساعات الدوام الرسمي في الموعد',scheduled:'انتهاء فترة المناوبة المجدولة تلقائياً',admin_correction:'تصحيح إداري'}[r.exit_reason]||r.exit_reason||'انتهاء الدوام الرسمي'));
+ const exitReasonLabel = String(rawExitReason || '—');
 
- return <tr key={r.id}>
+ return <tr key={r.id || ('rec-' + idx)}>
   <td><strong>{r.name}</strong><small>{r.identifier}</small></td>
   <td>{r.branch_name}</td>
   <td>{date(r.shift_start)}</td>
@@ -103,9 +124,44 @@ function Records({rows,onEdit,canEdit}){return rows.length?<div className="asas-
   <td>{r.counted_minutes==null?'مفتوح':`${r.counted_minutes} دقيقة`}<small>{r.deduct_away?'مع خصم المغادرة':'دون خصم المغادرة'}</small></td>
   {canEdit&&<td><Button onClick={()=>onEdit(r)}>تصحيح</Button></td>}
  </tr>;
-})}</tbody></table></div>:<Empty/>;}
+})}</tbody></table></div>;
+}
 
-export default function AsasApp(){
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentCatch(error, errorInfo) {
+    console.error('ErrorBoundary caught:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="asas-app" style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh',padding:20}}>
+          <div className="asas-card" style={{maxWidth:500,width:'100%',padding:24,textAlign:'center'}}>
+            <Brand/>
+            <h2 style={{color:'#c92a2a',marginTop:16}}>حدث خطأ أثناء عرض الصفحة</h2>
+            <p className="asas-muted" style={{marginTop:8}}>
+              {this.state.error?.message || 'تعذر استكمال العرض. تم تسجيل الخطأ لحمايتك.'}
+            </p>
+            <div style={{marginTop:20,display:'flex',gap:10,justifyContent:'center'}}>
+              <Button variant="primary" onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}>
+                🔄 إعادة تحميل الصفحة
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function AsasAppInner(){
  const [user,setUser]=useState(null),[boot,setBoot]=useState(true),[tab,setTab]=useState('dashboard'),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[open,setOpen]=useState(false),[notice,setNotice]=useState('');
  const [modal,setModal]=useState(null),[form,setForm]=useState({}),[branches,setBranches]=useState([]),[shifts,setShifts]=useState([]),[qr,setQr]=useState(null),[branchId,setBranchId]=useState(''),[from,setFrom]=useState(today),[to,setTo]=useState(today),[search,setSearch]=useState('');
  const [liveTime,setLiveTime]=useState('');
@@ -243,7 +299,7 @@ export default function AsasApp(){
  const set=(k,value)=>setForm(f=>({...f,[k]:value}));
  return <div className="asas-app">
   {open&&<div className="asas-modal-backdrop" style={{background:'rgba(35,31,32,0.4)',zIndex:25}} onClick={()=>setOpen(false)}/>}
-  <aside className={`asas-sidebar ${open?'open':''}`}><Brand/><p className="asas-nav-label">مساحة إدارة الفريق</p><nav className="asas-nav">{tabs.filter(([key])=>key!=='accounts'||can('employees.read')).filter(([key])=>key!=='audit'||can('audit.read')).map(([key,label,Icon])=><button className={tab===key?'active':''} key={key} onClick={()=>{setTab(key);setOpen(false);setData(null);setNotice('');setSearch('');}}><Icon/>{label}</button>)}</nav><div className="asas-sidebar-foot"><div className="asas-profile"><span className="asas-avatar">{user.name[0]}</span><div><strong>{user.name}</strong><p>{roles[user.role]}</p></div></div><Button icon={LogOut} onClick={logout}>تسجيل الخروج</Button></div></aside>
+  <aside className={`asas-sidebar ${open?'open':''}`}><Brand/><p className="asas-nav-label">مساحة إدارة الفريق</p><nav className="asas-nav">{tabs.filter(([key])=>key!=='accounts'||can('employees.read')).filter(([key])=>key!=='audit'||can('audit.read')).map(([key,label,Icon])=><button className={tab===key?'active':''} key={key} onClick={()=>{setTab(key);setOpen(false);setData(null);setNotice('');setSearch('');}}><Icon/>{label}</button>)}</nav><div className="asas-sidebar-foot"><div className="asas-profile"><span className="asas-avatar">{(user?.name || user?.identifier || 'أ')[0] || 'أ'}</span><div><strong>{user.name}</strong><p>{roles[user.role]}</p></div></div><Button icon={LogOut} onClick={logout}>تسجيل الخروج</Button></div></aside>
   <div className="asas-main"><header className="asas-topbar"><div className="asas-actions"><button className="asas-btn asas-menu" aria-label="القائمة" onClick={()=>setOpen(!open)}><Menu size={18}/></button><span>مساحة العمل / <strong>{title}</strong></span></div><span>{new Date().toLocaleDateString('ar-YE',{weekday:'long',day:'numeric',month:'long',timeZone:'Asia/Aden'})} · {liveTime||'—'} · توقيت صنعاء (اليمن)</span></header>
   <main className="asas-content"><div className="asas-heading"><div><p className="asas-eyebrow">أساس · إدارة الحضور</p><h1>{title}</h1><p className="asas-muted">حضور واضح، إدارة أدق، وفريق أكثر اتصالاً.</p></div><div className="asas-actions"><Button icon={RefreshCw} onClick={load} disabled={busy}>تحديث</Button>{['branches','shifts','accounts'].includes(tab)&&can({branches:'locations.write',shifts:'shifts.write',accounts:'employees.write'}[tab])&&<Button variant="primary" icon={Plus} onClick={()=>edit(tab)}>إضافة {tab==='branches'?'موقع':tab==='shifts'?'دوام':'موظف'}</Button>}</div></div>
   {error&&<div role="alert" className="asas-notice error" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}><span>{error}</span><Button type="button" icon={RefreshCw} onClick={load} disabled={busy} style={{padding:'4px 10px',fontSize:12}}>إعادة المحاولة</Button></div>}{notice&&<div role="status" className="asas-notice">{notice}</div>}
@@ -706,7 +762,8 @@ function Employee({user,logout}){
    const p=await new Promise((resolve,reject)=>{if(!navigator.geolocation)return reject(new Error('الموقع غير متاح'));navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:20000,maximumAge:0});});
    const fix={latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,captured_at:new Date(p.timestamp).toISOString()};
    const device_id=getDeviceId();
-   const r=await api('/attendance/action','POST',{action,token:currentToken,request_id:crypto.randomUUID(),device_id,fix});
+   const reqId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('req-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
+   const r=await api('/attendance/action','POST',{action,token:currentToken,request_id:reqId,device_id,fix});
    setMessage(r.message||'تم توثيق الحضور بنجاح');
    await load();
   }catch(e){setError(e.message);}finally{setBusy(false);}
@@ -739,7 +796,7 @@ function Employee({user,logout}){
   </div>
 
   <div className="asas-notice" style={{marginTop:20}}>🛡️ تم تقييد حسابك بجهازك المعتمد لحماية السجلات ومنع التحضير بالنيابة. المسح والموقع الجغرافي يوثقان لحظياً بتوقيت صنعاء.</div>
-  {error&&<div className="asas-notice error" role="alert" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}><span>{error}</span><Button type="button" icon={RefreshCw} onClick={refresh} disabled={busy} style={{padding:'4px 10px',fontSize:12}}>إعادة المحاولة</Button></div>}
+  {error&&<div className="asas-notice error" role="alert" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}><span>{error}</span><Button type="button" icon={RefreshCw} onClick={load} disabled={busy} style={{padding:'4px 10px',fontSize:12}}>إعادة المحاولة</Button></div>}
   {message&&<div className="asas-notice">{message}</div>}
 
   {/* Live Attendance & Exit Time Summary Card */}
@@ -828,4 +885,13 @@ function Employee({user,logout}){
   <section className="asas-card" style={{marginTop:20}}><div className="asas-card-head"><h2>طلب إجازة</h2></div><form className="asas-card-body asas-form" onSubmit={async e=>{e.preventDefault();setBusy(true);try{await api('/leave','POST',leave);setMessage('تم إرسال الطلب للمراجعة');setLeave({...leave,reason:''});}catch(e){setError(e.message);}finally{setBusy(false);}}}><div className="asas-form-grid"><Field label="من" type="date" required value={leave.from_date} onChange={e=>setLeave({...leave,from_date:e.target.value})}/><Field label="إلى" type="date" required value={leave.to_date} onChange={e=>setLeave({...leave,to_date:e.target.value})}/></div><Field label="السبب" required value={leave.reason} onChange={e=>setLeave({...leave,reason:e.target.value})}/><Button type="submit" disabled={busy}>إرسال الطلب</Button></form></section>
   <section className="asas-card" style={{marginTop:20}}><div className="asas-card-head"><h2>سجل حضوري</h2></div><Records rows={(data?.records||[]).map(r=>({...r,name:user.name,identifier:user.identifier}))}/></section>
  </main></div>;
+}
+
+
+export default function AsasApp() {
+  return (
+    <ErrorBoundary>
+      <AsasAppInner />
+    </ErrorBoundary>
+  );
 }
