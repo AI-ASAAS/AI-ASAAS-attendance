@@ -32,7 +32,7 @@ export function getDeviceId() {
 
     // Persist in localStorage and 10-year cookie
     localStorage.setItem('asas_device_id', id);
-    document.cookie = `asas_device_id=${encodeURIComponent(id)}; max-age=315360000; path=/; SameSite=Strict`;
+    document.cookie = `asas_device_id=${encodeURIComponent(id)}; max-age=315360000; path=/; SameSite=Lax`;
     return id;
   } catch (e) {
     return 'fallback-device-' + Date.now();

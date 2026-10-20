@@ -78,9 +78,9 @@ app.post('/api/auth/login',rateLimit({windowMs:900000,max:20,standardHeaders:tru
  }
 
  const token=security.newToken();
- await db.query("INSERT INTO auth_sessions(token_hash,account_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '8 hours')",[security.digest(token),account.id]);
- res.cookie('asas_session',token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'strict',maxAge:8*3600000,path:'/api'});
- respond(res,{account:safeAccount(account),...(req.headers['x-asas-client']==='android'?{token}:{})});
+ await db.query("INSERT INTO auth_sessions(token_hash,account_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '365 days')",[security.digest(token),account.id]);
+ res.cookie('asas_session',token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',maxAge:365*24*3600000,path:'/'});
+ respond(res,{account:safeAccount(account),token});
 }));
 
 async function generateNextEmployeeIdentifier(client) {
@@ -196,15 +196,15 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
  }
 
  const token=security.newToken();
- await db.query("INSERT INTO auth_sessions(token_hash,account_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '8 hours')",[security.digest(token),account.id]);
- res.cookie('asas_session',token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'strict',maxAge:8*3600000,path:'/api'});
+ await db.query("INSERT INTO auth_sessions(token_hash,account_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '365 days')",[security.digest(token),account.id]);
+ res.cookie('asas_session',token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',maxAge:365*24*3600000,path:'/'});
  respond(res,{
   account:safeAccount(account),
+  token,
   is_new:isNew,
   message:isNew
     ? `🎉 تم تسجيل حسابك بنجاح! رقمك الوظيفي الثابت هو: (${account.identifier})`
-    : `مرحباً بعودتك! رقمك الوظيفي: (${account.identifier})`,
-  ...(req.headers['x-asas-client']==='android'?{token}:{})
+    : `مرحباً بعودتك! رقمك الوظيفي: (${account.identifier})`
  });
 }));
 app.use('/api',wrap(async(req,res,next)=>{
@@ -216,7 +216,12 @@ app.use('/api',wrap(async(req,res,next)=>{
  req.user=rows[0];req.tokenHash=security.digest(token);next();
 }));
 app.get('/api/auth/me',(req,res)=>respond(res,safeAccount(req.user)));
-app.post('/api/auth/logout',wrap(async(req,res)=>{await db.query('DELETE FROM auth_sessions WHERE token_hash=$1',[req.tokenHash]);res.clearCookie('asas_session',{path:'/api'});respond(res,{logged_out:true});}));
+app.post('/api/auth/logout',wrap(async(req,res)=>{
+ await db.query('DELETE FROM auth_sessions WHERE token_hash=$1',[req.tokenHash]);
+ res.clearCookie('asas_session',{path:'/'});
+ res.clearCookie('asas_session',{path:'/api'});
+ respond(res,{logged_out:true});
+}));
 
 app.get('/api/admin/branches',admin,wrap(async(req,res)=>{
  const broad=['super_admin','hr_admin'].includes(req.user.role);

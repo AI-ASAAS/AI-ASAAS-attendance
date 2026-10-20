@@ -8,10 +8,16 @@ async function api(path, method = 'GET', body, retries = 2) {
   let attempt = 0;
   while (true) {
     try {
+      const headers = {};
+      if (body) headers['Content-Type'] = 'application/json';
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('asas_token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      }
       const r = await fetch(`/api${path}`, {
         method,
-        credentials: 'same-origin',
-        headers: body ? { 'Content-Type': 'application/json' } : {},
+        credentials: 'include',
+        headers,
         body: body ? JSON.stringify(body) : undefined,
         cache: 'no-store'
       });
@@ -162,7 +168,15 @@ class ErrorBoundary extends React.Component {
 }
 
 function AsasAppInner(){
- const [user,setUser]=useState(null),[boot,setBoot]=useState(true),[tab,setTab]=useState('dashboard'),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[open,setOpen]=useState(false),[notice,setNotice]=useState('');
+ const [user,setUser]=useState(()=>{
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('asas_account');
+      return saved ? JSON.parse(saved) : null;
+    } catch (_) {}
+  }
+  return null;
+ }),[boot,setBoot]=useState(true),[tab,setTab]=useState('dashboard'),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[open,setOpen]=useState(false),[notice,setNotice]=useState('');
  const [modal,setModal]=useState(null),[form,setForm]=useState({}),[branches,setBranches]=useState([]),[shifts,setShifts]=useState([]),[qr,setQr]=useState(null),[branchId,setBranchId]=useState(''),[from,setFrom]=useState(today),[to,setTo]=useState(today),[search,setSearch]=useState('');
  const [liveTime,setLiveTime]=useState('');
  useEffect(()=>{
@@ -181,12 +195,17 @@ function AsasAppInner(){
       try {
         const u = await api('/auth/me');
         setUser(u);
+        if (typeof window !== 'undefined') localStorage.setItem('asas_account', JSON.stringify(u));
         setError('');
         setBoot(false);
         if (isManual) setBusy(false);
         return;
       } catch (e) {
         if (e.status === 401) {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('asas_token');
+            localStorage.removeItem('asas_account');
+          }
           setUser(null);
           setError('');
           setBoot(false);
@@ -247,7 +266,14 @@ function AsasAppInner(){
   };
  },[load]);
  useEffect(()=>{setQr(null);},[branchId]);
- async function logout(){try{await api('/auth/logout','POST',{});setUser(null);}catch(e){setError(e.message);}}
+ async function logout(){
+  try{await api('/auth/logout','POST',{});}catch(e){}
+  if(typeof window !== 'undefined'){
+    localStorage.removeItem('asas_token');
+    localStorage.removeItem('asas_account');
+  }
+  setUser(null);
+ }
  async function edit(kind,item){
   setError('');setNotice('');
   if(kind==='records'){
@@ -339,43 +365,25 @@ function AsasAppInner(){
           </div>
           <div className="asas-actions">
             <Button icon={Printer} onClick={()=>window.print()}>طباعة الملصق (A4)</Button>
-            <a className="asas-btn primary" href={autoUrl} target="_blank" rel="noreferrer"><QrCode size={15}/>الكود الموحد الذكي</a>
-            <a className="asas-btn" href={enterUrl} target="_blank" rel="noreferrer"><LogIn size={15}/>صفحة كود الدخول</a>
-            <a className="asas-btn" href={exitUrl} target="_blank" rel="noreferrer"><LogOut size={15}/>صفحة كود الخروج</a>
-            <a className="asas-btn" href={fixUrl(`/attend?branch=${branchId}`)} target="_blank" rel="noreferrer"><Smartphone size={15}/>صفحة الآيفون العامة</a>
+            <a className="asas-btn primary" href={enterUrl} target="_blank" rel="noreferrer"><LogIn size={15}/>كود تسجيل الدخول (الحضور)</a>
+            <a className="asas-btn" href={exitUrl} target="_blank" rel="noreferrer"><LogOut size={15}/>كود تسجيل الخروج (الانصراف)</a>
+            <a className="asas-btn" href={fixUrl(`/attend?branch=${branchId}`)} target="_blank" rel="noreferrer"><Smartphone size={15}/>صفحة الآيفون والجوال</a>
             <Button variant="danger" onClick={async()=>{const reason=window.prompt('سبب إبطال الرموز وتجديدها:');if(!reason)return;try{await api(`/admin/branches/${branchId}/qr/revoke`,'POST',{reason});setQr(null);setNotice('تم إبطال الرموز بنجاح وإصدار مراجعة جديدة. اضغط عرض الرموز لإصدار البديل فوراً.');}catch(e){setError(e.message);}}}>إبطال وتجديد الرموز</Button>
           </div>
         </div>
 
         <div className="asas-qr-grid">
-          {/* Smart Unified Auto QR Card */}
-          <div className="asas-qr-card auto" style={{gridColumn:'1 / -1',background:'linear-gradient(180deg,#faf7f0 0%,#ffffff 100%)',border:'2px solid #b59045',boxShadow:'0 4px 14px rgba(181,144,69,0.12)'}}>
-            <div className="asas-qr-badge" style={{background:'#b59045',color:'#fff',fontSize:12.5,padding:'4px 14px'}}>⭐ الكود الموحد التلقائي الذكي (دخول وخروج تلقائي بحسب حالة الموظف)</div>
-            <div className="asas-qr-card-title" style={{fontSize:19,marginTop:8}}><QrCode size={22} color="#b59045"/>كود الحضور والانصراف الموحد التلقائي</div>
-            <p className="asas-muted" style={{fontSize:12.5,maxWidth:520,margin:'0 auto 10px'}}>
-              يطبع ويعلق في مدخل ومخرج المنشأة: يمسحه الموظف فيتعرف النظام على حالته تلقائياً؛ إذا كان خارج العمل يسجل له <strong>حضور</strong>، وإذا كان مسجلاً دخول يسجل له <strong>انصراف</strong> فوراً دون الحاجة لكودين منفصلين!
-            </p>
-            <div className="asas-qr-box" style={{borderColor:'#b59045',padding:10}}>
-              <QRCodeSVG value={autoUrl} size={220} level="M" includeMargin/>
-            </div>
-            <span className="asas-badge" style={{background:'#b59045',color:'#fff',marginTop:6}}>رمز موحد تلقائي دائم ومستمر</span>
-            <div className="asas-actions" style={{justifyContent:'center',marginTop:8,flexWrap:'wrap',gap:6}}>
-              <a className="asas-btn primary" href={autoUrl} target="_blank" rel="noreferrer"><Smartphone size={14}/>فتح صفحة التحضير التلقائية</a>
-              <a className="asas-btn" href={autoHtml} target="_blank" rel="noreferrer"><Smartphone size={14}/>HTML للآيفون</a>
-              <Button type="button" onClick={()=>{navigator.clipboard?.writeText(autoUrl);setNotice('تم نسخ رابط كود الحضور التلقائي الموحد');}}>نسخ الرابط</Button>
-            </div>
-          </div>
           {/* Check-In QR Card */}
           <div className="asas-qr-card enter">
-            <div className="asas-qr-badge">كود الدخول والعودة المعتمد الدائم</div>
-            <div className="asas-qr-card-title"><LogIn size={20}/>تسجيل الدخول والعودة</div>
-            <p className="asas-muted" style={{fontSize:12}}>رمز ثابت يطبع مرة واحدة ولا يتغير · يُمسح عند بداية يوم العمل أو العودة</p>
+            <div className="asas-qr-badge">كود تسجيل الدخول (الحضور والعودة)</div>
+            <div className="asas-qr-card-title"><LogIn size={20}/>تسجيل الدخول (الحضور)</div>
+            <p className="asas-muted" style={{fontSize:12}}>رمز معتمد دائم يُعلق عند المدخل · يُمسح بكاميرا الجوال عند الحضور صباحاً أو العودة</p>
             <div className="asas-qr-box">
               <QRCodeSVG value={enterUrl} size={210} level="M" includeMargin/>
             </div>
             <span className="asas-badge inside" style={{marginTop:6}}>رمز دخول دائم ومستمر</span>
             <div className="asas-actions" style={{justifyContent:'center',marginTop:8,flexWrap:'wrap',gap:6}}>
-              <a className="asas-btn" href={enterUrl} target="_blank" rel="noreferrer"><LogIn size={14}/>فتح صفحة الدخول</a>
+              <a className="asas-btn primary" href={enterUrl} target="_blank" rel="noreferrer"><LogIn size={14}/>فتح صفحة الدخول</a>
               <a className="asas-btn" href={enterHtml} target="_blank" rel="noreferrer"><Smartphone size={14}/>HTML للآيفون</a>
               <Button type="button" onClick={()=>{navigator.clipboard?.writeText(enterUrl);setNotice('تم نسخ رابط صفحة كود الدخول');}}>نسخ الرابط</Button>
             </div>
@@ -383,9 +391,9 @@ function AsasAppInner(){
 
           {/* Check-Out QR Card */}
           <div className="asas-qr-card exit">
-            <div className="asas-qr-badge">كود الخروج والانصراف المعتمد الدائم</div>
-            <div className="asas-qr-card-title"><LogOut size={20}/>تسجيل الخروج والانصراف</div>
-            <p className="asas-muted" style={{fontSize:12}}>رمز ثابت يطبع مرة واحدة ولا يتغير · يُمسح عند إنهاء الدوام أو المغادرة</p>
+            <div className="asas-qr-badge">كود تسجيل الخروج (الانصراف النهائي)</div>
+            <div className="asas-qr-card-title"><LogOut size={20}/>تسجيل الخروج (الانصراف)</div>
+            <p className="asas-muted" style={{fontSize:12}}>رمز معتمد دائم يُعلق عند المخرج · يُمسح بكاميرا الجوال عند إنهاء الدوام أو المغادرة</p>
             <div className="asas-qr-box">
               <QRCodeSVG value={exitUrl} size={210} level="M" includeMargin/>
             </div>
@@ -479,6 +487,10 @@ function Login({onLogin,initialError,onRetry}){
     device_id,
     device_name
    });
+   if (typeof window !== 'undefined') {
+    if (d?.token) localStorage.setItem('asas_token', d.token);
+    if (d?.account) localStorage.setItem('asas_account', JSON.stringify(d.account));
+   }
    onLogin(d.account);
   } catch (err) {
    setError(err.message || 'فشل التحقق عبر حساب Google');
@@ -536,6 +548,10 @@ function Login({onLogin,initialError,onRetry}){
    const device_id=getDeviceId();
    const device_name=getDeviceName();
    const d=await api('/auth/login','POST',{identifier,password,phone:phone||undefined,device_id,device_name});
+   if(typeof window!=='undefined'){
+    if(d?.token)localStorage.setItem('asas_token',d.token);
+    if(d?.account)localStorage.setItem('asas_account',JSON.stringify(d.account));
+   }
    onLogin(d.account);
   }catch(e){setError(e.message);}finally{setBusy(false);}
  }
@@ -545,6 +561,10 @@ function Login({onLogin,initialError,onRetry}){
    const device_id=getDeviceId();
    const device_name=getDeviceName();
    const d=await api('/auth/google','POST',{email:googleEmail,name:googleName||undefined,phone:phone||undefined,device_id,device_name});
+   if(typeof window!=='undefined'){
+    if(d?.token)localStorage.setItem('asas_token',d.token);
+    if(d?.account)localStorage.setItem('asas_account',JSON.stringify(d.account));
+   }
    onLogin(d.account);
   }catch(e){setError(e.message);}finally{setBusy(false);}
  }
