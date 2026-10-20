@@ -776,9 +776,13 @@ function Employee({user,logout}){
   <div className="asas-heading"><Brand/><Button onClick={logout} icon={LogOut}>خروج</Button></div>
   <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
    <div>
+    <div style={{display:'inline-flex',alignItems:'center',gap:6,background:'#fbf7ee',border:'1px solid #ebdcc0',padding:'3px 10px',borderRadius:20,fontSize:11.5,color:'#775b24',fontWeight:600,marginBottom:6}}>
+     <Users size={12}/> مساحة الموظف · خدمات الحضور الذاتية (لوحة التحكم للإدارة فقط)
+    </div>
     <h1>مرحباً، {user.name}</h1>
     <p className="asas-muted" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginTop:4}}>
      <span style={{background:'#231f20',color:'#b59045',padding:'2px 8px',borderRadius:4,fontWeight:'bold',fontSize:12.5,fontFamily:'monospace'}}>الرقم الوظيفي: {user.identifier}</span>
+     <span className="asas-badge outside" style={{fontSize:11}}>حساب موظف</span>
      <span>{user.email||'بدون بريد'}</span>
      {user.phone&&<span>· {user.phone}</span>}
     </p>
