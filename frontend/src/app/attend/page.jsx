@@ -353,7 +353,11 @@ export default function AttendPage({ forcedAction = null }) {
       });
       setUser(d.account);
       await loadUserData();
-      await fetchActiveToken();
+      if (token) {
+        setTimeout(() => handleAction(actionHint || 'auto'), 400);
+      } else {
+        await fetchActiveToken();
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -384,13 +388,26 @@ export default function AttendPage({ forcedAction = null }) {
         setNotice(`مرحباً بعودتك ${d.account.name}! رقمك الوظيفي المعتمد: (${d.account.identifier})`);
       }
       await loadUserData();
-      await fetchActiveToken();
+      if (token) {
+        setTimeout(() => handleAction(actionHint || 'auto'), 400);
+      } else {
+        await fetchActiveToken();
+      }
     } catch (e) {
       setError(e.message);
     } finally {
       setBusy(false);
     }
   };
+
+  // Auto-submit attendance immediately if token was scanned and user is logged in
+  const autoCheckedRef = useRef(false);
+  useEffect(() => {
+    if (user && token && !autoCheckedRef.current && !busy) {
+      autoCheckedRef.current = true;
+      handleAction(actionHint || 'auto');
+    }
+  }, [user, token, busy, actionHint]);
 
   // Leave submission
   const handleLeaveSubmit = async (e) => {
@@ -520,6 +537,17 @@ export default function AttendPage({ forcedAction = null }) {
         {/* Not Logged In -> Clean iPhone Login Card */}
         {!user ? (
           <div style={styles.card}>
+            {token && (
+              <div style={{ background: '#eaf4ee', border: '1px solid #b7dfc6', padding: '12px 14px', borderRadius: 10, marginBottom: 16, color: '#155724', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <CheckCircle2 size={20} color="#2d6a4f" style={{ flexShrink: 0 }} />
+                <div>
+                  <strong>تم التقاط رمز الفرع بنجاح! 📸</strong>
+                  <div style={{ fontSize: 11.5, marginTop: 2, color: '#2d6a4f' }}>
+                    سجّل الدخول بحسابك أو بضغطة واحدة عبر Google لتوثيق حضورك فوراً بهذا الرمز وتثبيت جهازك.
+                  </div>
+                </div>
+              </div>
+            )}
             <div style={styles.cardHeader}>
               <div style={styles.iconCircle}>
                 <Smartphone size={22} color="#b59045" />

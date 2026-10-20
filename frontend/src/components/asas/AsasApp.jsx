@@ -1,6 +1,6 @@
 'use client';
 import React, {useState,useEffect,useCallback,useRef} from 'react';
-import {LayoutDashboard,Users,MapPin,QrCode,Clock3,CalendarDays,FileText,File,ShieldCheck,LogOut,Menu,X,Plus,RefreshCw,Download,ArrowUpLeft,Search,Building2,Signal,CheckCircle2,AlertCircle,Printer,Settings2,LogIn,Smartphone,Mail,Phone,KeyRound,ShieldAlert,Unlock} from 'lucide-react';
+import {LayoutDashboard,Users,MapPin,QrCode,Clock3,CalendarDays,FileText,File,ShieldCheck,LogOut,Menu,X,Plus,RefreshCw,Download,ArrowUpLeft,Search,Building2,Signal,CheckCircle2,AlertCircle,Printer,Settings2,LogIn,Smartphone,Mail,Phone,KeyRound,ShieldAlert,Unlock,Camera} from 'lucide-react';
 import {QRCodeSVG} from 'qrcode.react';
 import {getDeviceId,getDeviceName} from '../../utils/device';
 
@@ -723,6 +723,51 @@ function Login({onLogin,initialError,onRetry}){
 function Employee({user,logout}){
  const [data,setData]=useState(null),[error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[token,setToken]=useState(''),[leave,setLeave]=useState({from_date:today(),to_date:today(),reason:''});
  const [liveTime,setLiveTime]=useState('');
+ const [cameraModal,setCameraModal]=useState(false);
+ const videoRef=useRef(null);
+ const streamRef=useRef(null);
+
+ async function startCamera(){
+  setCameraModal(true);setError('');
+  try{
+   const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+   streamRef.current=stream;
+   if(videoRef.current){videoRef.current.srcObject=stream;videoRef.current.play();}
+   if('BarcodeDetector' in window){
+    const detector=new window.BarcodeDetector({formats:['qr_code']});
+    const interval=setInterval(async()=>{
+     if(!videoRef.current||videoRef.current.readyState<2)return;
+     try{
+      const codes=await detector.detect(videoRef.current);
+      if(codes.length>0){
+       const raw=codes[0].rawValue;
+       stopCamera();
+       let t=raw;
+       try{
+        const u=new URL(raw);
+        const hash=new URLSearchParams(u.hash.replace(/^#/,''));
+        t=hash.get('qr')||u.searchParams.get('token')||raw;
+       }catch(_){}
+       setToken(t);
+       act('auto',t);
+       clearInterval(interval);
+      }
+     }catch(_){}
+    },350);
+   }
+  }catch(err){
+   setError('تعذر فتح الكاميرا؛ يرجى منح الإذن في المتصفح أو الضغط على زر الحضور التلقائي المباشر');
+   setCameraModal(false);
+  }
+ }
+
+ function stopCamera(){
+  if(streamRef.current){
+   streamRef.current.getTracks().forEach(t=>t.stop());
+   streamRef.current=null;
+  }
+  setCameraModal(false);
+ }
 
  useEffect(()=>{
   const update=()=>setLiveTime(new Intl.DateTimeFormat('ar-YE',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Asia/Aden'}).format(new Date()));
@@ -748,10 +793,10 @@ function Employee({user,logout}){
   };
  },[load]);
 
- async function act(action){
+ async function act(action, customToken = null){
   setBusy(true);setError('');
   try{
-   let currentToken = token;
+   let currentToken = customToken || token;
    if(!currentToken){
     try{
      const qrData = await api(`/attendance/active-qr?action=${action==='auto'?'':action}`);
@@ -847,6 +892,30 @@ function Employee({user,logout}){
      </div>
     </div>
 
+    {/* Camera QR Scanner Modal */}
+    {cameraModal && (
+      <div className="asas-modal-backdrop" onClick={stopCamera}>
+        <section className="asas-modal" style={{maxWidth:400,textAlign:'center'}} onClick={e=>e.stopPropagation()}>
+          <div className="asas-card-head">
+            <h2>📷 مسح كود الفرع</h2>
+            <Button icon={X} onClick={stopCamera}/>
+          </div>
+          <div style={{padding:16}}>
+            <p className="asas-muted" style={{fontSize:12.5,marginBottom:12}}>
+              وجّه كاميرا الهاتف نحو كود QR المعلق في مقر الفرع للتحضير الفوري:
+            </p>
+            <div style={{position:'relative',borderRadius:12,overflow:'hidden',background:'#000',minHeight:240}}>
+              <video ref={videoRef} playsInline autoPlay style={{width:'100%',height:240,objectFit:'cover'}}/>
+              <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:180,height:180,border:'2px dashed #b59045',borderRadius:12,pointerEvents:'none'}}/>
+            </div>
+          </div>
+          <div className="asas-modal-footer">
+            <Button type="button" onClick={stopCamera}>إلغاء</Button>
+          </div>
+        </section>
+      </div>
+    )}
+
     {/* Primary Smart Auto-Button */}
     <Button
       variant="primary"
@@ -872,6 +941,18 @@ function Employee({user,logout}){
         ? `⚡ تسجيل الانصراف التلقائي الآن ${liveTime?`(${liveTime})`:''}`
         : `⚡ تسجيل الحضور التلقائي الآن ${liveTime?`(${liveTime})`:''}`}
     </Button>
+
+    <div style={{marginBottom:12}}>
+      <Button
+        type="button"
+        icon={Camera}
+        onClick={startCamera}
+        disabled={busy}
+        style={{width:'100%',padding:'12px',fontSize:13.5,fontWeight:600,background:'#fff',border:'1px solid #d2c5ac',color:'#231f20',display:'flex',justifyContent:'center',gap:8}}
+      >
+        📷 مسح كود الفرع بكاميرا الجوال مباشرة
+      </Button>
+    </div>
 
     <div className="asas-actions" style={{justifyContent:'center',gap:8}}>
      <Button disabled={busy} onClick={()=>act('enter')} style={{fontSize:12}}>
