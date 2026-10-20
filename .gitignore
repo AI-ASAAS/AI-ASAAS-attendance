@@ -16,3 +16,4 @@ database/pgdata/
 *secret*.json
 *credentials*.json
 asaas_skills/
+scratch/

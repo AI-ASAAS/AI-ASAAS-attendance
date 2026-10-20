@@ -43,7 +43,10 @@ app.use(rateLimit({windowMs:60000,max:300,standardHeaders:true,legacyHeaders:fal
 app.use((req,res,next)=>{
  res.set('Cache-Control','no-store');
  if(!['GET','HEAD','OPTIONS'].includes(req.method)){
-  if(!req.is('application/json'))return next(new AppError('CONTENT_TYPE','يلزم JSON',415));
+  const hasBody = Boolean(req.headers['content-length'] && req.headers['content-length'] !== '0');
+  if(['POST','PUT','PATCH'].includes(req.method) || (hasBody && req.method !== 'DELETE')){
+   if(!req.is('application/json'))return next(new AppError('CONTENT_TYPE','يلزم JSON',415));
+  }
   if(req.headers.origin && !isAllowedOrigin(req.headers.origin))return next(new AppError('ORIGIN','مصدر الطلب غير مسموح',403));
   // Browser requests require an Origin; Android uses Authorization, including login protocol.
   if(!req.headers.origin&&!req.headers.authorization&&req.headers['x-asas-client']!=='android')return next(new AppError('ORIGIN','مصدر الطلب مفقود',403));
@@ -449,6 +452,10 @@ app.delete('/api/admin/accounts/:id',admin,allow('employees.write'),wrap(async(r
   if(!account)error('NOT_FOUND','الحساب غير موجود',404);
   if(account.role!=='employee'&&req.user.role!=='super_admin')error('FORBIDDEN','حذف الحسابات الإدارية لمدير النظام فقط',403);
   if(account.branch_id)scope(req.user,account.branch_id);
+
+  await c.query('UPDATE audit_log SET actor_id=NULL WHERE actor_id=$1',[accountId]);
+  await c.query('UPDATE leave_requests SET reviewed_by=NULL WHERE reviewed_by=$1',[accountId]);
+  await c.query('UPDATE announcements SET sender_id=NULL WHERE sender_id=$1',[accountId]);
 
   await c.query('DELETE FROM auth_sessions WHERE account_id=$1',[accountId]);
   await c.query('DELETE FROM leave_requests WHERE employee_id=$1',[accountId]);

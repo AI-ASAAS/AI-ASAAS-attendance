@@ -55,8 +55,7 @@ async function api(path, method = 'GET', body, retries = 2) {
   let attempt = 0;
   while (true) {
     try {
-      const headers = {};
-      if (body) headers['Content-Type'] = 'application/json';
+      const headers = { 'Content-Type': 'application/json' };
       if (typeof window !== 'undefined') {
         const token = localStorage.getItem('asas_token');
         if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -65,7 +64,7 @@ async function api(path, method = 'GET', body, retries = 2) {
         method,
         credentials: 'include',
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        body: body !== undefined && body !== null ? JSON.stringify(body) : (method === 'POST' || method === 'PUT' || method === 'PATCH' ? '{}' : undefined),
         cache: 'no-store'
       });
 

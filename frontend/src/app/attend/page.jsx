@@ -9,8 +9,7 @@ import {
 import { getDeviceId, getDeviceName } from '../../utils/device';
 
 async function api(path, method = 'GET', body = null) {
-  const headers = {};
-  if (body) headers['Content-Type'] = 'application/json';
+  const headers = { 'Content-Type': 'application/json' };
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('asas_token');
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -19,7 +18,7 @@ async function api(path, method = 'GET', body = null) {
     method,
     credentials: 'include',
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: body !== undefined && body !== null ? JSON.stringify(body) : (method === 'POST' || method === 'PUT' || method === 'PATCH' ? '{}' : undefined),
     cache: 'no-store'
   });
   const res = await r.json().catch(() => ({}));
