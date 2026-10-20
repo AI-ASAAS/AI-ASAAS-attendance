@@ -4,9 +4,52 @@ import {LayoutDashboard,Users,MapPin,QrCode,Clock3,CalendarDays,FileText,File,Sh
 import {QRCodeSVG} from 'qrcode.react';
 import {getDeviceId,getDeviceName} from '../../utils/device';
 
-async function api(path,method='GET',body){
- const r=await fetch(`/api${path}`,{method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,cache:'no-store'});
- const value=await r.json();if(!r.ok)throw Object.assign(new Error(value.message||'تعذر الاتصال بالخادم'),{status:r.status});return value.data;
+async function api(path, method = 'GET', body, retries = 2) {
+  let attempt = 0;
+  while (true) {
+    try {
+      const r = await fetch(`/api${path}`, {
+        method,
+        credentials: 'same-origin',
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        body: body ? JSON.stringify(body) : undefined,
+        cache: 'no-store'
+      });
+
+      let value = null;
+      const contentType = r.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        try { value = await r.json(); } catch {}
+      } else {
+        try {
+          const text = await r.text();
+          try { value = JSON.parse(text); } catch {}
+        } catch {}
+      }
+
+      if (!r.ok) {
+        if ([502, 503, 504].includes(r.status) && attempt < retries) {
+          attempt++;
+          await new Promise(res => setTimeout(res, 800 * attempt));
+          continue;
+        }
+        const msg = value?.message || value?.error || (r.status === 401 ? 'يرجى تسجيل الدخول' : 'تعذر الاتصال بالخادم');
+        throw Object.assign(new Error(msg), { status: r.status });
+      }
+
+      return value ? value.data : null;
+    } catch (netErr) {
+      if (attempt < retries && (!netErr.status || [502, 503, 504].includes(netErr.status))) {
+        attempt++;
+        await new Promise(res => setTimeout(res, 800 * attempt));
+        continue;
+      }
+      if (!netErr.status) {
+        throw Object.assign(new Error('تعذر الاتصال بخادم أساس وقاعدة البيانات'), { status: 0 });
+      }
+      throw netErr;
+    }
+  }
 }
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Aden'}).format(new Date());
 const time=v=>v?new Date(v).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'—';
@@ -73,7 +116,62 @@ export default function AsasApp(){
   return()=>clearInterval(id);
  },[]);
  const can=p=>user?.role==='super_admin'||user?.permissions?.includes(p);
- useEffect(()=>{api('/auth/me').then(setUser).catch(e=>{if(e.status!==401)setError('تعذر الاتصال بالخادم. تحقق من تشغيل خدمة أساس وقاعدة البيانات.');}).finally(()=>setBoot(false));},[]);
+  const checkAuth = useCallback(async (isManual = false) => {
+    if (isManual) setBusy(true);
+    let attempts = 0;
+    const maxAttempts = isManual ? 1 : 3;
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        const u = await api('/auth/me');
+        setUser(u);
+        setError('');
+        setBoot(false);
+        if (isManual) setBusy(false);
+        return;
+      } catch (e) {
+        if (e.status === 401) {
+          setUser(null);
+          setError('');
+          setBoot(false);
+          if (isManual) setBusy(false);
+          return;
+        }
+        if (attempts < maxAttempts) {
+          await new Promise(r => setTimeout(r, 1000));
+        } else {
+          const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+          const msg = isVercel
+            ? 'تعذر الاتصال بالخادم عبر الرابط السحابي. يرجى استخدام الرابط المحلي المستقر: http://localhost:3000/asas'
+            : 'تعذر الاتصال بالخادم. تحقق من تشغيل خدمة أساس وقاعدة البيانات.';
+          setError(msg);
+          setBoot(false);
+          if (isManual) setBusy(false);
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  // Periodic Auto-Healing Reconnect (checks every 4s if in error state to auto-clear error once online)
+  useEffect(() => {
+    if (!error || user) return;
+    const interval = setInterval(() => {
+      api('/auth/me').then(u => {
+        setUser(u);
+        setError('');
+      }).catch(e => {
+        if (e.status === 401) {
+          setUser(null);
+          setError('');
+        }
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [error, user]);
  const load=useCallback(async()=>{
   if(!user||user.role==='employee')return;setBusy(true);setError('');
   try{
@@ -138,7 +236,7 @@ export default function AsasApp(){
  async function exportWord(){setBusy(true);try{const r=await fetch(`/api/admin/reports.doc?from=${from}&to=${to}`,{credentials:'same-origin'});if(!r.ok)throw new Error('تعذر تصدير تقرير Word');const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=`تقرير-حضور-أساس-${from}-${to}.doc`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){setError(e.message);}finally{setBusy(false);}}
  async function exportTxt(){setBusy(true);try{const r=await fetch(`/api/admin/reports.txt?from=${from}&to=${to}`,{credentials:'same-origin'});if(!r.ok)throw new Error('تعذر تصدير التقرير النصي');const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=`تقرير-حضور-أساس-${from}-${to}.txt`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){setError(e.message);}finally{setBusy(false);}}
  if(boot)return <div className="asas-app"><Empty>جارٍ التحقق من الجلسة…</Empty></div>;
- if(!user)return <Login onLogin={setUser} initialError={error}/>;
+ if(!user)return <Login onLogin={setUser} initialError={error} onRetry={() => checkAuth(true)}/>;
  if(user.role==='employee')return <Employee user={user} logout={logout}/>;
  const title=tabs.find(t=>t[0]===tab)?.[1];
  const rows=Array.isArray(data)?data:[];
@@ -148,7 +246,7 @@ export default function AsasApp(){
   <aside className={`asas-sidebar ${open?'open':''}`}><Brand/><p className="asas-nav-label">مساحة إدارة الفريق</p><nav className="asas-nav">{tabs.filter(([key])=>key!=='accounts'||can('employees.read')).filter(([key])=>key!=='audit'||can('audit.read')).map(([key,label,Icon])=><button className={tab===key?'active':''} key={key} onClick={()=>{setTab(key);setOpen(false);setData(null);setNotice('');setSearch('');}}><Icon/>{label}</button>)}</nav><div className="asas-sidebar-foot"><div className="asas-profile"><span className="asas-avatar">{user.name[0]}</span><div><strong>{user.name}</strong><p>{roles[user.role]}</p></div></div><Button icon={LogOut} onClick={logout}>تسجيل الخروج</Button></div></aside>
   <div className="asas-main"><header className="asas-topbar"><div className="asas-actions"><button className="asas-btn asas-menu" aria-label="القائمة" onClick={()=>setOpen(!open)}><Menu size={18}/></button><span>مساحة العمل / <strong>{title}</strong></span></div><span>{new Date().toLocaleDateString('ar-YE',{weekday:'long',day:'numeric',month:'long',timeZone:'Asia/Aden'})} · {liveTime||'—'} · توقيت صنعاء (اليمن)</span></header>
   <main className="asas-content"><div className="asas-heading"><div><p className="asas-eyebrow">أساس · إدارة الحضور</p><h1>{title}</h1><p className="asas-muted">حضور واضح، إدارة أدق، وفريق أكثر اتصالاً.</p></div><div className="asas-actions"><Button icon={RefreshCw} onClick={load} disabled={busy}>تحديث</Button>{['branches','shifts','accounts'].includes(tab)&&can({branches:'locations.write',shifts:'shifts.write',accounts:'employees.write'}[tab])&&<Button variant="primary" icon={Plus} onClick={()=>edit(tab)}>إضافة {tab==='branches'?'موقع':tab==='shifts'?'دوام':'موظف'}</Button>}</div></div>
-  {error&&<div role="alert" className="asas-notice error">{error}</div>}{notice&&<div role="status" className="asas-notice">{notice}</div>}
+  {error&&<div role="alert" className="asas-notice error" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}><span>{error}</span><Button type="button" icon={RefreshCw} onClick={load} disabled={busy} style={{padding:'4px 10px',fontSize:12}}>إعادة المحاولة</Button></div>}{notice&&<div role="status" className="asas-notice">{notice}</div>}
   {busy&&!data&&<Empty>جارٍ تحميل البيانات…</Empty>}
    {tab==='dashboard'&&data&&<><section className="asas-banner"><div className="asas-banner-copy"><p className="asas-eyebrow">كل يوم يبدأ من أساس</p><h2>صورة أوضح ليوم فريقك.</h2><p>تابع الحضور والمواقع من مساحة واحدة مصممة لك.</p><Button variant="gold" icon={QrCode} onClick={()=>setTab('qr')}>عرض الرموز المعتمدة</Button></div><div className="asas-banner-emblem" aria-hidden="true"><img src="/brand/asas-logo.png" alt=""/><span>ذكاء أكثر سيادة</span></div></section><section className="asas-stats">{[[Users,'إجمالي الموظفين',data.total,'الحسابات النشطة'],[CheckCircle2,'سجّلوا الحضور',data.present,'خلال اليوم الحالي'],[MapPin,'داخل النطاق',data.inside,'حسب آخر موقع حديث'],[AlertCircle,'الموقع غير مؤكد',data.uncertain,'تحتاج اتصالاً أو قراءة أدق']].map(([Icon,label,value,caption])=><article className="asas-stat" key={label}><div className="asas-stat-top">{label}<Icon/></div><strong>{value}</strong><small>{caption}</small></article>)}</section><section className="asas-grid"><article className="asas-card"><div className="asas-card-head"><h2>حضور اليوم</h2><span className="asas-badge">{data.total?Math.round(data.present/data.total*100):0}%</span></div><div className="asas-card-body"><p className="asas-muted">نسبة الموظفين الذين سجلوا دخولهم اليوم</p><div className="asas-progress"><span style={{width:`${data.total?Math.min(100,data.present/data.total*100):0}%`}}/></div><div className="asas-mini-row"><span>لم يسجلوا حضوراً اليوم</span><strong>{Math.max(0,data.total-data.present)}</strong></div><div className="asas-mini-row"><span>حالات التأخير</span><strong>{data.late}</strong></div><p className="asas-help">عدم التسجيل لا يعني غياباً نهائياً؛ يراجع وفق جدول الموظف وإجازاته.</p></div></article><article className="asas-card"><div className="asas-card-head"><h2>إدارة موقع العمل</h2><Building2 size={18}/></div><div className="asas-card-body"><p className="asas-muted">اضبط حدود الشركة ودقة الموقع وفترة التحقق قبل الخروج التلقائي.</p><div className="asas-mini-row"><span>رمز الحضور</span><span>دائم ومستمر</span></div><div className="asas-mini-row"><span>سياسة الاحتساب</span><span>حسب جدول الموظف</span></div><Button icon={ArrowUpLeft} onClick={()=>setTab('branches')}>إدارة المواقع</Button></div></article></section><section className="asas-card"><div className="asas-card-head"><h2>آخر سجلات الحضور</h2><Button onClick={()=>setTab('records')}>جميع السجلات</Button></div><Records rows={data.records.slice(0,10)} onEdit={r=>edit('records',r)} canEdit={can('attendance.edit')}/></section></>}
    {tab==='records'&&<><div className="asas-search" style={{flexWrap:'wrap',gap:8}}><Field label="من تاريخ" type="date" value={from} onChange={e=>setFrom(e.target.value)}/><Field label="إلى تاريخ" type="date" value={to} onChange={e=>setTo(e.target.value)}/>{can('reports.export')&&<div className="asas-actions" style={{display:'inline-flex',gap:6,alignItems:'flex-end'}}><Button icon={Download} disabled={busy} onClick={exportCsv}>تصدير Excel/CSV</Button><Button icon={FileText} disabled={busy} onClick={exportWord}>تصدير Word</Button><Button icon={File} disabled={busy} onClick={exportTxt}>تصدير نصي (TXT)</Button></div>}</div><div className="asas-card"><Records rows={rows} onEdit={r=>edit('records',r)} canEdit={can('attendance.edit')}/></div></>}
@@ -304,9 +402,13 @@ export default function AsasApp(){
  </div>;
 }
 
-function Login({onLogin,initialError}){
+function Login({onLogin,initialError,onRetry}){
  const [identifier,setIdentifier]=useState(''),[password,setPassword]=useState(''),[phone,setPhone]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(initialError);
  const [googleModal,setGoogleModal]=useState(false),[googleEmail,setGoogleEmail]=useState(''),[googleName,setGoogleName]=useState('');
+
+ useEffect(() => {
+  setError(initialError);
+ }, [initialError]);
  async function submit(e){
   e.preventDefault();setBusy(true);setError('');
   try{
@@ -345,7 +447,16 @@ function Login({onLogin,initialError}){
     <p className="asas-muted">استخدم بريدك أو رقمك الوظيفي للوصول لمساحة العمل.</p>
 
     <form onSubmit={submit} className="asas-form">
-     {error&&<div className="asas-notice error" role="alert">{error}</div>}
+     {error && (
+       <div className="asas-notice error" role="alert" style={{display:'flex',flexDirection:'column',gap:8}}>
+         <div>{error}</div>
+         {onRetry && (
+           <button type="button" onClick={async () => { setBusy(true); await onRetry(); setBusy(false); }} disabled={busy} style={{alignSelf:'flex-start',padding:'4px 12px',borderRadius:6,border:'1px solid #d9480f',background:'#fff',color:'#d9480f',fontWeight:600,fontSize:12,cursor:'pointer'}}>
+             🔄 {busy ? 'جارٍ الفحص…' : 'إعادة فحص الاتصال الآن'}
+           </button>
+         )}
+       </div>
+     )}
      <Field label="البريد الإلكتروني أو الرقم الوظيفي" value={identifier} onChange={e=>setIdentifier(e.target.value)} autoComplete="username" required placeholder="001 أو name@company.com"/>
      <Field label="كلمة المرور" type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" required placeholder="••••••••••••"/>
      
@@ -459,7 +570,7 @@ function Employee({user,logout}){
   </div>
 
   <div className="asas-notice" style={{marginTop:20}}>🛡️ تم تقييد حسابك بجهازك المعتمد لحماية السجلات ومنع التحضير بالنيابة. المسح والموقع الجغرافي يوثقان لحظياً بتوقيت صنعاء.</div>
-  {error&&<div className="asas-notice error" role="alert">{error}</div>}
+  {error&&<div className="asas-notice error" role="alert" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}><span>{error}</span><Button type="button" icon={RefreshCw} onClick={refresh} disabled={busy} style={{padding:'4px 10px',fontSize:12}}>إعادة المحاولة</Button></div>}
   {message&&<div className="asas-notice">{message}</div>}
 
   {/* Live Attendance & Exit Time Summary Card */}

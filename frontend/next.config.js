@@ -8,7 +8,14 @@ const nextConfig = {
       { source:'/employee/:path*', destination:'/asas', permanent:false },
     ];
   },
-  async rewrites() { return [{source:'/api/:path*',destination:`${process.env.API_INTERNAL_URL || 'http://127.0.0.1:5000'}/api/:path*`}]; },
+  async rewrites() {
+    let raw = (process.env.API_INTERNAL_URL || 'http://127.0.0.1:5000').trim();
+    raw = raw.replace(/^['"]+|['"]+$/g, '').replace(/\/+$/, '');
+    if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
+      raw = `https://${raw}`;
+    }
+    return [{ source: '/api/:path*', destination: `${raw}/api/:path*` }];
+  },
   // Enable PWA service worker in production
   headers: async () => [
     {
