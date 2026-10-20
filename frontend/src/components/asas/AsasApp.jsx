@@ -405,6 +405,71 @@ export default function AsasApp(){
 function Login({onLogin,initialError,onRetry}){
  const [identifier,setIdentifier]=useState(''),[password,setPassword]=useState(''),[phone,setPhone]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(initialError);
  const [googleModal,setGoogleModal]=useState(false),[googleEmail,setGoogleEmail]=useState(''),[googleName,setGoogleName]=useState('');
+ const [googleClientId,setGoogleClientId]=useState(()=>typeof window!=='undefined'?(localStorage.getItem('asas_google_client_id')||process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID||''):'');
+ const [tempClientId,setTempClientId]=useState('');
+ const [modalTab,setModalTab]=useState('console'); // 'console' | 'direct'
+ const [copiedOrigin,setCopiedOrigin]=useState(false);
+
+ const handleGoogleCredentialResponse = useCallback(async (res) => {
+  if (!res?.credential) return;
+  setBusy(true);
+  setError('');
+  try {
+   const device_id = getDeviceId();
+   const device_name = getDeviceName();
+   const d = await api('/auth/google', 'POST', {
+    credential: res.credential,
+    phone: phone || undefined,
+    device_id,
+    device_name
+   });
+   onLogin(d.account);
+  } catch (err) {
+   setError(err.message || 'فشل التحقق عبر حساب Google');
+  } finally {
+   setBusy(false);
+  }
+ }, [phone, onLogin]);
+
+ useEffect(() => {
+  if (!googleClientId || typeof window === 'undefined') return;
+  function initGsi() {
+   if (!window.google?.accounts?.id) return;
+   try {
+    window.google.accounts.id.initialize({
+     client_id: googleClientId,
+     callback: handleGoogleCredentialResponse,
+     auto_select: false,
+     cancel_on_tap_outside: true,
+    });
+    const el = document.getElementById('google-btn-container');
+    if (el) {
+     el.innerHTML = '';
+     window.google.accounts.id.renderButton(el, {
+      theme: 'outline',
+      size: 'large',
+      text: 'continue_with',
+      shape: 'rectangular',
+      width: 320,
+      locale: 'ar'
+     });
+    }
+   } catch (err) {
+    console.warn('GSI render error:', err);
+   }
+  }
+  if (window.google?.accounts?.id) {
+   initGsi();
+  } else {
+   const timer = setInterval(() => {
+    if (window.google?.accounts?.id) {
+     clearInterval(timer);
+     initGsi();
+    }
+   }, 300);
+   return () => clearInterval(timer);
+  }
+ }, [googleClientId, handleGoogleCredentialResponse]);
 
  useEffect(() => {
   setError(initialError);
@@ -467,19 +532,28 @@ function Login({onLogin,initialError,onRetry}){
 
      <div style={{display:'flex',alignItems:'center',gap:12,margin:'14px 0'}}>
       <div style={{flex:1,height:1,background:'#d2c5ac'}}/>
-      <span style={{fontSize:12,color:'#736d65'}}>أو عبر Google</span>
+      <span style={{fontSize:12,color:'#736d65'}}>أو عبر Google Cloud & Firebase</span>
       <div style={{flex:1,height:1,background:'#d2c5ac'}}/>
      </div>
 
-     <button type="button" onClick={()=>setGoogleModal(true)} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:'11px 16px',borderRadius:8,border:'1px solid #d2c5ac',background:'#fff',color:'#231f20',fontWeight:600,cursor:'pointer',fontSize:13.5}}>
-      <svg width="18" height="18" viewBox="0 0 24 24">
-       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-      </svg>
-      تسجيل الدخول باستخدام Google / Gmail
-     </button>
+     {googleClientId ? (
+      <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,width:'100%'}}>
+       <div id="google-btn-container" style={{display:'flex',justifyContent:'center',width:'100%',minHeight:44}}/>
+       <button type="button" onClick={()=>{setTempClientId(googleClientId);setGoogleModal(true);}} style={{background:'none',border:'none',color:'#b59045',fontSize:12,cursor:'pointer',textDecoration:'underline'}}>
+        ⚙️ إعدادات Google Console والخيارات البديلة
+       </button>
+      </div>
+     ) : (
+      <button type="button" onClick={()=>{setTempClientId(googleClientId);setGoogleModal(true);}} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:'11px 16px',borderRadius:8,border:'1px solid #d2c5ac',background:'#fff',color:'#231f20',fontWeight:600,cursor:'pointer',fontSize:13.5}}>
+       <svg width="18" height="18" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+       </svg>
+       تسجيل الدخول باستخدام Google Cloud / Gmail
+      </button>
+     )}
     </form>
 
     <div style={{marginTop:16,padding:12,background:'#fbf7ee',borderRadius:8,fontSize:11.5,color:'#775b24',display:'flex',gap:8,alignItems:'flex-start'}}>
@@ -491,7 +565,102 @@ function Login({onLogin,initialError,onRetry}){
    </div>
   </section>
 
-  {googleModal&&<div className="asas-modal-backdrop" onClick={()=>setGoogleModal(false)}><section className="asas-modal" style={{maxWidth:440}}><div className="asas-card-head"><h2>تسجيل الدخول والتسجيل التلقائي عبر Google</h2><Button icon={X} onClick={()=>setGoogleModal(false)}/></div><form className="asas-form" onSubmit={submitGoogle}><p className="asas-muted" style={{background:'#fbf7ee',padding:10,borderRadius:6,border:'1px solid #ebdcc0',color:'#775b24',fontSize:12.5,lineHeight:1.5}}>⚡ <strong>تسجيل فوري وذكي:</strong> أدخل بريد Google الخاص بك. إذا كان حسابك جديداً، سيتم إصدار رقمك الوظيفي الثابت تلقائياً (مثل: 003) وربطه ببريدك وجوالك فوراً وإرسال إشعار ترحيبي إلى بريدك!</p><Field label="بريد Gmail أو بريد العمل" type="email" required autoFocus value={googleEmail} onChange={e=>setGoogleEmail(e.target.value)} placeholder="your.name@gmail.com"/><Field label="اسم المستخدم أو الاسم الكامل" type="text" value={googleName} onChange={e=>setGoogleName(e.target.value)} placeholder="مثال: anas أو أنس الأغبري"/><div className="asas-modal-footer"><Button type="button" onClick={()=>setGoogleModal(false)}>إلغاء</Button><Button variant="primary" type="submit" disabled={busy}>{busy?'جارٍ التحقق والتسجيل…':'دخول / تسجيل تلقائي'}</Button></div></form></section></div>}
+  {googleModal && (
+   <div className="asas-modal-backdrop" onClick={() => setGoogleModal(false)}>
+    <section className="asas-modal" style={{maxWidth: 520}} onClick={e => e.stopPropagation()}>
+     <div className="asas-card-head">
+      <div>
+       <h2 style={{fontSize: 16}}>ربط تسجيل الدخول مع Google Cloud & Firebase</h2>
+       <small style={{color: '#736d65'}}>مشروع Google Cloud: <code dir="ltr" style={{color: '#b59045', fontWeight: 600}}>centering-aegis-473416-f6</code></small>
+      </div>
+      <Button icon={X} onClick={() => setGoogleModal(false)}/>
+     </div>
+
+     <div style={{display:'flex',gap:8,padding:'8px 16px',background:'#faf8f5',borderBottom:'1px solid #ebdcc0'}}>
+      <button type="button" onClick={() => setModalTab('console')} style={{flex:1,padding:'8px 12px',borderRadius:6,border:'1px solid',borderColor:modalTab==='console'?'#b59045':'#d2c5ac',background:modalTab==='console'?'#fff':'transparent',fontWeight:600,fontSize:12.5,cursor:'pointer',color:modalTab==='console'?'#775b24':'#736d65'}}>
+       🔑 ربط Google OAuth Client ID
+      </button>
+      <button type="button" onClick={() => setModalTab('direct')} style={{flex:1,padding:'8px 12px',borderRadius:6,border:'1px solid',borderColor:modalTab==='direct'?'#b59045':'#d2c5ac',background:modalTab==='direct'?'#fff':'transparent',fontWeight:600,fontSize:12.5,cursor:'pointer',color:modalTab==='direct'?'#775b24':'#736d65'}}>
+       ⚡ دخول فوري سريع بالبريد
+      </button>
+     </div>
+
+     {modalTab === 'console' ? (
+      <div style={{padding: 16, display:'flex', flexDirection:'column', gap: 14}}>
+       <div style={{background: '#fbf7ee', border: '1px solid #ebdcc0', borderRadius: 8, padding: 12, fontSize: 12.5, lineHeight: 1.6, color: '#775b24'}}>
+        <strong>خطوات تفعيل تسجيل الدخول بجوجل لمشروعك:</strong>
+        <ol style={{margin: '8px 0 0', paddingRight: 18}}>
+         <li>افتح صفحة <strong>Credentials (بيانات الاعتماد)</strong> في مشروعك عبر الزر بالأسفل.</li>
+         <li>اضغط على <strong>Create Credentials</strong> ثم اختر <strong>OAuth client ID</strong>.</li>
+         <li>اختر نوع التطبيق: <strong>Web application</strong>.</li>
+         <li>في خانة <strong>Authorized JavaScript origins</strong>، أضف الرابطين التاليين:
+          <div style={{margin: '6px 0', display:'flex', flexDirection:'column', gap: 4}}>
+           <code dir="ltr" style={{background:'#fff',padding:'2px 6px',borderRadius:4,border:'1px solid #d2c5ac',fontSize:11.5}}>http://localhost:3000</code>
+           <code dir="ltr" style={{background:'#fff',padding:'2px 6px',borderRadius:4,border:'1px solid #d2c5ac',fontSize:11.5}}>https://ai-asaas-attendance.vercel.app</code>
+          </div>
+         </li>
+         <li>انسخ <strong>Client ID</strong> (ينتهي بـ <code>.apps.googleusercontent.com</code>) والصقه في الحقل أدناه.</li>
+        </ol>
+       </div>
+
+       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+        <a className="asas-btn" href="https://console.cloud.google.com/apis/credentials?project=centering-aegis-473416-f6" target="_blank" rel="noreferrer" style={{flex:1,justifyContent:'center',fontSize:12}}>
+         🌐 فتح Google Cloud Console
+        </a>
+        <a className="asas-btn" href="https://console.firebase.google.com/" target="_blank" rel="noreferrer" style={{flex:1,justifyContent:'center',fontSize:12}}>
+         🔥 فتح Firebase Console
+        </a>
+       </div>
+
+       <div>
+        <label className="asas-label">
+         OAuth 2.0 Client ID (معرف العميل من Google Cloud):
+         <input
+          className="asas-input"
+          dir="ltr"
+          placeholder="مثال: 123456789-abcdef.apps.googleusercontent.com"
+          value={tempClientId}
+          onChange={e => setTempClientId(e.target.value.trim())}
+         />
+        </label>
+       </div>
+
+       <div className="asas-modal-footer" style={{marginTop:0}}>
+        <Button type="button" onClick={() => setGoogleModal(false)}>إغلاق</Button>
+        <Button
+         variant="primary"
+         type="button"
+         onClick={() => {
+          if (!tempClientId) {
+           alert('يرجى لصق OAuth Client ID من Google Cloud أولاً');
+           return;
+          }
+          localStorage.setItem('asas_google_client_id', tempClientId);
+          setGoogleClientId(tempClientId);
+          setGoogleModal(false);
+          alert('تم حفظ معرف Google Client ID بنجاح! سيظهر الآن زر تسجيل الدخول الرسمي بجوجل.');
+         }}
+        >
+         💾 حفظ وتفعيل زر Google الرسمي
+        </Button>
+       </div>
+      </div>
+     ) : (
+      <form className="asas-form" onSubmit={submitGoogle} style={{padding: 16}}>
+       <p className="asas-muted" style={{background:'#fbf7ee',padding:10,borderRadius:6,border:'1px solid #ebdcc0',color:'#775b24',fontSize:12.5,lineHeight:1.5}}>
+        ⚡ <strong>تسجيل ودخول مباشر:</strong> اكتب بريد Google الخاص بك هنا للتجربة أو الدخول الفوري دون انتظار إعدادات OAuth. يتم إصدار الرقم الوظيفي الثابت وربط الجوال تلقائياً!
+       </p>
+       <Field label="بريد Gmail أو بريد العمل" type="email" required autoFocus value={googleEmail} onChange={e=>setGoogleEmail(e.target.value)} placeholder="your.name@gmail.com"/>
+       <Field label="اسم المستخدم أو الاسم الكامل" type="text" value={googleName} onChange={e=>setGoogleName(e.target.value)} placeholder="مثال: anas أو أنس الأغبري"/>
+       <div className="asas-modal-footer">
+        <Button type="button" onClick={()=>setGoogleModal(false)}>إلغاء</Button>
+        <Button variant="primary" type="submit" disabled={busy}>{busy?'جارٍ التحقق والتسجيل…':'دخول / تسجيل تلقائي'}</Button>
+       </div>
+      </form>
+     )}
+    </section>
+   </div>
+  )}
  </div>;
 }
 

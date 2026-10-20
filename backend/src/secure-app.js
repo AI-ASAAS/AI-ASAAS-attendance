@@ -106,13 +106,23 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
  let googleName=rawName?String(rawName).trim():null;
  if(credential&&typeof credential==='string'){
   try{
-   const parts=credential.split('.');
-   if(parts.length>=2){
-    const payload=JSON.parse(Buffer.from(parts[1],'base64url').toString('utf8'));
-    if(payload.email)targetEmail=payload.email.toLowerCase().trim();
-    if(payload.name&&!googleName)googleName=payload.name.trim();
+   const gRes=await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(credential));
+   if(gRes.ok){
+    const gData=await gRes.json();
+    if(gData.email)targetEmail=gData.email.toLowerCase().trim();
+    if(gData.name&&!googleName)googleName=gData.name.trim();
    }
-  }catch(e){}
+  }catch(_){}
+  if(!targetEmail){
+   try{
+    const parts=credential.split('.');
+    if(parts.length>=2){
+     const payload=JSON.parse(Buffer.from(parts[1],'base64url').toString('utf8'));
+     if(payload.email)targetEmail=payload.email.toLowerCase().trim();
+     if(payload.name&&!googleName)googleName=payload.name.trim();
+    }
+   }catch(e){}
+  }
  }
  if(!targetEmail&&rawEmail&&typeof rawEmail==='string')targetEmail=rawEmail.toLowerCase().trim();
  if(!targetEmail)error('GOOGLE_AUTH','بيانات التحقق من Google غير مكتملة',400);

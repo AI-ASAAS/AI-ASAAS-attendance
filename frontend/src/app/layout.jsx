@@ -21,6 +21,7 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="apple-touch-icon" href="/logo.jpeg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
       <body>
         <Providers>{children}</Providers>
