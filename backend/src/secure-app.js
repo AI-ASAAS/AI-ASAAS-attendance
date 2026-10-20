@@ -207,6 +207,19 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
     : `مرحباً بعودتك! رقمك الوظيفي: (${account.identifier})`
  });
 }));
+
+app.get('/api/settings',wrap(async(req,res)=>{
+ const settingsRows = (await db.query('SELECT key, value FROM system_settings')).rows;
+ const settingsMap = {};
+ for(const row of settingsRows) settingsMap[row.key] = row.value;
+ respond(res,{
+  company_name: settingsMap.company_name || 'شركة أساس الذكاء الاصطناعي (AI-ASAAS)',
+  timezone: settingsMap.timezone || 'Asia/Aden',
+  max_gps_accuracy: Number(settingsMap.max_gps_accuracy || 250),
+  support_contact: settingsMap.support_contact || '+967 770000000',
+ });
+}));
+
 app.use('/api',wrap(async(req,res,next)=>{
  const cookie=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('asas_session='))?.slice(13);
  const token=req.headers.authorization?.startsWith('Bearer ')?req.headers.authorization.slice(7):cookie;
@@ -426,6 +439,102 @@ app.post('/api/admin/accounts/:id/reset-device',admin,allow('employees.write'),w
   await audit(c,req.user,'account.reset_device',accountId,reason,{previous_device:acc.bound_device_name,previous_device_id:acc.bound_device_id});
   return {reset:true,message:`تم فك ارتباط الجهاز للموظف (${acc.name}) بنجاح. يمكنه الآن تسجيل الدخول من جهازه الجديد.`};
  }));
+}));
+
+app.delete('/api/admin/accounts/:id',admin,allow('employees.write'),wrap(async(req,res)=>{
+ const accountId=id(req.params.id);
+ if(accountId===req.user.id)error('VALIDATION','لا يمكنك حذف حسابك الحالي');
+ respond(res,await db.transaction(async c=>{
+  const account=(await c.query('SELECT * FROM accounts WHERE id=$1 FOR UPDATE',[accountId])).rows[0];
+  if(!account)error('NOT_FOUND','الحساب غير موجود',404);
+  if(account.role!=='employee'&&req.user.role!=='super_admin')error('FORBIDDEN','حذف الحسابات الإدارية لمدير النظام فقط',403);
+  if(account.branch_id)scope(req.user,account.branch_id);
+
+  await c.query('DELETE FROM auth_sessions WHERE account_id=$1',[accountId]);
+  await c.query('DELETE FROM leave_requests WHERE employee_id=$1',[accountId]);
+  await c.query('DELETE FROM attendance_events WHERE employee_id=$1',[accountId]);
+  await c.query('DELETE FROM duty_records WHERE employee_id=$1',[accountId]);
+  await c.query('DELETE FROM accounts WHERE id=$1',[accountId]);
+
+  await audit(c,req.user,'account.delete',accountId,`حذف حساب الموظف (${account.name})`,{account_name:account.name,identifier:account.identifier});
+  return {deleted:true,message:`تم حذف حساب الموظف (${account.name}) بنجاح`};
+ }));
+}));
+
+app.put('/api/auth/profile',wrap(async(req,res)=>{
+ const {current_password,new_password,avatar,phone}=req.body;
+ const accountId=req.user.id;
+ respond(res,await db.transaction(async c=>{
+  const acc=(await c.query('SELECT * FROM accounts WHERE id=$1 FOR UPDATE',[accountId])).rows[0];
+  if(!acc)error('NOT_FOUND','المستخدم غير موجود',404);
+
+  let newHash=acc.password_hash;
+  if(new_password){
+   if(acc.password_hash){
+    const valid=await security.verifyPassword(current_password||'',acc.password_hash);
+    if(!valid)error('VALIDATION','كلمة المرور الحالية غير صحيحة',400);
+   }
+   if(typeof new_password!=='string'||new_password.length<8)error('VALIDATION','يجب أن تتكون كلمة المرور الجديدة من 8 أحرف على الأقل',400);
+   newHash=await security.hashPassword(new_password);
+  }
+
+  const newAvatar = avatar !== undefined ? (typeof avatar === 'string' ? avatar.trim().slice(0, 500000) : null) : acc.avatar;
+  const newPhone = phone !== undefined ? (phone ? String(phone).trim().slice(0, 50) : null) : acc.phone;
+
+  const updated=(await c.query('UPDATE accounts SET password_hash=$1, avatar=$2, phone=$3 WHERE id=$4 RETURNING *',[newHash,newAvatar,newPhone,accountId])).rows[0];
+  req.user=updated;
+  return safeAccount(updated);
+ }));
+}));
+
+app.get('/api/announcements',wrap(async(req,res)=>{
+ const {rows}=await db.query(`
+   SELECT a.*, acc.name as sender_name 
+   FROM announcements a 
+   LEFT JOIN accounts acc ON acc.id = a.sender_id 
+   WHERE a.active = TRUE 
+   ORDER BY a.created_at DESC 
+   LIMIT 50
+ `);
+ respond(res,rows);
+}));
+
+app.post('/api/admin/announcements',admin,wrap(async(req,res)=>{
+ const {title,content,priority='normal',send_email=false}=req.body;
+ if(!title||!title.trim())error('VALIDATION','عنوان التعميم مطلوب');
+ if(!content||!content.trim())error('VALIDATION','نص التعميم مطلوب');
+
+ const cleanTitle=string(title,250);
+ const cleanContent=string(content,5000);
+ const cleanPriority=['normal','important','urgent'].includes(priority)?priority:'normal';
+
+ const inserted=await db.transaction(async c=>{
+  const r=await c.query(
+   `INSERT INTO announcements(title,content,priority,sender_id,sender_name,send_email,created_at,active)
+    VALUES($1,$2,$3,$4,$5,$6,NOW(),TRUE) RETURNING *`,
+   [cleanTitle,cleanContent,cleanPriority,req.user.id,req.user.name,bool(send_email)]
+  );
+  await audit(c,req.user,'announcement.create',r.rows[0].id,cleanTitle);
+  return r.rows[0];
+ });
+
+ if(send_email){
+  db.query('SELECT name, email FROM accounts WHERE active=TRUE AND email IS NOT NULL').then(async empRes=>{
+   for(const emp of empRes.rows){
+    if(emp.email){
+     notifications.notifyAnnouncement(emp, inserted).catch(err=>console.error(`Failed to send announcement email to ${emp.email}:`, err.message));
+    }
+   }
+  }).catch(()=>{});
+ }
+
+ respond(res,inserted);
+}));
+
+app.delete('/api/admin/announcements/:id',admin,wrap(async(req,res)=>{
+ const annId=id(req.params.id);
+ await db.query('UPDATE announcements SET active=FALSE WHERE id=$1',[annId]);
+ respond(res,{deleted:true});
 }));
 
 const employee=(req,res,next)=>['employee','super_admin','hr_admin','branch_manager'].includes(req.user.role)?next():next(new AppError('FORBIDDEN','هذه العملية لحساب الموظف',403));
@@ -701,9 +810,17 @@ app.patch('/api/admin/records/:id',admin,allow('attendance.edit'),wrap(async(req
  }));
 }));
 app.get('/api/admin/settings',admin,wrap(async(req,res)=>{
+ const settingsRows = (await db.query('SELECT key, value FROM system_settings')).rows;
+ const settingsMap = {};
+ for(const row of settingsRows) settingsMap[row.key] = row.value;
+
  const dbTest=await db.query('SELECT NOW() as now');
  respond(res,{
-  timezone:'Asia/Aden',
+  company_name: settingsMap.company_name || 'شركة أساس الذكاء الاصطناعي (AI-ASAAS)',
+  timezone: settingsMap.timezone || 'Asia/Aden',
+  max_gps_accuracy: Number(settingsMap.max_gps_accuracy || 250),
+  email_notifications: settingsMap.email_notifications === 'true',
+  support_contact: settingsMap.support_contact || '+967 770000000',
   server_time:new Date().toISOString(),
   db_time:dbTest.rows[0]?.now,
   node_version:process.version,
@@ -713,6 +830,29 @@ app.get('/api/admin/settings',admin,wrap(async(req,res)=>{
   web_origin:origin(),
   qr_secret_configured:Boolean(process.env.QR_SECRET&&process.env.QR_SECRET.length>=32&&!process.env.QR_SECRET.startsWith('REPLACE_'))
  });
+}));
+
+app.put('/api/admin/settings',admin,allow('locations.write'),wrap(async(req,res)=>{
+ const {company_name, timezone, max_gps_accuracy, email_notifications, support_contact} = req.body;
+ await db.transaction(async c => {
+  if(company_name !== undefined){
+   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('company_name', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [string(company_name, 200)]);
+  }
+  if(timezone !== undefined){
+   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('timezone', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [string(timezone, 100)]);
+  }
+  if(max_gps_accuracy !== undefined){
+   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('max_gps_accuracy', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [String(integer(max_gps_accuracy, 10, 1000))]);
+  }
+  if(email_notifications !== undefined){
+   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('email_notifications', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [email_notifications ? 'true' : 'false']);
+  }
+  if(support_contact !== undefined){
+   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('support_contact', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [string(support_contact, 100)]);
+  }
+  await audit(c, req.user, 'settings.update', null, 'تحديث إعدادات النظام الحقيقية');
+ });
+ respond(res, { saved: true, message: 'تم حفظ إعدادات النظام وتطبيقها فوراً' });
 }));
 app.get('/api/admin/dashboard',admin,wrap(async(req,res)=>{
  await closeScheduled();const broad=['super_admin','hr_admin'].includes(req.user.role);

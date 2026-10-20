@@ -1,0 +1,424 @@
+/* ───────── Assistant widget: floating button + small window ───────── */
+:root {
+  --launcher-size: 76px;
+  --launcher-gap: 20px;
+  --launcher-bottom: var(--launcher-gap);
+}
+
+/* Asaas robot: the full figure outside the chat, its face inside. */
+.assistant-face {
+  flex: none;
+  width: 44px;
+  height: auto;
+  filter: drop-shadow(0 4px 8px rgba(34, 31, 31, 0.18));
+  user-select: none;
+}
+
+.assistant-face--sm {
+  width: 34px;
+  margin-top: 4px;
+}
+
+.assistant-robot {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+
+/* Launcher: the robot itself floats in the bottom corner (left in RTL). */
+.assistant-launcher {
+  position: fixed;
+  z-index: 41;
+  bottom: var(--launcher-bottom);
+  inset-inline-end: var(--launcher-gap);
+  display: grid;
+  place-items: center;
+  width: var(--launcher-size);
+  height: var(--launcher-size);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transition: transform 0.35s var(--ease-spring);
+}
+
+/* Still by default (the interface never moves on its own); it reacts to hover only. */
+.assistant-launcher .assistant-robot {
+  filter: drop-shadow(0 10px 14px rgba(74, 54, 22, 0.35));
+}
+
+.assistant-launcher:hover { transform: scale(1.08) rotate(-3deg); }
+.assistant-launcher:active { transform: scale(0.95); }
+
+.assistant-launcher:focus-visible {
+  outline: 2px solid var(--accent-fill);
+  outline-offset: 4px;
+}
+
+.assistant-launcher[data-open='true'] {
+  width: 56px;
+  height: 56px;
+  margin: calc((var(--launcher-size) - 56px) / 2);
+  color: var(--text);
+  background: var(--glass-tint-strong);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  backdrop-filter: blur(16px) saturate(170%);
+  box-shadow: inset 0 0 0 1px var(--hairline), var(--glass-shadow);
+}
+
+.assistant-launcher[data-open='true'] svg { width: 24px; height: 24px; }
+
+/* The window opens above the launcher. */
+.assistant-panel {
+  position: fixed;
+  z-index: 40;
+  bottom: calc(var(--launcher-bottom) + var(--launcher-size) + 12px);
+  inset-inline-end: var(--launcher-gap);
+  display: flex;
+  flex-direction: column;
+  width: min(400px, calc(100vw - 32px));
+  height: min(640px, calc(100dvh - var(--launcher-bottom) - var(--launcher-size) - 40px));
+  border-radius: 28px;
+  /* More opaque than a card: it floats over busy pages and must stay readable. */
+  background: linear-gradient(165deg, var(--glass-tint-strong), color-mix(in srgb, var(--bg) 90%, transparent));
+  transform-origin: bottom left;
+  animation: assistant-in 0.35s var(--ease-spring);
+}
+
+@keyframes assistant-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+}
+
+.assistant-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 12px 16px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.assistant-panel__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.assistant-panel__title h2 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.assistant-panel__title p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.assistant-panel__thread {
+  flex: 1;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.assistant-panel__disclaimer {
+  margin: 0;
+  padding: 6px 14px 10px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.assistant-panel__off {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+}
+
+.assistant-panel__off .assistant-welcome__robot { width: 110px; }
+
+.assistant-panel__off h2 { font-family: var(--font-display); font-size: 20px; }
+.assistant-panel__off p { font-family: var(--font-text); line-height: 1.8; }
+
+.assistant-welcome {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 18px 4px 4px;
+  text-align: center;
+}
+
+.assistant-welcome__robot {
+  width: 116px;
+  margin-bottom: 2px;
+  filter: drop-shadow(0 12px 18px rgba(74, 54, 22, 0.28));
+  animation: robot-wave-in 0.6s var(--ease-spring);
+}
+
+@keyframes robot-wave-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.9); }
+}
+
+.assistant-welcome h3 {
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+
+.assistant-welcome .assistant-welcome__lead {
+  margin-top: -6px;
+  font-family: var(--font);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.assistant-welcome p {
+  margin: 0;
+  font-family: var(--font-text);
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--text-2);
+}
+
+.assistant-welcome__suggestions {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.assistant-welcome__suggestions .chip {
+  justify-content: flex-start;
+  height: auto;
+  min-height: 38px;
+  padding: 8px 14px;
+  text-align: start;
+}
+
+/* Bubbles: the user on the reading side (right in RTL), the assistant opposite. */
+.bubble {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.bubble--user { justify-self: start; max-width: 88%; }
+.bubble--assistant { justify-self: stretch; }
+
+.bubble__body {
+  display: grid;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.bubble__text {
+  padding: 10px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.bubble--user .bubble__text {
+  color: var(--on-accent);
+  background: var(--accent-fill);
+  border-start-start-radius: 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 20px -12px var(--accent-glow);
+}
+
+.bubble--assistant .bubble__text {
+  justify-self: start;
+  background: var(--glass-tint-strong);
+  border-start-start-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--hairline), inset 0 1px 0 var(--glass-rim);
+}
+
+.typing {
+  display: inline-flex;
+  gap: 5px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: var(--glass-tint-strong);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+
+.typing i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-fill);
+  animation: typing 1.2s infinite ease-in-out;
+}
+
+.typing i:nth-child(2) { animation-delay: 0.15s; }
+.typing i:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+.assistant-note {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--glass-inset);
+  font-size: 12px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.assistant-note svg { width: 14px; height: 14px; flex: none; }
+
+.assistant-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 13px;
+  color: var(--unpaid);
+  background: var(--unpaid-bg);
+}
+
+.assistant-error svg { width: 17px; height: 17px; flex: none; }
+.assistant-error span { flex: 1; min-width: 12ch; }
+
+/* Proposal: a change the manager confirms before anything is saved. */
+.proposal {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: var(--glass-tint-strong);
+  box-shadow: inset 0 0 0 1.5px var(--accent-fill), 0 10px 26px -16px var(--accent-glow);
+}
+
+.proposal[data-status='done'] { box-shadow: inset 0 0 0 1px var(--hairline); }
+.proposal[data-status='cancelled'] { box-shadow: inset 0 0 0 1px var(--hairline); opacity: 0.6; }
+
+.proposal__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.proposal__head .pill { margin-inline-start: auto; }
+
+.proposal__icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  background: var(--glass-inset);
+}
+
+.proposal__icon svg { width: 17px; height: 17px; }
+
+.proposal__rows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+}
+
+.proposal__rows dt { font-size: 11.5px; color: var(--text-3); }
+.proposal__rows dd { margin: 0; font-size: 13.5px; font-weight: 700; overflow-wrap: anywhere; }
+
+.proposal__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--unpaid);
+}
+
+.proposal__error svg { width: 15px; height: 15px; flex: none; }
+
+.proposal__actions { display: flex; gap: 8px; }
+.proposal__actions > .btn { flex: 1; }
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin: 0 12px;
+  padding: 6px;
+  border-radius: 24px;
+  background: var(--glass-inset);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  transition: box-shadow 0.25s var(--ease-out);
+}
+
+.composer:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--accent-fill), 0 0 0 4px var(--accent-glow);
+}
+
+.composer__input {
+  flex: 1;
+  min-height: 40px;
+  max-height: 120px;
+  padding: 9px 12px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  field-sizing: content;
+}
+
+.composer__input::placeholder { color: var(--text-3); }
+
+/* The paper plane points along the reading direction (left in RTL). */
+.composer__send svg { transform: scaleX(-1); }
+
+/* With the tab bar: the launcher floats just above it. */
+@media (max-width: 900px) {
+  :root {
+    --launcher-size: 64px;
+    --launcher-gap: 12px;
+    --launcher-bottom: calc(max(12px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) + 76px);
+  }
+}
+
+/* Phones: the window takes the whole screen. */
+@media (max-width: 640px) {
+  .assistant-panel {
+    inset: 0;
+    z-index: 45;
+    width: 100%;
+    height: 100dvh;
+    border-radius: 0;
+    padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+    padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+    animation-name: assistant-sheet-in;
+  }
+
+  .assistant-launcher[data-open='true'] { display: none; }
+}
+
+@keyframes assistant-sheet-in {
+  from { opacity: 0; transform: translateY(24px); }
+}

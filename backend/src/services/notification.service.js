@@ -190,10 +190,39 @@ async function notifyLeaveUpdate(account, leave, status) {
   return sendMail({ to: account.email, subject, html });
 }
 
+// ─── 5. General Announcement Broadcast Email ─────────────────────────────
+async function notifyAnnouncement(account, announcement) {
+  if (!account.email) return;
+  const priorityColor = announcement.priority === 'urgent' ? '#c92a2a' : (announcement.priority === 'important' ? '#d9480f' : '#b59045');
+  const priorityLabel = announcement.priority === 'urgent' ? 'عاجل جداً 🚨' : (announcement.priority === 'important' ? 'هام ⚠️' : 'تعميم عام 📢');
+  const subject = `[تعميم إداري - أساس] ${announcement.title}`;
+  const html = `
+    <div dir="rtl" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e0dacb; border-radius: 12px; overflow: hidden;">
+      <div style="background: #231f20; padding: 24px; text-align: center; color: #ffffff;">
+        <span style="background: ${priorityColor}; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 8px;">${priorityLabel}</span>
+        <h1 style="margin: 0; font-size: 22px; color: #b59045;">${announcement.title}</h1>
+        <p style="margin: 6px 0 0; font-size: 13px; color: #d2c5ac;">شركة أساس الذكاء الاصطناعي</p>
+      </div>
+      <div style="padding: 24px; color: #231f20; line-height: 1.8;">
+        <p style="font-size: 15px;">عزيزي/عزيزتي <strong>${account.name}</strong>،</p>
+        <div style="background: #fbf7ee; border: 1px solid #ebdcc0; border-radius: 8px; padding: 18px; margin: 16px 0; font-size: 14.5px; white-space: pre-line;">
+          ${announcement.content}
+        </div>
+        <p style="font-size: 12px; color: #736d65;">تاريخ النشر: ${new Date().toLocaleDateString('ar-YE', { timeZone: 'Asia/Aden' })}</p>
+      </div>
+      <div style="background: #f8f7f4; padding: 14px; text-align: center; font-size: 12px; color: #8a8275; border-top: 1px solid #ebdcc0;">
+        نظام أساس لإدارة الحضور والعمليات · توقيت صنعاء
+      </div>
+    </div>
+  `;
+  return sendMail({ to: account.email, subject, html, text: `${announcement.title}\n\n${announcement.content}` });
+}
+
 module.exports = {
   sendMail,
   notifyAccountCreated,
   notifyCheckIn,
   notifyCheckOut,
-  notifyLeaveUpdate
+  notifyLeaveUpdate,
+  notifyAnnouncement
 };

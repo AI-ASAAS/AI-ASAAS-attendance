@@ -1,0 +1,129 @@
+/*
+ * Thmanyah typeface (thmanyah.com) — see ../fonts/thmanyah/LICENSE.pdf.
+ * The license allows web embedding only as part of a packaged product, so the
+ * files live in src/ (never public/) and are bundled (hashed) by Vite — never put them in public/.
+ *
+ *  - Sans          → interface text and all numbers ("الرقمي")
+ *  - Serif Display → headings
+ *  - Serif Text    → descriptive / longer text
+ */
+
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('../fonts/thmanyah/sans/thmanyahsans-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('../fonts/thmanyah/sans/thmanyahsans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('../fonts/thmanyah/sans/thmanyahsans-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('../fonts/thmanyah/sans/thmanyahsans-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('../fonts/thmanyah/sans/thmanyahsans-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Serif Display';
+  src: url('../fonts/thmanyah/serif-display/thmanyahserifdisplay-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Serif Display';
+  src: url('../fonts/thmanyah/serif-display/thmanyahserifdisplay-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Serif Display';
+  src: url('../fonts/thmanyah/serif-display/thmanyahserifdisplay-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Serif Display';
+  src: url('../fonts/thmanyah/serif-display/thmanyahserifdisplay-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Serif Display';
+  src: url('../fonts/thmanyah/serif-display/thmanyahserifdisplay-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Serif Text';
+  src: url('../fonts/thmanyah/serif-text/thmanyahseriftext-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Serif Text';
+  src: url('../fonts/thmanyah/serif-text/thmanyahseriftext-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Serif Text';
+  src: url('../fonts/thmanyah/serif-text/thmanyahseriftext-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Serif Text';
+  src: url('../fonts/thmanyah/serif-text/thmanyahseriftext-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Serif Text';
+  src: url('../fonts/thmanyah/serif-text/thmanyahseriftext-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}

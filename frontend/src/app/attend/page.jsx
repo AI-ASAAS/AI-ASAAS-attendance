@@ -88,7 +88,19 @@ export default function AttendPage({ forcedAction = null }) {
   const [leaveModal, setLeaveModal] = useState(false);
   const [leaveForm, setLeaveForm] = useState({ from_date: '', to_date: '', reason: '' });
   const [showHistory, setShowHistory] = useState(false);
-  const [loginForm, setLoginForm] = useState({ identifier: '', password: '', phone: '' });
+  const [loginForm, setLoginForm] = useState(() => {
+    let savedId = '';
+    if (typeof window !== 'undefined') {
+      savedId = localStorage.getItem('asas_saved_identifier') || '';
+    }
+    return { identifier: savedId, password: '', phone: '' };
+  });
+  const [rememberMe, setRememberMe] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('asas_remember_me') !== 'false';
+    }
+    return true;
+  });
   const [googleModal, setGoogleModal] = useState(false);
   const [googleEmail, setGoogleEmail] = useState('');
   const [googleName, setGoogleName] = useState('');
@@ -377,6 +389,13 @@ export default function AttendPage({ forcedAction = null }) {
       if (typeof window !== 'undefined') {
         if (d.token) localStorage.setItem('asas_token', d.token);
         if (d.account) localStorage.setItem('asas_account', JSON.stringify(d.account));
+        if (rememberMe) {
+          localStorage.setItem('asas_saved_identifier', loginForm.identifier);
+          localStorage.setItem('asas_remember_me', 'true');
+        } else {
+          localStorage.removeItem('asas_saved_identifier');
+          localStorage.setItem('asas_remember_me', 'false');
+        }
       }
       setUser(d.account);
       await loadUserData();
@@ -410,6 +429,13 @@ export default function AttendPage({ forcedAction = null }) {
       if (typeof window !== 'undefined') {
         if (d.token) localStorage.setItem('asas_token', d.token);
         if (d.account) localStorage.setItem('asas_account', JSON.stringify(d.account));
+        if (rememberMe) {
+          localStorage.setItem('asas_saved_identifier', loginForm.identifier);
+          localStorage.setItem('asas_remember_me', 'true');
+        } else {
+          localStorage.removeItem('asas_saved_identifier');
+          localStorage.setItem('asas_remember_me', 'false');
+        }
       }
       setUser(d.account);
       setGoogleModal(false);
@@ -612,6 +638,16 @@ export default function AttendPage({ forcedAction = null }) {
                   onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
                 />
               </label>
+              <label className="asas-remember-row" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '10px 0 14px', fontSize: 13, color: '#736d65', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                  style={{ width: 17, height: 17, accentColor: '#b59045', cursor: 'pointer' }}
+                />
+                <span>تذكر بيانات الدخول على هذا الجهاز</span>
+              </label>
+
               <button type="submit" disabled={busy} style={styles.primaryButton}>
                 {busy ? 'جارٍ التحقق…' : 'تسجيل الدخول ومتابعة الحضور'}
                 <LogIn size={16} />
@@ -661,12 +697,7 @@ export default function AttendPage({ forcedAction = null }) {
               يتم ربط حساب الموظف تلقائياً بجواله الشخصي عند أول تسجيل دخول. لن يتمكن أي شخص آخر من استخدام هذا الجوال لحساب موظف آخر، ولا يمكن التحضير من هاتف آخر دون مراجعة الإدارة.
             </div>
 
-            <div style={{ marginTop: 12, padding: 10, background: '#faf9f5', borderRadius: 10, fontSize: 11.5, color: '#736d65', border: '1px solid #e0dacb' }}>
-              💡 <strong>حسابات التجربة والتسجيل:</strong><br/>
-              • المدير: <code>admin</code> / <code>AsasAdmin@2026</code><br/>
-              • الموظف المعتمد: <code>001</code> أو <code>002</code> / <code>AsasEmployee@2026</code><br/>
-              • أو سجل بحسابك في Google / Gmail بضغطة واحدة ليصدر لك رقمك الوظيفي الثابت تلقائياً (مثل: <code>003</code>).
-            </div>
+
           </div>
         ) : (
           /* Attendance Interface (Works for both Employees and Admins testing) */

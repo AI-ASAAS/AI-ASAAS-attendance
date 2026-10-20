@@ -1,3 +1,4 @@
+import '../asaas-ui/styles/index.css';
 import './globals.css';
 import './asas.css';
 import Providers from '@/components/shared/Providers';

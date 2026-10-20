@@ -1,0 +1,97 @@
+/* ───────── Brand: ASAAS — ink, gold & sand (from the brand guideline) ───────── */
+:root {
+  --brand-ink: #221f1f;
+  --brand-gold: #ba9555;
+  --brand-sand: #d3c6b4;
+  --brand-clay: #c3ad8d;
+  --brand-cream: #ede7da;
+  --brand-paper: #fcf9f5;
+
+  --font: 'Thmanyah Sans', system-ui, sans-serif;
+  --font-display: 'Thmanyah Serif Display', 'Thmanyah Sans', serif;
+  --font-text: 'Thmanyah Serif Text', 'Thmanyah Sans', serif;
+
+  --radius-xl: 30px;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --radius-pill: 999px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --gutter: 20px;
+
+  /* light theme (default) */
+  color-scheme: light;
+  --bg: #ece5d7;
+  --orb-1: rgba(186, 149, 85, 0.62);
+  --orb-2: rgba(214, 196, 168, 0.9);
+  --orb-3: rgba(120, 92, 52, 0.28);
+  --pattern: rgba(34, 31, 31, 0.05);
+
+  --text: #221f1f;
+  --text-2: rgba(34, 31, 31, 0.7);
+  --text-3: rgba(34, 31, 31, 0.5);
+  --hairline: rgba(34, 31, 31, 0.08);
+
+  --glass-tint: rgba(255, 253, 249, 0.38);
+  --glass-tint-strong: rgba(255, 253, 249, 0.66);
+  --glass-rim: rgba(255, 255, 255, 0.95);
+  --glass-rim-low: rgba(255, 255, 255, 0.3);
+  --glass-sheen: rgba(255, 255, 255, 0.55);
+  --glass-shadow: 0 1px 2px rgba(34, 31, 31, 0.05), 0 18px 44px -18px rgba(74, 54, 22, 0.32);
+  --glass-inset: rgba(34, 31, 31, 0.045);
+  --overlay: rgba(34, 28, 20, 0.28);
+
+  --accent: #8f6626;
+  --accent-fill: #ba9555;
+  --accent-glow: rgba(186, 149, 85, 0.45);
+  --on-accent: #ffffff;
+
+  --paid: #23744a;
+  --paid-bg: rgba(35, 116, 74, 0.12);
+  --partial: #9a5f05;
+  --partial-bg: rgba(214, 139, 20, 0.16);
+  --unpaid: #b0342c;
+  --unpaid-bg: rgba(176, 52, 44, 0.1);
+
+  /* validated chart pair (dataviz validator: all checks pass) */
+  --chart-in: #a8771f;
+  --chart-out: #00849e;
+  --chart-grid: rgba(34, 31, 31, 0.08);
+}
+
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #141111;
+  --orb-1: rgba(186, 149, 85, 0.42);
+  --orb-2: rgba(195, 173, 141, 0.16);
+  --orb-3: rgba(120, 82, 34, 0.45);
+  --pattern: rgba(246, 240, 229, 0.035);
+  --text: #f6f0e5;
+  --text-2: rgba(246, 240, 229, 0.72);
+  --text-3: rgba(246, 240, 229, 0.5);
+  --hairline: rgba(246, 240, 229, 0.08);
+  --glass-tint: rgba(255, 246, 230, 0.05);
+  --glass-tint-strong: rgba(255, 246, 230, 0.11);
+  --glass-rim: rgba(255, 244, 222, 0.4);
+  --glass-rim-low: rgba(255, 244, 222, 0.07);
+  --glass-sheen: rgba(255, 244, 222, 0.14);
+  --glass-shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 0 24px 60px -24px rgba(0, 0, 0, 0.8);
+  --glass-inset: rgba(255, 244, 222, 0.04);
+  --overlay: rgba(6, 4, 3, 0.55);
+  --accent: #d8b36f;
+  --accent-fill: #c39f5e;
+  --accent-glow: rgba(195, 159, 94, 0.4);
+  --on-accent: #1b1714;
+  --paid: #6fcf98;
+  --paid-bg: rgba(111, 207, 152, 0.13);
+  --partial: #f0b65a;
+  --partial-bg: rgba(240, 182, 90, 0.14);
+  --unpaid: #f4877b;
+  --unpaid-bg: rgba(244, 135, 123, 0.13);
+  --chart-in: #b5842a;
+  --chart-out: #2e9cb2;
+  --chart-grid: rgba(246, 240, 229, 0.08);
+}
