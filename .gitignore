@@ -12,3 +12,6 @@ test-results/
 # Local In-Project PostgreSQL Database Data
 database/pgdata/
 *.pid
+ 
+*secret*.json
+*credentials*.json

@@ -405,7 +405,7 @@ export default function AsasApp(){
 function Login({onLogin,initialError,onRetry}){
  const [identifier,setIdentifier]=useState(''),[password,setPassword]=useState(''),[phone,setPhone]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(initialError);
  const [googleModal,setGoogleModal]=useState(false),[googleEmail,setGoogleEmail]=useState(''),[googleName,setGoogleName]=useState('');
- const [googleClientId,setGoogleClientId]=useState(()=>typeof window!=='undefined'?(localStorage.getItem('asas_google_client_id')||process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID||''):'');
+ const [googleClientId,setGoogleClientId]=useState(()=>typeof window!=='undefined'?(localStorage.getItem('asas_google_client_id')||process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID||'331442639841-s48n1ir37vnn9nckg6ogn1hv8fl9fiq3.apps.googleusercontent.com'):'331442639841-s48n1ir37vnn9nckg6ogn1hv8fl9fiq3.apps.googleusercontent.com');
  const [tempClientId,setTempClientId]=useState('');
  const [modalTab,setModalTab]=useState('console'); // 'console' | 'direct'
  const [copiedOrigin,setCopiedOrigin]=useState(false);
