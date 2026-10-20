@@ -9,3 +9,6 @@ coverage/
 test-results/
 *.tsbuildinfo
 
+# Local In-Project PostgreSQL Database Data
+database/pgdata/
+*.pid
