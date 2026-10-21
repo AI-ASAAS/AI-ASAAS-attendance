@@ -1592,6 +1592,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
   const [analyticsDate, setAnalyticsDate] = useState(today);
   const [analyticsMonth, setAnalyticsMonth] = useState(() => today().slice(0, 7));
   const [analyticsBranch, setAnalyticsBranch] = useState('');
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [liveTime, setLiveTime] = useState('');
   const [announcements, setAnnouncements] = useState([]);
@@ -1684,6 +1686,26 @@ function AsasAppInner({ defaultAction = 'auto' }) {
     loadAnnouncements();
   }, [loadAnnouncements]);
 
+  const loadAnalytics = useCallback(async () => {
+    if (!user || user.role === 'employee') return;
+    try {
+      setAnalyticsLoading(true);
+      const res = await api(`/admin/analytics?mode=${analyticsMode}&date=${analyticsDate}&month=${analyticsMonth}${analyticsBranch ? `&branch_id=${analyticsBranch}` : ''}`);
+      setAnalyticsData(res);
+      return res;
+    } catch (err) {
+      console.error('Failed to load analytics:', err);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [user, analyticsMode, analyticsDate, analyticsMonth, analyticsBranch]);
+
+  useEffect(() => {
+    if (tab === 'dashboard' || tab === 'analytics') {
+      loadAnalytics();
+    }
+  }, [tab, loadAnalytics]);
+
   const load = useCallback(async (showBusy = false) => {
     if (!user || user.role === 'employee') return;
     if (showBusy) setBusy(true);
@@ -1698,6 +1720,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
         : `/admin/${tab}`;
       const result = await api(path);
       setData(result);
+      if (tab === 'analytics') setAnalyticsData(result);
       if (tab === 'branches' || tab === 'qr') setBranches(result);
       if (tab === 'settings' && result) setSystemSettings(result);
       if (tab === 'announcements' && Array.isArray(result)) setAnnouncements(result);
@@ -2164,13 +2187,19 @@ function AsasAppInner({ defaultAction = 'auto' }) {
             <>
               <Glass className="asas-hero-banner">
                 <div>
-                  <p className="asas-eyebrow">منظومة العمل الذكية</p>
+                  <p className="asas-eyebrow">منظومة القيادة والعمل الذكية</p>
                   <h2><Stretch before="أهْـ" after="ـلاً" length={3} /> بك في لوحة تحكم أساس</h2>
-                  <p>حضور مؤكد جغرافياً ومقيد بأجهزة الموظفين مع تحديث لحظي على السحابة وقواعد البيانات.</p>
+                  <p>إدارة مركزية متكاملة لبيانات الحضور والانصراف، الفحص الجغرافي، والإحصائيات اللحظية المقيدة بقواعد البيانات.</p>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
-                    <button className="asas-btn primary" onClick={() => setTab('analytics')}>
+                    <button
+                      className="asas-btn primary"
+                      onClick={() => {
+                        const el = document.getElementById('asas-dashboard-analytics-section');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                    >
                       <Icon name="trend" />
-                      مساحة الإحصائيات والتحليلات
+                      عرض الإحصائيات الشاملة (بالأسفل)
                     </button>
                     <button className="asas-btn" onClick={() => setTab('qr')}>
                       <Icon name="qrCode" />
@@ -2192,33 +2221,6 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div className="asas-mark" />
                 </div>
-              </Glass>
-
-              {/* Analytics Feature Callout Card */}
-              <Glass style={{ padding: '16px 20px', borderRadius: 14, border: '1px solid var(--accent)', background: 'linear-gradient(135deg, rgba(34, 28, 27, 0.8) 0%, rgba(20, 17, 16, 0.92) 100%)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, boxShadow: '0 6px 20px rgba(0,0,0,0.25)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(186, 149, 85, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-gold)', flexShrink: 0 }}>
-                    <Icon name="trend" style={{ width: 22, height: 22 }} />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <strong style={{ fontSize: 15, color: 'var(--text)' }}>مساحة الإحصائيات والتحليلات الشاملة</strong>
-                      <span className="asas-badge inside" style={{ fontSize: 10, padding: '1px 6px' }}>جديد</span>
-                    </div>
-                    <p className="asas-muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
-                      كشوفات تفصيلية للحضور، الغياب، وقت الحضور والانصراف، والوقت المحتسب (يومية وشهرية مع رسوم بيانية).
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="asas-btn primary"
-                  onClick={() => setTab('analytics')}
-                  style={{ height: 38, padding: '0 18px', fontSize: 13, fontWeight: 700 }}
-                >
-                  <Icon name="trend" />
-                  دخول مساحة الإحصائيات ➔
-                </button>
               </Glass>
 
               <div className="asas-stats-grid">
@@ -2257,6 +2259,44 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                   <div className="asas-stat-value" style={{ color: data.late > 0 ? 'var(--partial)' : 'var(--text)' }}>{formatNumber(data.late)}</div>
                   <div className="asas-stat-caption">حالات تأخير بحاجة لمتابعة</div>
                 </Glass>
+              </div>
+
+              {/* Integrated Core Analytics & Statistics Section Directly in the Dashboard */}
+              <div id="asas-dashboard-analytics-section" style={{ display: 'flex', flexDirection: 'column', gap: 14, margin: '8px 0 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, paddingBottom: 10, borderBottom: '1px solid var(--border-soft)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(186, 149, 85, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-gold)' }}>
+                      <Icon name="trend" style={{ width: 22, height: 22 }} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: 18, color: 'var(--text)' }}>مساحة الإحصائيات والتحليلات القيادية</h3>
+                      <p className="asas-muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
+                        كشف الحضور والغياب، وقت الحضور والانصراف، والوقت المحتسب، والتأخير (يومية وشهرية مع رسوم بيانية تفاعلية)
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="asas-badge inside" style={{ fontSize: 11, padding: '3px 8px' }}>
+                      <span className="asas-radar-pulse pulse-green" style={{ width: 7, height: 7, display: 'inline-block', position: 'static', marginRight: 4 }} />
+                      تحديث لحظي سحابي
+                    </span>
+                  </div>
+                </div>
+
+                <AnalyticsView
+                  data={analyticsData}
+                  mode={analyticsMode}
+                  setMode={setAnalyticsMode}
+                  date={analyticsDate}
+                  setDate={setAnalyticsDate}
+                  month={analyticsMonth}
+                  setMonth={setAnalyticsMonth}
+                  branchId={analyticsBranch}
+                  setBranchId={setAnalyticsBranch}
+                  branches={branches}
+                  onRefresh={() => { load(true); loadAnalytics(); }}
+                  busy={analyticsLoading || busy}
+                />
               </div>
 
               <div className="asas-grid-halves">
@@ -2304,7 +2344,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
           {/* ANALYTICS & STATISTICS TAB */}
           {tab === 'analytics' && (
             <AnalyticsView
-              data={data}
+              data={analyticsData || data}
               mode={analyticsMode}
               setMode={setAnalyticsMode}
               date={analyticsDate}
@@ -2314,8 +2354,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               branchId={analyticsBranch}
               setBranchId={setAnalyticsBranch}
               branches={branches}
-              onRefresh={() => load(true)}
-              busy={busy}
+              onRefresh={() => { load(true); loadAnalytics(); }}
+              busy={analyticsLoading || busy}
             />
           )}
 
