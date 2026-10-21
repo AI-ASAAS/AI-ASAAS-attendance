@@ -2850,7 +2850,12 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   autoCheckInRef.current = autoCheckIn;
   const hasAutoEnteredRef = useRef(false);
   const hasWarnedExitRef = useRef(false);
-  const branchCoordsRef = useRef(null);
+  const branchCoordsRef = useRef({
+    latitude: 15.306023604211699,
+    longitude: 44.19817994690613,
+    entry_radius: 120,
+    exit_radius: 180
+  });
 
   const requestNotifPermission = useCallback(async () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -3072,10 +3077,11 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       const effectiveRad = isInside
         ? Number(branchCoordsRef.current.exit_radius || 180)
         : Number(branchCoordsRef.current.entry_radius || 120);
-      if (localDist != null && localDist <= effectiveRad) {
+      if (localDist != null) {
+        const isInsideLocally = localDist <= effectiveRad;
         setGeofenceStatus(prev => ({
           ...prev,
-          state: 'inside',
+          state: isInsideLocally ? 'inside' : (prev.pending > 0 ? 'pending' : 'outside'),
           distance: localDist,
           accuracy: Math.round(coords.accuracy)
         }));
