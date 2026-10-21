@@ -520,10 +520,51 @@ app.post('/api/admin/announcements',admin,wrap(async(req,res)=>{
  respond(res,inserted);
 }));
 
+app.put('/api/admin/announcements/:id',admin,wrap(async(req,res)=>{
+ const annId=id(req.params.id);
+ const {title,content,priority='normal',send_email=false}=req.body;
+ if(!title||!title.trim())error('VALIDATION','عنوان التعميم مطلوب');
+ if(!content||!content.trim())error('VALIDATION','نص التعميم مطلوب');
+
+ const cleanTitle=string(title,250);
+ const cleanContent=string(content,5000);
+ const cleanPriority=['normal','important','urgent'].includes(priority)?priority:'normal';
+
+ const updated=await db.transaction(async c=>{
+  const existing=(await c.query('SELECT * FROM announcements WHERE id=$1 AND active=TRUE FOR UPDATE',[annId])).rows[0];
+  if(!existing)error('NOT_FOUND','التعميم غير موجود أو تم حذفه مسبقاً',404);
+
+  const r=await c.query(
+   `UPDATE announcements SET title=$1, content=$2, priority=$3, send_email=$4 WHERE id=$5 RETURNING *`,
+   [cleanTitle,cleanContent,cleanPriority,bool(send_email),annId]
+  );
+  await audit(c,req.user,'announcement.update',annId,cleanTitle);
+  return r.rows[0];
+ });
+
+ if(send_email){
+  db.query('SELECT name, email FROM accounts WHERE active=TRUE AND email IS NOT NULL').then(async empRes=>{
+   for(const emp of empRes.rows){
+    if(emp.email){
+     notifications.notifyAnnouncement(emp, updated).catch(err=>console.error(`Failed to send updated announcement email to ${emp.email}:`, err.message));
+    }
+   }
+  }).catch(()=>{});
+ }
+
+ respond(res,updated);
+}));
+
 app.delete('/api/admin/announcements/:id',admin,wrap(async(req,res)=>{
  const annId=id(req.params.id);
- await db.query('UPDATE announcements SET active=FALSE WHERE id=$1',[annId]);
- respond(res,{deleted:true});
+ await db.transaction(async c=>{
+  const existing=(await c.query('SELECT * FROM announcements WHERE id=$1 FOR UPDATE',[annId])).rows[0];
+  if(existing){
+   await c.query('UPDATE announcements SET active=FALSE WHERE id=$1',[annId]);
+   await audit(c,req.user,'announcement.delete',annId,existing.title);
+  }
+ });
+ respond(res,{deleted:true,message:'تم حذف التعميم بنجاح'});
 }));
 
 const employee=(req,res,next)=>['employee','super_admin','hr_admin','branch_manager'].includes(req.user.role)?next():next(new AppError('FORBIDDEN','هذه العملية لحساب الموظف',403));

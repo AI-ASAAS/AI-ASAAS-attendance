@@ -269,7 +269,7 @@ function Records({ rows = [], onEdit, canEdit }) {
 }
 
 // Announcements Dialog
-function AnnouncementsModal({ announcements, onClose }) {
+function AnnouncementsModal({ announcements, onClose, canManage, onEdit, onDelete }) {
   return (
     <div className="asas-modal-backdrop" onClick={onClose}>
       <section className="asas-modal" style={{ maxWidth: 620 }} onClick={e => e.stopPropagation()}>
@@ -300,9 +300,26 @@ function AnnouncementsModal({ announcements, onClose }) {
                 <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)', whiteSpace: 'pre-line', margin: '8px 0' }}>
                   {a.content}
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, fontSize: 11.5, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 8 }}>
-                  <span>المرسل: <strong>{a.sender_name || 'الإدارة'}</strong></span>
-                  <time>{date(a.created_at)} · {time(a.created_at)}</time>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, fontSize: 11.5, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 8, flexWrap: 'wrap', gap: 8 }}>
+                  <div>
+                    <span>المرسل: <strong>{a.sender_name || 'الإدارة'}</strong></span> · <time>{date(a.created_at)} · {time(a.created_at)}</time>
+                  </div>
+                  {canManage && (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {onEdit && (
+                        <button className="asas-btn sm" onClick={() => onEdit(a)}>
+                          <Icon name="edit" />
+                          تعديل
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button className="asas-btn sm danger" onClick={() => onDelete(a.id)}>
+                          <Icon name="trash" />
+                          حذف
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </article>
             ))
@@ -1020,14 +1037,24 @@ function AsasAppInner({ defaultAction = 'auto' }) {
       }
 
       if (modal === 'announcements') {
-        await api('/admin/announcements', 'POST', {
-          title: form.title,
-          content: form.content,
-          priority: form.priority || 'normal',
-          send_email: Boolean(form.send_email)
-        });
+        if (form.id) {
+          await api(`/admin/announcements/${form.id}`, 'PUT', {
+            title: form.title,
+            content: form.content,
+            priority: form.priority || 'normal',
+            send_email: Boolean(form.send_email)
+          });
+          setNotice('تم حفظ وتعديل التعميم الرسمي بنجاح');
+        } else {
+          await api('/admin/announcements', 'POST', {
+            title: form.title,
+            content: form.content,
+            priority: form.priority || 'normal',
+            send_email: Boolean(form.send_email)
+          });
+          setNotice('تم نشر التعميم الرسمي وإرسال الإشعارات بنجاح');
+        }
         setModal(null);
-        setNotice('تم نشر التعميم الرسمي وإرسال الإشعارات بنجاح');
         await load();
         await loadAnnouncements();
         return;
@@ -1586,10 +1613,6 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                 <p className="asas-muted" style={{ margin: 0 }}>
                   نشر بيانات رسمية تظهر فوراً لجميع الموظفين في التطبيق والموقع مع إرسال بريد إلكتروني اختياري.
                 </p>
-                <button className="asas-btn primary" onClick={() => { setForm({ ...defaults.announcements }); setModal('announcements'); }}>
-                  <Icon name="send" />
-                  نشر تعميم رسمي جديد
-                </button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
@@ -1604,13 +1627,19 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                     <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)', whiteSpace: 'pre-line', margin: '8px 0' }}>
                       {a.content}
                     </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: 11.5, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: 11.5, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 8, flexWrap: 'wrap', gap: 8 }}>
                       <div>المرسل: <strong>{a.sender_name || 'الإدارة'}</strong> · <time>{date(a.created_at)}</time></div>
                       {can('employees.write') && (
-                        <button className="asas-btn sm danger" onClick={() => deleteAnnouncement(a.id)}>
-                          <Icon name="trash" />
-                          حذف
-                        </button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="asas-btn sm" onClick={() => edit('announcements', a)} title="تعديل التعميم">
+                            <Icon name="edit" />
+                            تعديل
+                          </button>
+                          <button className="asas-btn sm danger" onClick={() => deleteAnnouncement(a.id)} title="حذف التعميم">
+                            <Icon name="trash" />
+                            حذف
+                          </button>
+                        </div>
                       )}
                     </div>
                   </article>
@@ -2030,6 +2059,14 @@ function AsasAppInner({ defaultAction = 'auto' }) {
         <AnnouncementsModal
           announcements={announcements}
           onClose={() => setShowAnnouncementsModal(false)}
+          canManage={can('employees.write')}
+          onEdit={(a) => {
+            setShowAnnouncementsModal(false);
+            edit('announcements', a);
+          }}
+          onDelete={async (id) => {
+            await deleteAnnouncement(id);
+          }}
         />
       )}
 
@@ -2053,12 +2090,14 @@ function AsasAppInner({ defaultAction = 'auto' }) {
           <section className="asas-modal" role="dialog" aria-modal="true" aria-label="تحرير البيانات">
             <div className="asas-modal-head">
               <h2>
-                {modal === 'announcements' ? 'نشر تعميم رسمي جديد' : (form.id ? 'تعديل' : 'إضافة')} {
-                  modal === 'branches' ? 'موقع الشركة'
-                    : modal === 'shifts' ? 'الدوام وسياسة الاحتساب'
-                    : modal === 'records' ? 'سجل الحضور'
-                    : modal === 'accounts' ? 'حساب موظف' : ''
-                }
+                {modal === 'announcements'
+                  ? (form.id ? 'تعديل التعميم الرسمي' : 'نشر تعميم رسمي')
+                  : `${form.id ? 'تعديل' : 'إضافة'} ${
+                      modal === 'branches' ? 'موقع الشركة'
+                        : modal === 'shifts' ? 'الدوام وسياسة الاحتساب'
+                        : modal === 'records' ? 'سجل الحضور'
+                        : modal === 'accounts' ? 'حساب موظف' : ''
+                    }`}
               </h2>
               <button className="asas-btn sm" onClick={() => setModal(null)} aria-label="إغلاق">
                 <Icon name="close" />
@@ -2221,7 +2260,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                 </>
               )}
 
-              {(form.id || modal === 'branches' || modal === 'records') && (
+              {modal !== 'announcements' && (form.id || modal === 'branches' || modal === 'records') && (
                 <Field label="سبب التغيير (يوثق في سجل العمليات)" required value={form.reason || ''} onChange={e => set('reason', e.target.value)} />
               )}
 
@@ -2229,7 +2268,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                 <button className="asas-btn" type="button" onClick={() => setModal(null)}>إلغاء</button>
                 <button className="asas-btn primary" type="submit" disabled={busy}>
                   <Icon name="check" />
-                  {modal === 'announcements' ? 'نشر التعميم' : 'حفظ التغييرات'}
+                  {modal === 'announcements' ? (form.id ? 'حفظ التعديلات' : 'نشر التعميم') : 'حفظ التغييرات'}
                 </button>
               </div>
             </form>
