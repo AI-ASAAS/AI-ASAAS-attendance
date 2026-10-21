@@ -2176,4 +2176,53 @@ select.asas-input option {
   opacity: 0.75;
 }
 
+/* Admin Horizontal Quick Nav */
+.asas-admin-quick-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 18px;
+  background: rgba(20, 17, 16, 0.85);
+  border-bottom: 1px solid var(--hairline);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  position: sticky;
+  top: 57px;
+  z-index: 20;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.asas-admin-quick-nav::-webkit-scrollbar {
+  display: none;
+}
+.asas-quick-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--hairline);
+  background: var(--glass-inset);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.asas-quick-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  border-color: var(--glass-rim);
+}
+.asas-quick-tab-btn.active {
+  background: var(--brand-gold) !important;
+  color: #14110e !important;
+  border-color: var(--brand-gold) !important;
+  box-shadow: 0 0 14px rgba(186, 149, 85, 0.45);
+}
+
+
 

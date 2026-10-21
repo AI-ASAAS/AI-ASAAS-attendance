@@ -2074,8 +2074,9 @@ function AsasAppInner({ defaultAction = 'auto' }) {
       <div className="asas-main">
         <header className="asas-topbar">
           <div className="asas-topbar-title">
-            <button className="asas-btn sm asas-menu-btn" style={{ padding: '0 8px' }} onClick={() => setOpen(!open)} aria-label="القائمة">
-              <Icon name="grid" />
+            <button className="asas-btn sm asas-menu-btn" style={{ padding: '0 10px', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setOpen(!open)} aria-label="القائمة الجانبية">
+              <Icon name="grid" style={{ width: 15, height: 15 }} />
+              <span style={{ fontSize: 12, fontWeight: 600 }}>القائمة</span>
             </button>
             <span><span className="asas-topbar-breadcrumb">لوحة القيادة / </span><strong><Swash>{title}</Swash></strong></span>
           </div>
@@ -2100,6 +2101,24 @@ function AsasAppInner({ defaultAction = 'auto' }) {
             </div>
           </div>
         </header>
+
+        {/* Horizontal Navigation Pills Bar (Direct Access on Desktop & Mobile) */}
+        <div className="asas-admin-quick-nav">
+          {tabs.filter(([key]) => key !== 'accounts' || can('employees.read')).filter(([key]) => key !== 'audit' || can('audit.read')).map(([key, label, iconName]) => (
+            <button
+              type="button"
+              className={`asas-quick-tab-btn ${tab === key ? 'active' : ''}`}
+              key={key}
+              onClick={() => { setTab(key); setData(null); setNotice(''); setSearch(''); }}
+            >
+              <Icon name={iconName} style={{ width: 14, height: 14 }} />
+              <span>{label}</span>
+              {key === 'analytics' && (
+                <span className="asas-badge inside" style={{ fontSize: 9, padding: '1px 5px', background: tab === key ? '#12100e' : 'rgba(34, 197, 94, 0.2)', color: tab === key ? '#ffd700' : 'var(--paid)' }}>جديد</span>
+              )}
+            </button>
+          ))}
+        </div>
 
         <main className="asas-content">
           <div className="asas-heading">
@@ -2173,6 +2192,33 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div className="asas-mark" />
                 </div>
+              </Glass>
+
+              {/* Analytics Feature Callout Card */}
+              <Glass style={{ padding: '16px 20px', borderRadius: 14, border: '1px solid var(--accent)', background: 'linear-gradient(135deg, rgba(34, 28, 27, 0.8) 0%, rgba(20, 17, 16, 0.92) 100%)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, boxShadow: '0 6px 20px rgba(0,0,0,0.25)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(186, 149, 85, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-gold)', flexShrink: 0 }}>
+                    <Icon name="trend" style={{ width: 22, height: 22 }} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <strong style={{ fontSize: 15, color: 'var(--text)' }}>مساحة الإحصائيات والتحليلات الشاملة</strong>
+                      <span className="asas-badge inside" style={{ fontSize: 10, padding: '1px 6px' }}>جديد</span>
+                    </div>
+                    <p className="asas-muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
+                      كشوفات تفصيلية للحضور، الغياب، وقت الحضور والانصراف، والوقت المحتسب (يومية وشهرية مع رسوم بيانية).
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="asas-btn primary"
+                  onClick={() => setTab('analytics')}
+                  style={{ height: 38, padding: '0 18px', fontSize: 13, fontWeight: 700 }}
+                >
+                  <Icon name="trend" />
+                  دخول مساحة الإحصائيات ➔
+                </button>
               </Glass>
 
               <div className="asas-stats-grid">
