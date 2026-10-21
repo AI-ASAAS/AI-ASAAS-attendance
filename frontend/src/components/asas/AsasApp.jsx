@@ -176,7 +176,7 @@ function Brand() {
       <div className="asas-mark" />
       <div>
         <strong>أساس</strong>
-        <small>نظام الحضور الذكي</small>
+        <small>نظام الحضور والدوام السيادي</small>
       </div>
     </div>
   );
@@ -508,7 +508,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function AsasAppInner() {
+function AsasAppInner({ defaultAction = 'auto' }) {
   const [theme, toggleTheme] = useTheme();
   const [user, setUser] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -914,6 +914,7 @@ function AsasAppInner() {
           announcements={announcements}
           onOpenAnnouncements={() => setShowAnnouncementsModal(true)}
           onOpenProfile={() => setShowProfileModal(true)}
+          defaultAction={defaultAction}
         />
         {showAnnouncementsModal && (
           <AnnouncementsModal
@@ -2068,6 +2069,9 @@ function Login({ onLogin, initialError, onRetry }) {
 
       <section className="asas-login-form-wrap">
         <div className="asas-login-box">
+          <div className="asas-login-mobile-brand">
+            <Brand />
+          </div>
           <p className="asas-eyebrow">بوابة الدخول الموحدة</p>
           <h2>تسجيل الدخول إلى أساس</h2>
           <p className="asas-muted">أدخل بياناتك المعتمدة للوصول إلى لوحة التحكم أو مساحة الموظف.</p>
@@ -2142,7 +2146,7 @@ function Login({ onLogin, initialError, onRetry }) {
 }
 
 // EMPLOYEE PORTAL
-function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProfile }) {
+function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProfile, defaultAction = 'auto' }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -2218,8 +2222,12 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
   useEffect(() => {
     load();
-    const hash = new URLSearchParams(window.location.hash.slice(1));
-    setToken(hash.get('qr') || '');
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const search = new URLSearchParams(window.location.search);
+    const foundToken = hash.get('qr') || search.get('qr') || search.get('token') || '';
+    if (foundToken) {
+      setToken(foundToken);
+    }
     window.history.replaceState(null, '', window.location.pathname);
 
     const poll = setInterval(() => {
@@ -2428,14 +2436,40 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       <Card title="سجل حضوري الأخير" icon="calendar">
         <Records rows={(data?.records || []).map(r => ({ ...r, name: user.name, identifier: user.identifier }))} />
       </Card>
+
+      {/* Floating Asas AI Assistant Robot for Employee */}
+      <AssistantWidget
+        user={{ id: String(user.id), displayName: user.name }}
+        title="مساعد أساس الذكي"
+        subtitle="مساعدك الذكي للاستفسار عن الحضور والدوام والإجازات"
+        suggestions={[
+          'كيف أسجل حضوري الآن؟',
+          'كم باقي على نهاية الدوام؟',
+          'كيف أطلب إجازة أو عذر؟',
+          'ما هي سياسة التأخير المعتمدة؟'
+        ]}
+        ask={async (messages) => {
+          const last = messages[messages.length - 1]?.content || '';
+          if (last.includes('حضور') || last.includes('انصراف')) {
+            return { reply: 'لتسجيل حضورك: تأكد من تفعيل خدمة الموقع (GPS) بجوالك، ثم اضغط على زر "تسجيل الحضور الآن" الذهبي، أو امسح رمز الـ QR عند مدخل المقر.' };
+          }
+          if (last.includes('دوام') || last.includes('وقت') || last.includes('ساعات')) {
+            return { reply: 'ساعات العمل الرسمية تبدأ من 08:00 صباحاً وحتى 04:00 عصراً بتوقيت صنعاء، وفترة السماح المعتمدة 15 دقيقة.' };
+          }
+          if (last.includes('إجازة') || last.includes('عذر') || last.includes('طلب')) {
+            return { reply: 'يمكنك تقديم طلب إجازة مباشرة من نموذج "طلب إجازة / عذر" في أسفل هذه الصفحة وسيرسل فوراً للمراجعة الإدارية.' };
+          }
+          return { reply: 'مرحباً بك يا ' + user.name + '! أنا مساعد أساس الذكي، جاهز للإجابة عن أي استفسار يخص الدوام وسجلات حضورك.' };
+        }}
+      />
     </div>
   );
 }
 
-export default function AsasApp() {
+export default function AsasApp({ defaultAction = 'auto' }) {
   return (
     <ErrorBoundary>
-      <AsasAppInner />
+      <AsasAppInner defaultAction={defaultAction} />
     </ErrorBoundary>
   );
 }

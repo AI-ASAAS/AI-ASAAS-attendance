@@ -1,7 +1,6 @@
 'use client';
-
-import AttendPage from '../attend/page';
+import AsasApp from '@/components/asas/AsasApp';
 
 export default function EnterPage() {
-  return <AttendPage forcedAction="enter" />;
+  return <AsasApp defaultAction="enter" />;
 }

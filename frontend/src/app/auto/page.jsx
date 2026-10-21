@@ -1,7 +1,6 @@
 'use client';
+import AsasApp from '@/components/asas/AsasApp';
 
-import AttendPage from '../attend/page';
-
-export default function AutoAttendPage() {
-  return <AttendPage forcedAction="auto" />;
+export default function AutoPage() {
+  return <AsasApp defaultAction="auto" />;
 }

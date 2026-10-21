@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bgGrad2" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#2d2929"/>
+      <stop offset="100%" stop-color="#191717"/>
+    </radialGradient>
+    <linearGradient id="goldGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e2bf7d"/>
+      <stop offset="50%" stop-color="#ba9555"/>
+      <stop offset="100%" stop-color="#916f34"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded squircle -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad2)"/>
+  <rect width="504" height="504" x="4" y="4" rx="124" fill="none" stroke="url(#goldGrad2)" stroke-width="2" opacity="0.3"/>
+
+  <!-- Geofence Radar Pulse Rings (النطاق الجغرافي المعزول) -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="url(#goldGrad2)" stroke-width="2" opacity="0.25" stroke-dasharray="8 6"/>
+  <circle cx="256" cy="256" r="130" fill="none" stroke="url(#goldGrad2)" stroke-width="2.5" opacity="0.45" stroke-dasharray="12 6"/>
+  <circle cx="256" cy="256" r="85" fill="none" stroke="url(#goldGrad2)" stroke-width="3" opacity="0.7"/>
+
+  <!-- Asaas Hexagonal Outer Brackets (الأساس) -->
+  <!-- Top Left Bracket -->
+  <path d="M 230 84 L 140 136 L 140 216 L 175 216 L 175 156 L 230 124 Z" fill="#fcf9f5" opacity="0.9"/>
+  <!-- Top Right Bracket -->
+  <path d="M 282 84 L 372 136 L 372 216 L 337 216 L 337 156 L 282 124 Z" fill="#fcf9f5" opacity="0.9"/>
+  <!-- Bottom Left Bracket -->
+  <path d="M 140 296 L 140 376 L 230 428 L 230 388 L 175 356 L 175 296 Z" fill="#fcf9f5" opacity="0.9"/>
+  <!-- Bottom Right Bracket -->
+  <path d="M 372 296 L 372 376 L 282 428 L 282 388 L 337 356 L 337 296 Z" fill="#fcf9f5" opacity="0.9"/>
+
+  <!-- 4 Cardinal Direction Points (الذكاء والاتجاهات الجغرافية الأربعة) -->
+  <g fill="url(#goldGrad2)">
+    <!-- North -->
+    <path d="M 256 120 L 264 136 L 280 136 L 267 146 L 272 162 L 256 152 L 240 162 L 245 146 L 232 136 L 248 136 Z"/>
+    <!-- South -->
+    <path d="M 256 350 L 264 366 L 280 366 L 267 376 L 272 392 L 256 382 L 240 392 L 245 376 L 232 366 L 248 366 Z"/>
+    <!-- West -->
+    <path d="M 130 240 L 138 256 L 154 256 L 141 266 L 146 282 L 130 272 L 114 282 L 119 266 L 106 256 L 122 256 Z"/>
+    <!-- East -->
+    <path d="M 382 240 L 390 256 L 406 256 L 393 266 L 398 282 L 382 272 L 366 282 L 371 266 L 358 256 L 374 256 Z"/>
+  </g>
+
+  <!-- Central Location Beacon & Diamond Pin (توثيق الحضور الجغرافي للمقر) -->
+  <g transform="translate(256, 240)">
+    <!-- Pin Head -->
+    <path d="M 0 -50 C -34 -50 -54 -26 -54 8 C -54 44 0 90 0 90 C 0 90 54 44 54 8 C 54 -26 34 -50 0 -50 Z" 
+          fill="#1e1c1c" stroke="url(#goldGrad2)" stroke-width="5" stroke-linejoin="round"/>
+    <!-- Asaas Rhombus inside Pin -->
+    <rect x="-18" y="-4" width="36" height="36" rx="6" fill="url(#goldGrad2)" transform="rotate(45)"/>
+    <circle cx="0" cy="8" r="5" fill="#fcf9f5"/>
+  </g>
+</svg>

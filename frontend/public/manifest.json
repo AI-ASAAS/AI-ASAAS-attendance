@@ -1,15 +1,24 @@
 {
-  "name": "AI-ASAAS-attendance",
-  "short_name": "أساس",
-  "description": "نظام حضور موظفي أساس - AI-ASAAS Attendance System",
-  "start_url": "/attend",
+  "name": "أساس - نظام إدارة الحضور الذكي",
+  "short_name": "أساس حضور",
+  "description": "نظام الحضور والدوام السيادي لشركة أساس الذكاء الاصطناعي",
+  "start_url": "/asas",
   "display": "standalone",
-  "background_color": "#FAF9F5",
-  "theme_color": "#231F20",
+  "background_color": "#181616",
+  "theme_color": "#221f1f",
   "orientation": "portrait",
   "icons": [
-    { "src": "/brand/asas-logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/brand/asas-logo.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/brand/attendance_icon_user_check.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/brand/attendance_icon_user_check.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
   ],
   "categories": ["business", "productivity"]
 }

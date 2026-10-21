@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bgBdg" cx="50%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#2d2929"/>
+      <stop offset="100%" stop-color="#181616"/>
+    </radialGradient>
+    <linearGradient id="goldBdg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8c98e"/>
+      <stop offset="50%" stop-color="#ba9555"/>
+      <stop offset="100%" stop-color="#997435"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background App Squircle -->
+  <rect width="512" height="512" rx="128" fill="url(#bgBdg)"/>
+  <rect width="504" height="504" x="4" y="4" rx="124" fill="none" stroke="url(#goldBdg)" stroke-width="2" opacity="0.35"/>
+
+  <!-- Lanyard / Clip at the top (شريط ومشبك تعليق البطاقة) -->
+  <path d="M 230 40 L 256 95 L 282 40" fill="none" stroke="url(#goldBdg)" stroke-width="6" stroke-linecap="round"/>
+  <rect x="236" y="95" width="40" height="20" rx="6" fill="#ba9555"/>
+  <rect x="246" y="115" width="20" height="18" rx="3" fill="#fcf9f5" opacity="0.8"/>
+
+  <!-- Attendance Badge Card (بطاقة الحضور الرسمية) -->
+  <g transform="translate(136, 125)">
+    <!-- Card Base -->
+    <rect width="240" height="310" rx="28" fill="#242121" stroke="#fcf9f5" stroke-width="4.5"/>
+    <!-- Top Slot Hole -->
+    <rect x="95" y="14" width="50" height="8" rx="4" fill="#181616" stroke="url(#goldBdg)" stroke-width="2"/>
+
+    <!-- Asaas Brand Diamond Watermark at Top of Card -->
+    <rect x="110" y="42" width="20" height="20" rx="4" fill="url(#goldBdg)" transform="rotate(45 120 52)"/>
+
+    <!-- Employee Photo Silhouette / Face Frame -->
+    <g transform="translate(120, 130)">
+      <circle cx="0" cy="0" r="42" fill="#1b1818" stroke="url(#goldBdg)" stroke-width="3"/>
+      <!-- Head -->
+      <circle cx="0" cy="-8" r="17" fill="#fcf9f5"/>
+      <!-- Shoulders -->
+      <path d="M -26 28 C -26 12 26 12 26 28" fill="#fcf9f5"/>
+    </g>
+
+    <!-- Info Lines (بيانات الحضور والرقم الوظيفي) -->
+    <line x1="50" y1="205" x2="190" y2="205" stroke="#fcf9f5" stroke-width="6" stroke-linecap="round"/>
+    <line x1="70" y1="228" x2="170" y2="228" stroke="url(#goldBdg)" stroke-width="4.5" stroke-linecap="round"/>
+    <line x1="85" y1="248" x2="155" y2="248" stroke="#fcf9f5" stroke-width="3.5" stroke-linecap="round" opacity="0.6"/>
+
+    <!-- Punch-in / Attendance Barcode lines -->
+    <line x1="60" y1="275" x2="72" y2="275" stroke="url(#goldBdg)" stroke-width="3.5"/>
+    <line x1="78" y1="275" x2="84" y2="275" stroke="url(#goldBdg)" stroke-width="2"/>
+    <line x1="90" y1="275" x2="104" y2="275" stroke="url(#goldBdg)" stroke-width="3.5"/>
+    <line x1="110" y1="275" x2="114" y2="275" stroke="url(#goldBdg)" stroke-width="2"/>
+    <line x1="120" y1="275" x2="135" y2="275" stroke="url(#goldBdg)" stroke-width="3.5"/>
+    <line x1="142" y1="275" x2="152" y2="275" stroke="url(#goldBdg)" stroke-width="3"/>
+    <line x1="158" y1="275" x2="164" y2="275" stroke="url(#goldBdg)" stroke-width="2"/>
+    <line x1="170" y1="275" x2="180" y2="275" stroke="url(#goldBdg)" stroke-width="3.5"/>
+  </g>
+
+  <!-- Big Gold Attendance Verified Check Badge (ختم تأكيد تسجيل الحضور) -->
+  <g transform="translate(365, 385)">
+    <!-- Outer Glow / Rim -->
+    <circle cx="0" cy="0" r="54" fill="#242121" stroke="url(#goldBdg)" stroke-width="6"/>
+    <circle cx="0" cy="0" r="42" fill="url(#goldBdg)"/>
+    <!-- Checkmark -->
+    <path d="M -18 2 L -6 14 L 18 -12" fill="none" stroke="#221f1f" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

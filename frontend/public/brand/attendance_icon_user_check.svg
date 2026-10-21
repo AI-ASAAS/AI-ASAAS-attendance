@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bgUsr" cx="50%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#2d2929"/>
+      <stop offset="100%" stop-color="#181616"/>
+    </radialGradient>
+    <linearGradient id="goldUsr" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8c98e"/>
+      <stop offset="50%" stop-color="#ba9555"/>
+      <stop offset="100%" stop-color="#997435"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background App Squircle -->
+  <rect width="512" height="512" rx="128" fill="url(#bgUsr)"/>
+  <rect width="504" height="504" x="4" y="4" rx="124" fill="none" stroke="url(#goldUsr)" stroke-width="2" opacity="0.35"/>
+
+  <!-- Attendance Pulse Rings / Wireless Clock-in Arcs -->
+  <circle cx="256" cy="240" r="165" fill="none" stroke="url(#goldUsr)" stroke-width="3" opacity="0.25" stroke-dasharray="14 10"/>
+  <circle cx="256" cy="240" r="135" fill="none" stroke="url(#goldUsr)" stroke-width="3.5" opacity="0.5"/>
+
+  <!-- Employee Attendance Avatar (صورة الموظف) -->
+  <g transform="translate(256, 235)">
+    <!-- Base Circular Frame -->
+    <circle cx="0" cy="0" r="105" fill="#242121" stroke="#fcf9f5" stroke-width="5"/>
+
+    <!-- Employee Head Silhouette -->
+    <circle cx="0" cy="-24" r="38" fill="url(#goldUsr)"/>
+
+    <!-- Employee Shoulders Silhouette -->
+    <path d="M -66 75 C -66 28 66 28 66 75 Z" fill="#fcf9f5"/>
+
+    <!-- Collar / Tie Accent in Asaas Gold -->
+    <path d="M 0 35 L -10 58 L 0 74 L 10 58 Z" fill="url(#goldUsr)"/>
+  </g>
+
+  <!-- Big Verified Attendance Punch-in Badge at Bottom Right (ختم الحضور المعتمد) -->
+  <g transform="translate(365, 365)">
+    <!-- Shadow / Rim -->
+    <circle cx="0" cy="0" r="56" fill="#181616" stroke="url(#goldUsr)" stroke-width="7"/>
+    <circle cx="0" cy="0" r="44" fill="url(#goldUsr)"/>
+    <!-- Bold Checkmark -->
+    <path d="M -18 2 L -6 14 L 20 -12" fill="none" stroke="#221f1f" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Time Attendance Timestamp Pill at Bottom Left (توثيق وقت الدخول) -->
+  <g transform="translate(135, 395)">
+    <rect x="-65" y="-22" width="130" height="44" rx="22" fill="#242121" stroke="url(#goldUsr)" stroke-width="3"/>
+    <!-- Small Clock Icon -->
+    <circle cx="-36" cy="0" r="11" fill="none" stroke="#fcf9f5" stroke-width="2.5"/>
+    <polyline points="-36,-6 -36,0 -31,2" fill="none" stroke="url(#goldUsr)" stroke-width="2" stroke-linecap="round"/>
+    <!-- Text "08:00" in Latin Digits (Thmanyah style) -->
+    <text x="5" y="6" fill="#fcf9f5" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" letter-spacing="1">08:00</text>
+  </g>
+</svg>
