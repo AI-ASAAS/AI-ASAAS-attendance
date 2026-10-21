@@ -933,12 +933,6 @@ select.asas-input option {
   display: none;
   margin-bottom: 16px;
 }
-@media (max-width: 900px) {
-  .asas-login-mobile-brand {
-    display: flex;
-    justify-content: center;
-  }
-}
 .asas-login-box h2 {
   font-family: var(--font-display);
   font-size: 24px;
@@ -947,28 +941,336 @@ select.asas-input option {
   margin: 4px 0 8px;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   RESPONSIVE DESIGN SYSTEM — ALL DEVICES & SCREEN SIZES
+   Mobile (320px-480px), Phablets (481px-768px),
+   Tablets (769px-1024px), Laptops (1025px-1439px), Desktops (1440px+)
+   ───────────────────────────────────────────────────────────── */
+
+/* Desktop Extra Large (1440px+) */
+@media (min-width: 1440px) {
+  .asas-content {
+    max-width: 1560px;
+    padding: 28px 36px 64px;
+    gap: 28px;
+  }
+  .asas-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+  .asas-stat-value {
+    font-size: 36px;
+  }
+  .asas-hero-banner {
+    padding: 32px 42px;
+  }
+}
+
+/* Laptops & Standard Desktop (1025px - 1439px) */
+@media (min-width: 1025px) and (max-width: 1439px) {
+  .asas-content {
+    max-width: 1280px;
+    padding: 24px 28px 48px;
+  }
+  .asas-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+}
+
+/* Hide drawer toggle menu button on desktops */
+@media (min-width: 1025px) {
+  .asas-menu-btn {
+    display: none !important;
+  }
+}
+
+/* Responsive Grid Halves */
+.asas-grid-halves {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
 @media (max-width: 900px) {
+  .asas-grid-halves {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
+/* Employee Page Base Layout */
+.asas-employee-page {
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.asas-employee-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* Tablets & Mobile Screens (max-width: 1024px) */
+@media (max-width: 1024px) {
   .asas-login {
     grid-template-columns: 1fr;
   }
   .asas-login-hero {
     display: none;
   }
+  .asas-login-mobile-brand {
+    display: flex;
+    justify-content: center;
+  }
+  .asas-login-box {
+    margin: 0 auto;
+    max-width: 440px;
+  }
   .asas-sidebar {
     position: fixed;
     top: 0;
     right: 0;
     bottom: 0;
+    width: min(300px, 85vw);
     transform: translateX(100%);
+    z-index: 50;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.4);
   }
   .asas-sidebar.open {
     transform: translateX(0);
   }
-  .asas-content {
-    padding: 18px 16px 40px;
+  .asas-menu-btn {
+    display: inline-flex !important;
   }
   .asas-topbar {
-    padding: 10px 16px;
+    padding: 10px 18px;
+  }
+  .asas-content {
+    padding: 20px 18px 44px;
+    gap: 20px;
+  }
+  .asas-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+/* Tablets / Mobile Landscape (max-width: 768px) */
+@media (max-width: 768px) {
+  .asas-content {
+    padding: 16px 14px 40px;
+    gap: 16px;
+  }
+  .asas-heading {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .asas-heading h1 {
+    font-size: 24px;
+  }
+  .asas-heading > div:last-child {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+  }
+  .asas-heading > div:last-child .asas-btn {
+    flex: 1;
+    justify-content: center;
+  }
+  .asas-hero-banner {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    padding: 22px 20px;
+    gap: 18px;
+  }
+  .asas-hero-banner h2 {
+    font-size: 21px;
+    line-height: 1.35;
+  }
+  .asas-hero-banner p {
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+  .asas-hero-banner > div:first-child > div {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+  .asas-hero-banner > div:first-child > div .asas-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .asas-hero-banner .asas-mark {
+    width: 54px !important;
+    height: 60px !important;
+  }
+
+  /* Stat tiles on mobile: clean 2x2 grid */
+  .asas-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .asas-stat-card {
+    padding: 14px 14px;
+    gap: 6px;
+  }
+  .asas-stat-card-top span {
+    font-size: 11.5px;
+  }
+  .asas-stat-value {
+    font-size: 22px;
+  }
+  .asas-stat-caption {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+  .asas-stat-icon-wrap {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+  }
+  .asas-stat-icon-wrap svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* Tables: momentum touch scroll with guaranteed minimum width */
+  .asas-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    contain: paint;
+    border-radius: var(--radius-md);
+  }
+  .asas-table {
+    min-width: 620px;
+  }
+  .asas-table th,
+  .asas-table td {
+    padding: 11px 12px;
+    font-size: 12.5px;
+  }
+
+  /* Form grids on mobile */
+  .asas-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  /* Input fields: 16px to prevent iOS Safari auto-zoom */
+  .asas-input,
+  input.asas-input,
+  select.asas-input,
+  textarea.asas-input {
+    font-size: 16px !important;
+    height: 48px;
+  }
+
+  /* Employee Page responsive */
+  .asas-employee-page {
+    padding: 14px 12px 36px !important;
+    gap: 14px !important;
+  }
+  .asas-employee-profile {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+    padding: 18px 16px !important;
+  }
+  .asas-employee-profile > div:last-child {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .asas-employee-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .asas-employee-stats > div {
+    padding: 10px 4px !important;
+  }
+  .asas-employee-stats > div > div:first-child {
+    font-size: 10.5px !important;
+  }
+  .asas-employee-stats > div > div:last-child {
+    font-size: 15px !important;
+  }
+}
+
+/* Mobile Phones (max-width: 480px) */
+@media (max-width: 480px) {
+  .asas-topbar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .asas-topbar-title {
+    font-size: 12.5px;
+    gap: 6px;
+  }
+  .asas-topbar-breadcrumb {
+    display: none;
+  }
+  .asas-topbar-controls {
+    gap: 6px;
+  }
+  .asas-clock-pill {
+    padding: 4px 8px;
+    font-size: 11px;
+    gap: 4px;
+  }
+  .asas-clock-label {
+    display: none;
+  }
+  .asas-bell-btn,
+  .asas-theme-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Modal Bottom Sheet on narrow phones */
+  .asas-modal-backdrop {
+    padding: 6px;
+    align-items: flex-end;
+  }
+  .asas-modal {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 22px 22px 0 0 !important;
+    max-height: 92dvh;
+  }
+  .asas-modal-head {
+    padding: 14px 16px;
+  }
+  .asas-modal-head h2 {
+    font-size: 16.5px;
+  }
+  .asas-modal-body {
+    padding: 14px 16px;
+  }
+  .asas-modal-footer {
+    padding: 12px 16px 20px;
+    flex-direction: column-reverse;
+  }
+  .asas-modal-footer .asas-btn {
+    width: 100%;
+  }
+
+  .card {
+    padding: 16px 14px;
+    border-radius: var(--radius-lg);
+  }
+  .card__title {
+    font-size: 16px;
+  }
+
+  .asas-heading h1 {
+    font-size: 21px;
   }
 }
 

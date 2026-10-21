@@ -1125,16 +1125,16 @@ function AsasAppInner({ defaultAction = 'auto' }) {
       <div className="asas-main">
         <header className="asas-topbar">
           <div className="asas-topbar-title">
-            <button className="asas-btn sm" style={{ padding: '0 8px' }} onClick={() => setOpen(!open)} aria-label="القائمة">
+            <button className="asas-btn sm asas-menu-btn" style={{ padding: '0 8px' }} onClick={() => setOpen(!open)} aria-label="القائمة">
               <Icon name="grid" />
             </button>
-            <span>لوحة القيادة / <strong><Swash>{title}</Swash></strong></span>
+            <span><span className="asas-topbar-breadcrumb">لوحة القيادة / </span><strong><Swash>{title}</Swash></strong></span>
           </div>
 
           <div className="asas-topbar-controls">
             <div className="asas-clock-pill">
               <Icon name="clock" style={{ width: 15, height: 15, color: 'var(--accent)' }} />
-              <span>صنعاء: <strong>{liveTime || '—'}</strong></span>
+              <span><span className="asas-clock-label">صنعاء: </span><strong>{liveTime || '—'}</strong></span>
             </div>
 
             <button className="asas-bell-btn" onClick={() => setShowAnnouncementsModal(true)} aria-label="التعميمات">
@@ -1218,7 +1218,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div className="asas-mark" style={{ width: 80, height: 90 }} />
+                  <div className="asas-mark" />
                 </div>
               </Glass>
 
@@ -1260,7 +1260,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                 </Glass>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18 }}>
+              <div className="asas-grid-halves">
                 <Card title="مؤشر نسبة الحضور" icon="trend">
                   <div style={{ padding: '12px 6px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -2436,9 +2436,9 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   const isInside = todayRecord?.state === 'inside';
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="asas-employee-page">
       {/* Top Header */}
-      <Glass style={{ padding: '16px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Glass className="asas-employee-header" style={{ padding: '16px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Brand />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button className="asas-bell-btn" onClick={onOpenAnnouncements} aria-label="الإشعارات">
@@ -2453,7 +2453,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       </Glass>
 
       {/* Profile Card */}
-      <Glass style={{ padding: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+      <Glass className="asas-employee-profile" style={{ padding: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <UserAvatar user={user} size="lg" onClick={onOpenProfile} />
           <div>
@@ -2477,7 +2477,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           </button>
           <div className="asas-clock-pill">
             <Icon name="clock" style={{ width: 14, height: 14, color: 'var(--accent)' }} />
-            <span>صنعاء: <strong>{liveTime || '—'}</strong></span>
+            <span><span className="asas-clock-label">صنعاء: </span><strong>{liveTime || '—'}</strong></span>
           </div>
         </div>
       </Glass>
@@ -2509,7 +2509,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
+          <div className="asas-employee-stats">
             <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 12, textAlign: 'center', border: '1px solid var(--hairline)' }}>
               <div style={{ fontSize: 12, color: 'var(--text-3)' }}>أول دخول (حضور)</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginTop: 4 }}>{todayRecord?.first_in ? time(todayRecord.first_in) : '—'}</div>
