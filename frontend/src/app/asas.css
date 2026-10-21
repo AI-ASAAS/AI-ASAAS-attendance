@@ -1034,6 +1034,73 @@ select.asas-input option {
   margin-bottom: 16px;
 }
 
+/* Employee Subpage Navigation Tabs */
+.asas-employee-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--glass-inset);
+  padding: 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.asas-employee-tab {
+  flex: 1;
+  min-width: 120px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--font-text);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-spring);
+  white-space: nowrap;
+}
+.asas-employee-tab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+.asas-employee-tab.active {
+  background: var(--glass-tint-strong);
+  color: var(--accent);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12), inset 0 1px 0 var(--glass-rim);
+  font-weight: 700;
+}
+:root[data-theme='dark'] .asas-employee-tab.active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ba9555 !important;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 244, 222, 0.2) !important;
+}
+
+@media (max-width: 600px) {
+  .asas-employee-tabs {
+    gap: 4px;
+    padding: 4px;
+  }
+  .asas-employee-tab {
+    min-width: 0;
+    padding: 0 10px;
+    font-size: 12px;
+    height: 38px;
+    gap: 6px;
+  }
+  .asas-employee-tab svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
 /* Tablets & Mobile Screens (max-width: 1024px) */
 @media (max-width: 1024px) {
   .asas-login {
