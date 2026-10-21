@@ -322,6 +322,133 @@ function AnnouncementsModal({ announcements, onClose }) {
   );
 }
 
+// Install App Modal (PWA Download for Mobile & Desktop)
+function InstallAppModal({ onClose, installPrompt }) {
+  const [platform, setPlatform] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const ua = navigator.userAgent || '';
+      if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+      if (/Android/i.test(ua)) return 'android';
+    }
+    return 'android';
+  });
+
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://ai-asaas-attendance.vercel.app';
+
+  return (
+    <div className="asas-modal-backdrop" onClick={onClose}>
+      <section className="asas-modal" style={{ maxWidth: 540 }} onClick={e => e.stopPropagation()}>
+        <div className="asas-modal-head">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="download" style={{ width: 22, height: 22, color: 'var(--accent)' }} />
+            <h2 style={{ fontSize: 18, margin: 0 }}>تحميل وتثبيت تطبيق أساس المعتمد</h2>
+          </div>
+          <button className="asas-btn sm" onClick={onClose} aria-label="إغلاق">
+            <Icon name="close" />
+          </button>
+        </div>
+
+        <div className="asas-modal-body" style={{ textAlign: 'center' }}>
+          {/* App Brand Icon with Glow */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <img
+              src="/brand/attendance_icon_user_check.svg"
+              alt="تطبيق أساس للحضور"
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 22,
+                boxShadow: '0 8px 24px rgba(186, 149, 85, 0.45)'
+              }}
+            />
+            <div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', color: 'var(--text)' }}>
+                تطبيق أساس للحضور الذكي
+              </h3>
+              <p style={{ fontSize: 13, color: 'var(--text-2)', margin: 0 }}>
+                تطبيق الويب التقدمي (PWA) الخفيف والمحمي · بدون إعلانات ولا يستهلك البطارية
+              </p>
+            </div>
+          </div>
+
+          {/* Quick 1-Click Install Button if supported by browser */}
+          {installPrompt && (
+            <div style={{ marginBottom: 18 }}>
+              <button
+                className="asas-btn primary"
+                style={{ width: '100%', justifyContent: 'center', padding: '12px 18px', fontSize: 15 }}
+                onClick={() => {
+                  installPrompt.prompt();
+                  onClose();
+                }}
+              >
+                <Icon name="download" />
+                تثبيت التطبيق على هذا الجهاز الآن
+              </button>
+            </div>
+          )}
+
+          {/* QR Code for scanning from desktop */}
+          <div style={{ background: 'var(--glass-tint)', border: '1px solid var(--hairline)', borderRadius: 16, padding: 16, marginBottom: 18 }}>
+            <p style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)', margin: '0 0 10px' }}>
+              امسح الكود بكاميرا الجوال للفتح والتثبيت المباشر:
+            </p>
+            <div style={{ background: '#ffffff', padding: 10, borderRadius: 12, display: 'inline-block', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+              <QRCodeSVG value={appUrl} size={150} level="M" includeMargin />
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '8px 0 0' }}>
+              الرابط المعتمد: {appUrl}
+            </p>
+          </div>
+
+          {/* Step-by-step instructions */}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12 }}>
+            <button
+              className={`asas-btn sm ${platform === 'android' ? 'primary' : ''}`}
+              onClick={() => setPlatform('android')}
+            >
+              <Icon name="smartphone" />
+              أجهزة أندرويد (Android)
+            </button>
+            <button
+              className={`asas-btn sm ${platform === 'ios' ? 'primary' : ''}`}
+              onClick={() => setPlatform('ios')}
+            >
+              <Icon name="smartphone" />
+              أجهزة آبل (iPhone / iPad)
+            </button>
+          </div>
+
+          <div style={{ textAlign: 'right', background: 'var(--glass-tint-strong)', borderRadius: 12, padding: '12px 16px', fontSize: 13, lineHeight: 1.7, color: 'var(--text-2)' }}>
+            {platform === 'android' ? (
+              <ol style={{ margin: 0, paddingRight: 20 }}>
+                <li>افتح الموقع عبر متصفح <strong>Google Chrome</strong> على جوالك.</li>
+                <li>اضغط على زر القائمة الثلاثي <strong>(⋮)</strong> في الزاوية العلوية.</li>
+                <li>اختر <strong>«تثبيت التطبيق»</strong> أو <strong>«إضافة إلى الشاشة الرئيسية»</strong>.</li>
+                <li>ستظهر أيقونة التطبيق الذهبية المعتمدة فوراً على شاشة هاتفك.</li>
+              </ol>
+            ) : (
+              <ol style={{ margin: 0, paddingRight: 20 }}>
+                <li>افتح الموقع عبر متصفح <strong>Safari</strong> على جهاز الآيفون.</li>
+                <li>اضغط على زر المشاركة في أسفل الشاشة <strong>(Share / ⎋)</strong>.</li>
+                <li>مرر للأسفل واضغط على <strong>«إضافة إلى الشاشة الرئيسية (Add to Home Screen)»</strong>.</li>
+                <li>اضغط <strong>«إضافة (Add)»</strong> في الأعلى لتثبيته كتطبيق مستقل.</li>
+              </ol>
+            )}
+          </div>
+        </div>
+
+        <div className="asas-modal-footer">
+          <button className="asas-btn primary" onClick={onClose}>
+            <Icon name="check" />
+            فهمت، إغلاق
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // Profile & Security Modal
 function ProfileModal({ user, onClose, onUpdated }) {
   const [avatar, setAvatar] = useState(user?.avatar || 'gold');
@@ -545,6 +672,17 @@ function AsasAppInner({ defaultAction = 'auto' }) {
   const [announcements, setAnnouncements] = useState([]);
   const [showAnnouncementsModal, setShowAnnouncementsModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
   const [systemSettings, setSystemSettings] = useState({
     company_name: 'شركة أساس الذكاء الاصطناعي (AI-ASAAS)',
     timezone: 'Asia/Aden',
@@ -914,6 +1052,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
           announcements={announcements}
           onOpenAnnouncements={() => setShowAnnouncementsModal(true)}
           onOpenProfile={() => setShowProfileModal(true)}
+          onOpenInstall={() => setShowInstallModal(true)}
+          installPrompt={installPrompt}
           defaultAction={defaultAction}
         />
         {showAnnouncementsModal && (
@@ -927,6 +1067,12 @@ function AsasAppInner({ defaultAction = 'auto' }) {
             user={user}
             onClose={() => setShowProfileModal(false)}
             onUpdated={(u) => setUser(u)}
+          />
+        )}
+        {showInstallModal && (
+          <InstallAppModal
+            onClose={() => setShowInstallModal(false)}
+            installPrompt={installPrompt}
           />
         )}
       </>
@@ -991,6 +1137,25 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               <span>صنعاء: <strong>{liveTime || '—'}</strong></span>
             </div>
 
+            <button
+              className="asas-btn sm"
+              onClick={() => {
+                if (installPrompt) installPrompt.prompt();
+                else setShowInstallModal(true);
+              }}
+              style={{
+                background: 'var(--glass-tint)',
+                borderColor: 'var(--accent)',
+                color: 'var(--accent)',
+                fontWeight: 600,
+                gap: 6
+              }}
+              title="تحميل وتثبيت التطبيق على الجوال أو الحاسوب"
+            >
+              <Icon name="download" style={{ width: 15, height: 15 }} />
+              <span>تحميل التطبيق</span>
+            </button>
+
             <button className="asas-bell-btn" onClick={() => setShowAnnouncementsModal(true)} aria-label="التعميمات">
               <Icon name="bell" />
               {announcements.length > 0 && <span className="asas-bell-badge">{announcements.length}</span>}
@@ -1053,10 +1218,23 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                   <p className="asas-eyebrow">منظومة العمل الذكية</p>
                   <h2><Stretch before="أهْـ" after="ـلاً" length={3} /> بك في لوحة تحكم أساس</h2>
                   <p>حضور مؤكد جغرافياً ومقيد بأجهزة الموظفين مع تحديث لحظي على السحابة وقواعد البيانات.</p>
-                  <button className="asas-btn primary" onClick={() => setTab('qr')}>
-                    <Icon name="qrCode" />
-                    عرض الرموز المعتمدة
-                  </button>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+                    <button className="asas-btn primary" onClick={() => setTab('qr')}>
+                      <Icon name="qrCode" />
+                      عرض الرموز المعتمدة
+                    </button>
+                    <button
+                      className="asas-btn"
+                      onClick={() => {
+                        if (installPrompt) installPrompt.prompt();
+                        else setShowInstallModal(true);
+                      }}
+                      style={{ background: 'var(--glass-tint)', borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 600 }}
+                    >
+                      <Icon name="download" />
+                      تحميل التطبيق على الجوال
+                    </button>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div className="asas-mark" style={{ width: 80, height: 90 }} />
@@ -1741,6 +1919,13 @@ function AsasAppInner({ defaultAction = 'auto' }) {
         />
       )}
 
+      {showInstallModal && (
+        <InstallAppModal
+          onClose={() => setShowInstallModal(false)}
+          installPrompt={installPrompt}
+        />
+      )}
+
       {modal && (
         <div className="asas-modal-backdrop" onClick={e => { if (e.target === e.currentTarget && !busy) setModal(null); }}>
           <section className="asas-modal" role="dialog" aria-modal="true" aria-label="تحرير البيانات">
@@ -2146,7 +2331,7 @@ function Login({ onLogin, initialError, onRetry }) {
 }
 
 // EMPLOYEE PORTAL
-function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProfile, defaultAction = 'auto' }) {
+function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProfile, onOpenInstall, installPrompt, defaultAction = 'auto' }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -2277,6 +2462,21 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       <Glass style={{ padding: '16px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Brand />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            className="asas-btn sm"
+            onClick={onOpenInstall}
+            style={{
+              background: 'var(--glass-tint)',
+              borderColor: 'var(--accent)',
+              color: 'var(--accent)',
+              fontWeight: 600,
+              gap: 6
+            }}
+            title="تحميل وتثبيت التطبيق على الجوال"
+          >
+            <Icon name="download" style={{ width: 15, height: 15 }} />
+            <span>تحميل التطبيق</span>
+          </button>
           <button className="asas-bell-btn" onClick={onOpenAnnouncements} aria-label="الإشعارات">
             <Icon name="bell" />
             {announcements.length > 0 && <span className="asas-bell-badge">{announcements.length}</span>}
