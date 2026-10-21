@@ -11,7 +11,7 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    let raw = (process.env.API_INTERNAL_URL || 'http://127.0.0.1:5000').trim();
+    let raw = (process.env.API_INTERNAL_URL || 'http://backend:5000').trim();
     raw = raw.replace(/^['"]+|['"]+$/g, '').replace(/\/+$/, '');
     if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
       raw = `https://${raw}`;
