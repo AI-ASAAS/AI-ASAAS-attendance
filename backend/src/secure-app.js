@@ -742,8 +742,12 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
   if(b.action==='location'){
    const dist=Math.round(location.distance);
    const maxAcc=Math.max(Number(branch.max_accuracy||200),250);
-   const insideEntry=dist<=Number(branch.entry_radius)&&b.fix.accuracy<=maxAcc;
-   const currentGpsState=insideEntry?'inside':(dist>Number(branch.exit_radius)?'outside':'uncertain');
+   const entryRadius=Number(branch.entry_radius||120);
+   const exitRadius=Number(branch.exit_radius||180);
+   const effectiveRadius=record?.state==='inside'?exitRadius:entryRadius;
+   const isInsidePerimeter=dist<=effectiveRadius||location.state==='inside';
+   const insideEntry=(dist<=entryRadius&&(b.fix.accuracy<=maxAcc||dist<=80))||location.state==='inside';
+   const currentGpsState=isInsidePerimeter?'inside':(dist>exitRadius?'outside':'uncertain');
 
    // Geofence check while NOT clocked in (instant response for automatic check-in & device scanner)
    if(!record||record.state!=='inside'){
@@ -754,24 +758,32 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
       inside_geofence:insideEntry,
       distance:dist,
       accuracy:Math.round(b.fix.accuracy),
-      branch:{id:branch.id,name:branch.name,entry_radius:Number(branch.entry_radius),exit_radius:Number(branch.exit_radius)},
+      branch:{id:branch.id,name:branch.name,latitude:branch.latitude,longitude:branch.longitude,entry_radius:entryRadius,exit_radius:exitRadius},
+      branch_radius:{entry:entryRadius,exit:exitRadius},
       message:insideEntry?'أنت داخل نطاق مقر العمل (جاهز لتسجيل الحضور التلقائي)':`أنت خارج نطاق الفرع (المسافة: ${dist} م)`
     };
    }
 
    // Geofence monitoring while on duty (Automatic Exit Candidate)
-   location.state=currentGpsState==='inside'?'inside':(dist>Number(branch.exit_radius)?'outside':(location.state||'inside'));
+   location.state=currentGpsState==='inside'?'inside':(dist>exitRadius?'outside':(location.state||'inside'));
    candidate=policy.advanceExit(record.exit_candidate,location,b.fix,branch,now);
 
    // Accelerate exit if clearly distant (>= 1.5x exit radius) or confirmed by policy
-   if(dist>=Number(branch.exit_radius)*1.5&&b.fix.accuracy<=maxAcc&&candidate?.count>=1){
+   if(dist>=exitRadius*1.5&&b.fix.accuracy<=maxAcc&&candidate?.count>=1){
     automatic=true;
    }else{
     automatic=candidate.exit;
    }
 
    if(candidate.ignored&&!automatic){
-    return {ignored:true,distance:dist,state:location.state,pending_exit:record.exit_candidate?.count||0};
+    return {
+      ignored:true,
+      distance:dist,
+      state:isInsidePerimeter?'inside':location.state,
+      inside_geofence:isInsidePerimeter,
+      pending_exit:record.exit_candidate?.count||0,
+      branch_radius:{entry:entryRadius,exit:exitRadius}
+    };
    }
 
    await c.query('UPDATE duty_records SET exit_candidate=$1,last_seen=$2,gps_state=$3 WHERE id=$4',[JSON.stringify(candidate),now,location.state,record.id]);
@@ -818,14 +830,19 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    await event(c,req.user,record,'location',b,{location,accuracy:b.fix.accuracy,revision:branch.location_revision});
   }
   const remainingSec=candidate?.since?Math.max(0,Math.ceil((Number(branch.exit_delay_seconds)*1000-(now-Date.parse(candidate.since)))/1000)):0;
+  const entryRadius=Number(branch.entry_radius||120);
+  const exitRadius=Number(branch.exit_radius||180);
+  const isInsidePerimeter=Math.round(location.distance)<=exitRadius||location.state==='inside';
   return {
     record:{...record,gps_state:location.state,last_seen:now},
     pending_exit:candidate?.count||0,
     required_samples:Number(branch.exit_samples||2),
     remaining_seconds:remainingSec,
     distance:Math.round(location.distance),
-    state:location.state,
-    branch_radius:{entry:Number(branch.entry_radius),exit:Number(branch.exit_radius)}
+    state:isInsidePerimeter?'inside':(Math.round(location.distance)>exitRadius?'outside':'uncertain'),
+    inside_geofence:isInsidePerimeter,
+    branch:{id:branch.id,name:branch.name,latitude:branch.latitude,longitude:branch.longitude,entry_radius:entryRadius,exit_radius:exitRadius},
+    branch_radius:{entry:entryRadius,exit:exitRadius}
   };
  });respond(res,result);
 }));
@@ -851,11 +868,13 @@ app.get('/api/attendance/me',employee,wrap(async(req,res)=>{
    next_action_label: isInside ? 'تسجيل الانصراف' : 'تسجيل الحضور',
    exit_reason_label: autoInfo?.exit_reason_label || (isInside ? 'قيد الدوام (على رأس العمل)' : '—')
  };
+ const branchId = isInside ? todayRecord.branch_id : (req.user.branch_id || 1);
+ const branch = (await db.query('SELECT id, name, latitude, longitude, entry_radius, exit_radius, max_accuracy FROM branches WHERE id=$1', [branchId])).rows[0] || null;
  const enhancedRecords = records.map(r => {
    const res = resolveRecordStatus(r);
    return { ...r, ...res, counted_minutes: countedMinutes(r) };
  });
- respond(res,{records:enhancedRecords,shift,account:safeAccount(req.user),automatic_status});
+ respond(res,{records:enhancedRecords,shift,branch,account:safeAccount(req.user),automatic_status});
 }));
 // Offline evidence is never promoted directly to approved attendance.
 app.post('/api/attendance/offline',employee,wrap(async(req,res)=>{

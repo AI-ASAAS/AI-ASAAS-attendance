@@ -2746,6 +2746,17 @@ function decodeQrToken(tokenStr) {
   }
 }
 
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
+  const R = 6371000;
+  const rad = n => (n * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLon = rad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+  return Math.round(R * c);
+}
+
 // Pure Web Audio API synthesizers for real-time haptic & audio feedback
 function playChime(type) {
   try {
@@ -2839,6 +2850,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   autoCheckInRef.current = autoCheckIn;
   const hasAutoEnteredRef = useRef(false);
   const hasWarnedExitRef = useRef(false);
+  const branchCoordsRef = useRef(null);
 
   const requestNotifPermission = useCallback(async () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -2913,7 +2925,10 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
   const load = useCallback(() => {
     api('/attendance/me')
-      .then(setData)
+      .then(res => {
+        setData(res);
+        if (res?.branch) branchCoordsRef.current = res.branch;
+      })
       .catch(e => {
         if (e.status === 401) logout();
         else setError(e.message);
@@ -3045,6 +3060,28 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     lastCoordsRef.current = { coords, timestamp: timestamp || nowMs };
     lastCoordsTimeRef.current = nowMs;
 
+    // Fast local client calculation if branch coords are known
+    let localDist = null;
+    if (branchCoordsRef.current?.latitude && branchCoordsRef.current?.longitude) {
+      localDist = haversineDistance(
+        coords.latitude,
+        coords.longitude,
+        Number(branchCoordsRef.current.latitude),
+        Number(branchCoordsRef.current.longitude)
+      );
+      const effectiveRad = isInside
+        ? Number(branchCoordsRef.current.exit_radius || 180)
+        : Number(branchCoordsRef.current.entry_radius || 120);
+      if (localDist != null && localDist <= effectiveRad) {
+        setGeofenceStatus(prev => ({
+          ...prev,
+          state: 'inside',
+          distance: localDist,
+          accuracy: Math.round(coords.accuracy)
+        }));
+      }
+    }
+
     try {
       const fix = {
         latitude: coords.latitude,
@@ -3064,6 +3101,8 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       });
 
       if (res) {
+        if (res.branch) branchCoordsRef.current = { ...branchCoordsRef.current, ...res.branch };
+
         // Auto-exit confirmed
         if (res.action === 'exit' || res.automatic || res.record?.state === 'outside') {
           playChime('exit');
@@ -3074,12 +3113,20 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           return;
         }
 
-        const dist = res.distance != null ? res.distance : null;
-        const entryRadius = res.branch_radius?.entry || res.branch?.entry_radius || 120;
-        const isInsideRadius = res.state === 'inside' || (dist != null && dist <= entryRadius);
+        const dist = res.distance != null ? Math.round(res.distance) : localDist;
+        const entryRadius = Number(res.branch_radius?.entry || res.branch?.entry_radius || 120);
+        const exitRadius = Number(res.branch_radius?.exit || res.branch?.exit_radius || 180);
+        const effectiveRadius = isInside ? exitRadius : entryRadius;
+
+        // Comprehensive inside check: server inside flag, inside_geofence flag, or distance within radius
+        const isCurrentlyInside = Boolean(
+          res.state === 'inside' ||
+          res.inside_geofence === true ||
+          (dist != null && dist <= effectiveRadius)
+        );
 
         // Warning when on duty and outside perimeter
-        if (isInside && (res.pending_exit > 0 || res.state === 'outside')) {
+        if (isInside && (res.pending_exit > 0 || (!isCurrentlyInside && dist != null && dist > exitRadius))) {
           if (!hasWarnedExitRef.current) {
             hasWarnedExitRef.current = true;
             playChime('warning');
@@ -3091,7 +3138,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         }
 
         // Auto check-in if arrived at branch while off duty
-        if (!isInside && isInsideRadius && autoCheckInRef.current && !hasAutoEnteredRef.current && (!todayRecord || todayRecord.state !== 'inside')) {
+        if (!isInside && isCurrentlyInside && autoCheckInRef.current && !hasAutoEnteredRef.current && (!todayRecord || todayRecord.state !== 'inside')) {
           hasAutoEnteredRef.current = true;
           setMessage('🎯 تم رصد تواجدك داخل مقر العمل! جاري تسجيل الحضور التلقائي...');
           try {
@@ -3118,7 +3165,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         }
 
         setGeofenceStatus({
-          state: res.state || (isInsideRadius ? 'inside' : 'outside'),
+          state: isCurrentlyInside ? 'inside' : (res.pending_exit > 0 ? 'pending' : 'outside'),
           distance: dist,
           accuracy: Math.round(coords.accuracy),
           pending: res.pending_exit || 0,
@@ -3354,71 +3401,97 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             </div>
 
             {/* Live Geofence Monitoring Capsule (التصميم الكبسولي السيادي الأصلي) */}
-            <div
-              style={{
-                background: 'var(--glass-inset)',
-                border: '1px solid var(--hairline)',
-                padding: '10px 14px',
-                borderRadius: 12,
-                marginBottom: 14,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
-                fontSize: 12.5,
-                flexWrap: 'wrap'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
+            {(() => {
+              const dist = geofenceStatus.distance;
+              const isInsidePerimeter = Boolean(
+                geofenceStatus.state === 'inside' ||
+                (dist != null && dist <= (isInside ? 180 : 120))
+              );
+              const isPendingExit = Boolean(
+                geofenceStatus.pending > 0 || geofenceStatus.state === 'pending'
+              );
+              const isIdle = geofenceStatus.state === 'idle' && dist == null;
+
+              // Visual Status: 'inside' (green) | 'pending' / 'idle' (amber) | 'outside' (red)
+              const visualStatus = isInsidePerimeter
+                ? 'inside'
+                : (isPendingExit ? 'pending' : (isIdle ? 'idle' : 'outside'));
+
+              const dotColor = visualStatus === 'inside'
+                ? 'var(--paid)'
+                : (visualStatus === 'pending' || visualStatus === 'idle' ? 'var(--accent)' : 'var(--unpaid)');
+
+              const dotGlow = visualStatus === 'inside'
+                ? '0 0 10px var(--paid)'
+                : (visualStatus === 'pending' || visualStatus === 'idle' ? '0 0 10px var(--accent)' : '0 0 10px var(--unpaid)');
+
+              let labelText = '';
+              if (visualStatus === 'idle') {
+                labelText = 'جاري فحص الإحداثيات والتواجد...';
+              } else if (visualStatus === 'pending') {
+                labelText = `قيد فحص وتأكيد المغادرة (${geofenceStatus.remaining_seconds || 15} ث)`;
+              } else if (visualStatus === 'inside') {
+                labelText = isInside
+                  ? 'متواجد داخل مقر العمل (على رأس العمل)'
+                  : 'متواجد داخل مقر العمل (جاهز للدخول)';
+              } else {
+                labelText = isInside
+                  ? 'خارج نطاق مقر العمل'
+                  : 'خارج نطاق مقر العمل';
+              }
+
+              return (
+                <div
                   style={{
-                    width: 9,
-                    height: 9,
-                    borderRadius: '50%',
-                    background: geofenceStatus.state === 'inside'
-                      ? 'var(--paid)'
-                      : (geofenceStatus.state === 'idle' ? 'var(--accent)' : 'var(--unpaid)'),
-                    boxShadow: geofenceStatus.state === 'inside'
-                      ? '0 0 10px var(--paid)'
-                      : (geofenceStatus.state === 'idle' ? '0 0 10px var(--accent)' : '0 0 10px var(--unpaid)'),
-                    display: 'inline-block',
-                    flexShrink: 0
+                    background: 'var(--glass-inset)',
+                    border: '1px solid var(--hairline)',
+                    padding: '10px 14px',
+                    borderRadius: 12,
+                    marginBottom: 14,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                    fontSize: 12.5,
+                    flexWrap: 'wrap'
                   }}
-                />
-                <strong style={{ color: 'var(--text)' }}>مراقبة النطاق الجغرافي:</strong>
-                <span style={{
-                  color: geofenceStatus.state === 'inside'
-                    ? 'var(--paid)'
-                    : (geofenceStatus.state === 'idle' ? 'var(--accent)' : 'var(--unpaid)'),
-                  fontWeight: 700
-                }}>
-                  {geofenceStatus.state === 'idle'
-                    ? 'جاري فحص الإحداثيات والتواجد...'
-                    : (isInside
-                        ? (geofenceStatus.pending > 0
-                            ? `قيد فحص وتأكيد المغادرة (${geofenceStatus.remaining_seconds || 15} ث)`
-                            : (geofenceStatus.state === 'inside' ? 'متواجد داخل مقر العمل' : 'خارج نطاق العمل'))
-                        : (geofenceStatus.state === 'inside'
-                            ? 'متواجد داخل مقر العمل (جاهز للدخول)'
-                            : 'خارج نطاق مقر العمل'))}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: 'var(--text-3)', fontSize: 11.5 }}>
-                  {geofenceStatus.distance != null ? `المسافة الحالية: ${geofenceStatus.distance} م` : 'جاري فحص المسافة...'}
-                </span>
-                <button
-                  type="button"
-                  className="asas-btn sm"
-                  style={{ height: 22, padding: '0 6px', fontSize: 11, border: 'none', background: 'transparent', color: 'var(--accent)', cursor: 'pointer' }}
-                  onClick={triggerLocationCheck}
-                  disabled={checkingGps}
-                  title="إعادة فحص الإحداثيات اللحظية"
                 >
-                  <Icon name="refresh" className={checkingGps ? 'asas-spin' : ''} style={{ width: 12, height: 12 }} />
-                </button>
-              </div>
-            </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span
+                      style={{
+                        width: 9,
+                        height: 9,
+                        borderRadius: '50%',
+                        background: dotColor,
+                        boxShadow: dotGlow,
+                        display: 'inline-block',
+                        flexShrink: 0,
+                        transition: 'background 0.3s ease, box-shadow 0.3s ease'
+                      }}
+                    />
+                    <strong style={{ color: 'var(--text)' }}>مراقبة النطاق الجغرافي:</strong>
+                    <span style={{ color: dotColor, fontWeight: 700, transition: 'color 0.3s ease' }}>
+                      {labelText}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ color: 'var(--text-3)', fontSize: 11.5 }}>
+                      {dist != null ? `المسافة الحالية: ${dist} م` : 'جاري فحص المسافة...'}
+                    </span>
+                    <button
+                      type="button"
+                      className="asas-btn sm"
+                      style={{ height: 22, padding: '0 6px', fontSize: 11, border: 'none', background: 'transparent', color: 'var(--accent)', cursor: 'pointer' }}
+                      onClick={triggerLocationCheck}
+                      disabled={checkingGps}
+                      title="إعادة فحص الإحداثيات اللحظية"
+                    >
+                      <Icon name="refresh" className={checkingGps ? 'asas-spin' : ''} style={{ width: 12, height: 12 }} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             {token && (() => {
               const meta = decodeQrToken(token);
