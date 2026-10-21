@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  compress: true,
+  swcMinify: true,
   async redirects() {
     return [
       { source:'/admin/:path*', destination:'/asas', permanent:false },

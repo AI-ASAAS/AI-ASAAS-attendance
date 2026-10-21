@@ -51,7 +51,7 @@ function UserAvatar({ user, size = 'md', onClick }) {
   );
 }
 
-async function api(path, method = 'GET', body, retries = 2) {
+async function api(path, method = 'GET', body, retries = 1) {
   let attempt = 0;
   while (true) {
     try {
@@ -60,13 +60,19 @@ async function api(path, method = 'GET', body, retries = 2) {
         const token = localStorage.getItem('asas_token');
         if (token) headers['Authorization'] = `Bearer ${token}`;
       }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+
       const r = await fetch(`/api${path}`, {
         method,
         credentials: 'include',
         headers,
         body: body !== undefined && body !== null ? JSON.stringify(body) : (method === 'POST' || method === 'PUT' || method === 'PATCH' ? '{}' : undefined),
-        cache: 'no-store'
+        cache: 'no-store',
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       let value = null;
       const contentType = r.headers.get('content-type') || '';
@@ -82,7 +88,7 @@ async function api(path, method = 'GET', body, retries = 2) {
       if (!r.ok) {
         if ([502, 503, 504].includes(r.status) && attempt < retries) {
           attempt++;
-          await new Promise(res => setTimeout(res, 800 * attempt));
+          await new Promise(res => setTimeout(res, 500 * attempt));
           continue;
         }
         const msg = value?.message || value?.error || (r.status === 401 ? 'يرجى تسجيل الدخول' : 'تعذر الاتصال بالخادم');
@@ -93,7 +99,7 @@ async function api(path, method = 'GET', body, retries = 2) {
     } catch (netErr) {
       if (attempt < retries && (!netErr.status || [502, 503, 504].includes(netErr.status))) {
         attempt++;
-        await new Promise(res => setTimeout(res, 800 * attempt));
+        await new Promise(res => setTimeout(res, 500 * attempt));
         continue;
       }
       if (!netErr.status) {
@@ -513,7 +519,13 @@ function AsasAppInner() {
     }
     return null;
   });
-  const [boot, setBoot] = useState(true);
+  const [boot, setBoot] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('asas_token');
+      if (!token) return false;
+    }
+    return true;
+  });
   const [tab, setTab] = useState('dashboard');
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -551,39 +563,43 @@ function AsasAppInner() {
   const can = p => user?.role === 'super_admin' || user?.permissions?.includes(p);
 
   const checkAuth = useCallback(async (isManual = false) => {
-    if (isManual) setBusy(true);
-    let attempts = 0;
-    const maxAttempts = isManual ? 1 : 3;
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        const u = await api('/auth/me');
-        setUser(u);
-        if (typeof window !== 'undefined') localStorage.setItem('asas_account', JSON.stringify(u));
-        setError('');
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('asas_token');
+      if (!token) {
+        setUser(null);
         setBoot(false);
         if (isManual) setBusy(false);
         return;
-      } catch (e) {
-        if (e.status === 401) {
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('asas_token');
-            localStorage.removeItem('asas_account');
-          }
-          setUser(null);
-          setError('');
-          setBoot(false);
-          if (isManual) setBusy(false);
-          return;
+      }
+    }
+    if (isManual) setBusy(true);
+    try {
+      const u = await api('/auth/me', 'GET', undefined, 1);
+      setUser(u);
+      if (typeof window !== 'undefined') localStorage.setItem('asas_account', JSON.stringify(u));
+      setError('');
+    } catch (e) {
+      if (e.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('asas_token');
+          localStorage.removeItem('asas_account');
         }
-        if (attempts < maxAttempts) {
-          await new Promise(r => setTimeout(r, 1000));
-        } else {
+        setUser(null);
+        setError('');
+      } else {
+        if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem('asas_account');
+          if (cached) {
+            try { setUser(JSON.parse(cached)); } catch (_) {}
+          }
+        }
+        if (isManual) {
           setError('تعذر الاتصال بالخادم. تحقق من تشغيل خدمة أساس وقاعدة البيانات.');
-          setBoot(false);
-          if (isManual) setBusy(false);
         }
       }
+    } finally {
+      setBoot(false);
+      if (isManual) setBusy(false);
     }
   }, []);
 
@@ -604,9 +620,9 @@ function AsasAppInner() {
     loadAnnouncements();
   }, [loadAnnouncements]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (showBusy = false) => {
     if (!user || user.role === 'employee') return;
-    setBusy(true);
+    if (showBusy) setBusy(true);
     setError('');
     try {
       const path = tab === 'qr' ? '/admin/branches'
@@ -621,18 +637,24 @@ function AsasAppInner() {
       if (tab === 'settings' && result) setSystemSettings(result);
       if (tab === 'announcements' && Array.isArray(result)) setAnnouncements(result);
     } catch (e) {
-      setData(null);
-      setError(e.message);
+      if (showBusy) {
+        setData(null);
+        setError(e.message);
+      }
       if (e.status === 401) setUser(null);
     } finally {
-      setBusy(false);
+      if (showBusy) setBusy(false);
     }
   }, [user, tab, from, to]);
 
   useEffect(() => {
-    load();
-    const timer = setInterval(load, 8000);
-    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    load(true);
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        load(false);
+      }
+    }, 15000);
+    const onVisible = () => { if (document.visibilityState === 'visible') load(false); };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       clearInterval(timer);
@@ -991,7 +1013,7 @@ function AsasAppInner() {
               <p className="asas-muted">إدارة فورية دقيقة، حوكمة مؤكدة، وقاعدة بيانات سحابية متزامنة لحظياً.</p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button className="asas-btn" onClick={load} disabled={busy}>
+              <button className="asas-btn" onClick={() => load(true)} disabled={busy}>
                 <Icon name="refresh" />
                 تحديث فوري
               </button>
@@ -2185,7 +2207,14 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     return () => clearInterval(id);
   }, []);
 
-  const load = useCallback(() => api('/attendance/me').then(setData).catch(e => setError(e.message)), []);
+  const load = useCallback(() => {
+    api('/attendance/me')
+      .then(setData)
+      .catch(e => {
+        if (e.status === 401) logout();
+        else setError(e.message);
+      });
+  }, [logout]);
 
   useEffect(() => {
     load();
@@ -2193,7 +2222,11 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     setToken(hash.get('qr') || '');
     window.history.replaceState(null, '', window.location.pathname);
 
-    const poll = setInterval(load, 8000);
+    const poll = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        load();
+      }
+    }, 15000);
     const onVisible = () => { if (document.visibilityState === 'visible') load(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => {

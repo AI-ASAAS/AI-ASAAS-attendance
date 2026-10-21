@@ -57,8 +57,8 @@
 
 .btn--glass {
   background: var(--glass-tint-strong);
-  -webkit-backdrop-filter: blur(16px) saturate(170%);
-  backdrop-filter: blur(16px) saturate(170%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
   box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 0 0 1px var(--glass-rim-low), 0 4px 14px -6px rgba(0, 0, 0, 0.2);
 }
 

@@ -103,8 +103,8 @@ html, body {
   height: 100dvh;
   flex-shrink: 0;
   background: var(--glass-tint-strong);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
   border-left: 1px solid var(--glass-rim);
   box-shadow: inset -1px 0 0 var(--glass-rim-low), var(--glass-shadow);
   padding: 22px 14px;
@@ -113,6 +113,7 @@ html, body {
   z-index: 30;
   overflow-y: auto;
   transition: transform 0.3s var(--ease-out);
+  transform: translateZ(0);
 }
 
 .asas-sidebar .asas-logo {
@@ -228,10 +229,11 @@ html, body {
   justify-content: space-between;
   padding: 12px 28px;
   background: var(--glass-tint-strong);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
   border-bottom: 1px solid var(--glass-rim);
   box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.08);
+  transform: translateZ(0);
 }
 
 .asas-topbar-title {
@@ -277,8 +279,8 @@ html, body {
   border-radius: 50%;
   border: 1px solid var(--hairline);
   background: var(--glass-tint);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -453,9 +455,8 @@ html, body {
   white-space: nowrap;
   background: var(--glass-tint-strong);
   color: var(--text);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 0 0 1px var(--glass-rim-low), 0 4px 14px -6px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-rim), 0 4px 14px -6px rgba(0, 0, 0, 0.15);
   transition: transform 0.3s var(--ease-spring), box-shadow 0.25s, background 0.25s;
   text-decoration: none;
 }
@@ -506,8 +507,9 @@ html, body {
   border-radius: var(--radius-lg);
   border: 1px solid var(--hairline);
   background: var(--glass-tint);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transform: translateZ(0);
 }
 .asas-table {
   width: 100%;
@@ -716,25 +718,27 @@ select.asas-input option {
   inset: 0;
   z-index: 100;
   background: var(--overlay);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   display: grid;
   place-items: center;
   padding: 20px;
   animation: fadeIn 0.25s var(--ease-out);
+  transform: translateZ(0);
 }
 .asas-modal {
   width: 100%;
   max-width: 600px;
   border-radius: var(--radius-xl);
   background: var(--glass-tint-strong);
-  -webkit-backdrop-filter: blur(36px) saturate(190%);
-  backdrop-filter: blur(36px) saturate(190%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
   border: 1px solid var(--glass-rim);
   box-shadow: var(--glass-shadow);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transform: translateZ(0);
 }
 .asas-modal-head {
   display: flex;
@@ -769,11 +773,12 @@ select.asas-input option {
   border-radius: var(--radius-lg);
   padding: 20px;
   background: var(--glass-tint);
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-sm);
   transition: transform 0.22s var(--ease-out), box-shadow 0.22s;
+  transform: translateZ(0);
 }
 .asas-announcement-card:hover {
   transform: translateY(-2px);
@@ -795,12 +800,13 @@ select.asas-input option {
   border-radius: var(--radius-xl);
   text-align: center;
   background: var(--glass-tint);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--hairline);
   display: flex;
   flex-direction: column;
   align-items: center;
+  transform: translateZ(0);
 }
 .asas-qr-box {
   background: #ffffff;
@@ -861,9 +867,10 @@ select.asas-input option {
   flex-direction: column;
   justify-content: space-between;
   background: var(--glass-tint-strong);
-  -webkit-backdrop-filter: blur(30px);
-  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
   border-left: 1px solid var(--glass-rim);
+  transform: translateZ(0);
 }
 .asas-login-hero h1 {
   font-family: var(--font-display);
@@ -902,10 +909,11 @@ select.asas-input option {
   padding: 36px 32px;
   border-radius: var(--radius-xl);
   background: var(--glass-tint-strong);
-  -webkit-backdrop-filter: blur(36px);
-  backdrop-filter: blur(36px);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
   border: 1px solid var(--glass-rim);
   box-shadow: var(--glass-shadow);
+  transform: translateZ(0);
 }
 .asas-login-box h2 {
   font-family: var(--font-display);
