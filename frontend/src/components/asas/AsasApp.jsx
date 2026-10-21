@@ -467,10 +467,6 @@ function InstallAppModal({ onClose, installPrompt }) {
 function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
   const [printMode, setPrintMode] = useState(initialMode || 'both');
 
-  function handlePrint() {
-    window.print();
-  }
-
   const fixUrl = (u) => {
     if (!u) return 'https://ai-asaas-attendance.vercel.app/asas';
     try {
@@ -486,15 +482,24 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
   const effectiveBranch = qr?.branch || branchName || 'المقر الرئيسي';
   const currentDate = new Intl.DateTimeFormat('ar-YE', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Aden' }).format(new Date());
 
+  function handleExportPdf() {
+    const originalTitle = document.title;
+    document.title = `ملصق-رموز-الحضور-والانصراف-${effectiveBranch.replace(/\s+/g, '-')}-أساس`;
+    window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1200);
+  }
+
   return (
     <div className="asas-modal-backdrop asas-print-mode" onClick={onClose}>
       <section className="asas-modal asas-a4-preview-modal" onClick={e => e.stopPropagation()}>
         <div className="asas-modal-head">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Icon name="printer" style={{ width: 22, height: 22, color: 'var(--accent)' }} />
+            <Icon name="file" style={{ width: 22, height: 22, color: 'var(--accent)' }} />
             <div>
-              <h2 style={{ fontSize: 18, margin: 0 }}>معاينة وطباعة ملصق A4 المعتمد</h2>
-              <p className="asas-muted" style={{ fontSize: 11.5, margin: 0 }}>مُسطر ومتوافق بدقة مع معايير طباعة الورق الرسمي (A4 Portrait)</p>
+              <h2 style={{ fontSize: 18, margin: 0 }}>معاينة وتصدير ملصق A4 كـ PDF</h2>
+              <p className="asas-muted" style={{ fontSize: 11.5, margin: 0 }}>مُسطر ومتوافق بدقة مع معايير ورقة A4 للتصدير كملف PDF والطباعة الرسمية</p>
             </div>
           </div>
           <button className="asas-btn sm" onClick={onClose} aria-label="إغلاق">
@@ -502,7 +507,7 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
           </button>
         </div>
 
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--hairline)', display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', background: 'var(--glass-inset)' }}>
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--hairline)', display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', background: 'var(--glass-inset)' }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>تنسيق الورقة:</span>
             <button
@@ -528,9 +533,9 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
             </button>
           </div>
 
-          <button className="asas-btn primary" onClick={handlePrint}>
-            <Icon name="printer" />
-            طباعة الملصق الآن (A4)
+          <button className="asas-btn primary" onClick={handleExportPdf}>
+            <Icon name="file" />
+            تصدير وحفظ PDF (A4)
           </button>
         </div>
 
@@ -542,9 +547,25 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
                 {/* Official Ruled Header */}
                 <div className="asas-a4-header">
                   <div className="asas-a4-logo-row">
-                    <div style={{ textAlign: 'right' }}>
-                      <p className="asas-a4-brand-title">نظام الحضور والدوام السيادي</p>
-                      <p className="asas-a4-subtitle">SOVEREIGN ATTENDANCE & DUTY SYSTEM · AI-ASAAS</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <img
+                        src="/logo-dark.png"
+                        alt="شعار أساس"
+                        style={{
+                          width: 48,
+                          height: 52,
+                          objectFit: 'contain',
+                          borderRadius: 8,
+                          border: '1.5px solid #ba9555',
+                          padding: 2,
+                          background: '#ffffff',
+                          display: 'inline-block'
+                        }}
+                      />
+                      <div style={{ textAlign: 'right' }}>
+                        <p className="asas-a4-brand-title">نظام الحضور والدوام السيادي</p>
+                        <p className="asas-a4-subtitle">SOVEREIGN ATTENDANCE & DUTY SYSTEM · AI-ASAAS</p>
+                      </div>
                     </div>
                     <div style={{ textAlign: 'left', fontSize: 11, color: '#55524e', fontWeight: 600 }}>
                       <div>وثيقة اعتماد المقر الرسمية</div>
@@ -617,12 +638,18 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
           </div>
         </div>
 
-        <div className="asas-modal-footer" style={{ justifyContent: 'space-between' }}>
-          <button className="asas-btn" onClick={onClose}>إغلاق</button>
-          <button className="asas-btn primary" onClick={handlePrint}>
-            <Icon name="printer" />
-            طباعة الملصق الآن (A4)
-          </button>
+        <div className="asas-modal-footer" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
+            <Icon name="sparkle" style={{ width: 15, height: 15, color: 'var(--accent)' }} />
+            <span>لحفظ الملصق كملف PDF عالي الدقة: اختر <strong>«حفظ بتنسيق PDF / Save as PDF»</strong> من خيارات الطابعة.</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="asas-btn" onClick={onClose}>إغلاق</button>
+            <button className="asas-btn primary" onClick={handleExportPdf}>
+              <Icon name="file" />
+              تصدير وحفظ PDF (A4)
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -1958,8 +1985,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                             </div>
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                               <button className="asas-btn primary" onClick={() => setShowPrintModal('both')}>
-                                <Icon name="printer" />
-                                معاينة وطباعة ملصق (A4)
+                                <Icon name="file" />
+                                معاينة وتصدير PDF (A4)
                               </button>
                               <button className="asas-btn danger" onClick={async () => {
                                 const reason = window.prompt('سبب إبطال الرموز وتجديدها:');
@@ -1989,8 +2016,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                                   فتح صفحة الدخول
                                 </a>
                                 <button className="asas-btn sm" onClick={() => setShowPrintModal('enter')}>
-                                  <Icon name="printer" />
-                                  طباعة A4
+                                  <Icon name="file" />
+                                  تصدير PDF (دخول)
                                 </button>
                               </div>
                             </div>
@@ -2007,8 +2034,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                                   فتح صفحة الخروج
                                 </a>
                                 <button className="asas-btn sm" onClick={() => setShowPrintModal('exit')}>
-                                  <Icon name="printer" />
-                                  طباعة A4
+                                  <Icon name="file" />
+                                  تصدير PDF (خروج)
                                 </button>
                               </div>
                             </div>
