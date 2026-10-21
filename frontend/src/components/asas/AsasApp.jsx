@@ -3539,45 +3539,52 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               );
             })()}
 
-            {/* Smart Button */}
-            {(() => {
-              const meta = decodeQrToken(token);
-              const isEnterQr = meta?.action === 'enter';
-              const isExitQr = meta?.action === 'exit';
-              const targetAction = isEnterQr ? 'enter' : (isExitQr ? 'exit' : (isInside ? 'exit' : 'enter'));
-              const btnColor = targetAction === 'exit' ? 'danger' : 'primary';
-              const btnIcon = targetAction === 'exit' ? 'logOut' : 'logIn';
-              const btnLabel = isEnterQr
-                ? 'تسجيل الحضور الآن (بكود الدخول)'
-                : (isExitQr
-                  ? 'تسجيل الانصراف الآن (بكود الخروج)'
-                  : (isInside ? 'تسجيل الانصراف التلقائي الآن' : 'تسجيل الحضور التلقائي الآن'));
+            {/* Action Buttons: Prominent Check-in & Check-out */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+              <button
+                className={`asas-btn ${!isInside ? 'primary' : ''}`}
+                disabled={busy}
+                onClick={() => act('enter')}
+                style={{
+                  height: 52,
+                  fontSize: 15,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  boxShadow: !isInside ? '0 0 16px rgba(46, 125, 50, 0.35)' : 'none'
+                }}
+              >
+                <Icon name="logIn" />
+                <span>تسجيل الحضور</span>
+              </button>
 
-              return (
-                <button
-                  className={`asas-btn ${btnColor}`}
-                  disabled={busy}
-                  onClick={() => act(targetAction)}
-                  style={{ width: '100%', height: 52, fontSize: 16, marginBottom: 10 }}
-                >
-                  <Icon name={btnIcon} />
-                  {btnLabel}
-                </button>
-              );
-            })()}
+              <button
+                className={`asas-btn ${isInside ? 'danger' : ''}`}
+                disabled={busy}
+                onClick={() => act('exit')}
+                style={{
+                  height: 52,
+                  fontSize: 15,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  borderColor: !isInside ? 'var(--hairline)' : undefined,
+                  boxShadow: isInside ? '0 0 16px rgba(211, 47, 47, 0.35)' : 'none'
+                }}
+              >
+                <Icon name="logOut" />
+                <span>تسجيل الانصراف</span>
+              </button>
+            </div>
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button className="asas-btn" onClick={startCamera} style={{ flex: 1, minWidth: 160, justifyContent: 'center' }}>
+              <button className="asas-btn" onClick={startCamera} style={{ flex: 1, minWidth: 160, height: 44, justifyContent: 'center' }}>
                 <Icon name="camera" />
-                مسح QR بكاميرا الجوال
-              </button>
-              <button className="asas-btn" onClick={() => act('enter')} disabled={busy}>
-                <Icon name="logIn" />
-                دخول يدوي
-              </button>
-              <button className="asas-btn" onClick={() => act('exit')} disabled={busy}>
-                <Icon name="logOut" />
-                خروج يدوي
+                مسح كود QR بكاميرا الجوال
               </button>
             </div>
           </div>
