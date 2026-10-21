@@ -466,6 +466,8 @@ function InstallAppModal({ onClose, installPrompt }) {
 // A4 Official QR Poster Modal (منظومة أساس السيادية)
 function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
   const [printMode, setPrintMode] = useState(initialMode || 'both');
+  const [exporting, setExporting] = useState(false);
+  const [exportDone, setExportDone] = useState(false);
 
   const fixUrl = (u) => {
     if (!u) return 'https://ai-asaas-attendance.vercel.app/asas';
@@ -482,13 +484,62 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
   const effectiveBranch = qr?.branch || branchName || 'المقر الرئيسي';
   const currentDate = new Intl.DateTimeFormat('ar-YE', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Aden' }).format(new Date());
 
-  function handleExportPdf() {
-    const originalTitle = document.title;
-    document.title = `ملصق-رموز-الحضور-والانصراف-${effectiveBranch.replace(/\s+/g, '-')}-أساس`;
-    window.print();
-    setTimeout(() => {
-      document.title = originalTitle;
-    }, 1200);
+  async function handleExportPdf() {
+    if (exporting) return;
+    setExporting(true);
+    setExportDone(false);
+
+    try {
+      const sheetEl = document.getElementById('asas-a4-printable-sheet');
+      if (!sheetEl) throw new Error('تعذر العثور على قالب الملصق.');
+
+      // Ensure all images are loaded before capturing
+      const images = sheetEl.querySelectorAll('img');
+      await Promise.all(Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(res => { img.onload = res; img.onerror = res; });
+      }));
+
+      // Small delay for font and DOM layout stabilization
+      await new Promise(r => setTimeout(r, 60));
+
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(sheetEl, {
+        scale: 2.5, // High DPI for crystal-clear vector-like scannable output
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: sheetEl.offsetWidth,
+        windowHeight: sheetEl.offsetHeight,
+      });
+
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true,
+      });
+
+      // Exactly 1 page: 210mm x 297mm
+      pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+
+      const modeSlug = printMode === 'enter' ? 'دخول' : printMode === 'exit' ? 'خروج' : 'شامل';
+      const branchSlug = effectiveBranch.replace(/\s+/g, '-');
+      const filename = `ملصق-رموز-الحضور-${modeSlug}-${branchSlug}-أساس.pdf`;
+
+      pdf.save(filename);
+      setExportDone(true);
+      setTimeout(() => setExportDone(false), 3500);
+    } catch (err) {
+      console.error('Direct PDF export error, falling back to print:', err);
+      window.print();
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -496,13 +547,13 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
       <section className="asas-modal asas-a4-preview-modal" onClick={e => e.stopPropagation()}>
         <div className="asas-modal-head">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Icon name="file" style={{ width: 22, height: 22, color: 'var(--accent)' }} />
+            <Icon name="download" style={{ width: 22, height: 22, color: 'var(--accent)' }} />
             <div>
-              <h2 style={{ fontSize: 18, margin: 0 }}>معاينة وتصدير ملصق A4 كـ PDF</h2>
-              <p className="asas-muted" style={{ fontSize: 11.5, margin: 0 }}>مُسطر ومتوافق بدقة مع معايير ورقة A4 للتصدير كملف PDF والطباعة الرسمية</p>
+              <h2 style={{ fontSize: 18, margin: 0 }}>تصدير ملصق A4 كـ PDF تلقائياً</h2>
+              <p className="asas-muted" style={{ fontSize: 11.5, margin: 0 }}>تصدير وتنزيل ملف PDF عالي الدقة مباشرة بدون الحاجة لفتح نافذة الطباعة</p>
             </div>
           </div>
-          <button className="asas-btn sm" onClick={onClose} aria-label="إغلاق">
+          <button className="asas-btn sm" onClick={onClose} aria-label="إغلاق" disabled={exporting}>
             <Icon name="close" />
           </button>
         </div>
@@ -514,35 +565,52 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
               type="button"
               className={`asas-btn sm ${printMode === 'both' ? 'primary' : ''}`}
               onClick={() => setPrintMode('both')}
+              disabled={exporting}
             >
-              ملصق مزدوج (دخول + خروج)
+              ملصق شامل (دخول + خروج)
             </button>
             <button
               type="button"
               className={`asas-btn sm ${printMode === 'enter' ? 'primary' : ''}`}
               onClick={() => setPrintMode('enter')}
+              disabled={exporting}
             >
-              كود الدخول فقط (A4 كامل)
+              كود الدخول فقط (A4)
             </button>
             <button
               type="button"
               className={`asas-btn sm ${printMode === 'exit' ? 'primary' : ''}`}
               onClick={() => setPrintMode('exit')}
+              disabled={exporting}
             >
-              كود الخروج فقط (A4 كامل)
+              كود الخروج فقط (A4)
             </button>
           </div>
 
-          <button className="asas-btn primary" onClick={handleExportPdf}>
-            <Icon name="file" />
-            تصدير وحفظ PDF (A4)
+          <button className="asas-btn primary" onClick={handleExportPdf} disabled={exporting}>
+            {exporting ? (
+              <>
+                <span className="asas-spinner" />
+                جاري تصدير PDF...
+              </>
+            ) : exportDone ? (
+              <>
+                <Icon name="check" />
+                تم تنزيل ملف PDF بنجاح!
+              </>
+            ) : (
+              <>
+                <Icon name="download" />
+                تصدير وتنزيل PDF تلقائياً (A4)
+              </>
+            )}
           </button>
         </div>
 
         <div className="asas-a4-preview-scroll">
           {/* PRINTABLE AREA */}
           <div className="asas-printable-area" id="asas-a4-printable">
-            <div className="asas-a4-sheet">
+            <div className="asas-a4-sheet" id="asas-a4-printable-sheet">
               <div className="asas-a4-border">
                 {/* Official Ruled Header */}
                 <div className="asas-a4-header">
@@ -551,6 +619,7 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
                       <img
                         src="/logo-dark.png"
                         alt="شعار أساس"
+                        crossOrigin="anonymous"
                         style={{
                           width: 48,
                           height: 52,
@@ -589,7 +658,7 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
                         كود تسجيل الحضور (دخول فقط)
                       </div>
                       <div className="asas-a4-qr-frame">
-                        <QRCodeSVG value={enterUrl} size={printMode === 'both' ? 200 : 280} level="H" includeMargin />
+                        <QRCodeSVG value={enterUrl} size={printMode === 'both' ? 180 : 250} level="H" includeMargin />
                       </div>
                       <div className="asas-a4-code-desc">
                         يُعلق عند مدخل المقر لتسجيل بدء الدوام الرسمي
@@ -608,7 +677,7 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
                         كود تسجيل الانصراف (خروج فقط)
                       </div>
                       <div className="asas-a4-qr-frame">
-                        <QRCodeSVG value={exitUrl} size={printMode === 'both' ? 200 : 280} level="H" includeMargin />
+                        <QRCodeSVG value={exitUrl} size={printMode === 'both' ? 180 : 250} level="H" includeMargin />
                       </div>
                       <div className="asas-a4-code-desc">
                         يُعلق عند مخرج المقر لتوثيق إنهاء الدوام الرسمي
@@ -641,13 +710,27 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
         <div className="asas-modal-footer" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
             <Icon name="sparkle" style={{ width: 15, height: 15, color: 'var(--accent)' }} />
-            <span>لحفظ الملصق كملف PDF عالي الدقة: اختر <strong>«حفظ بتنسيق PDF / Save as PDF»</strong> من خيارات الطابعة.</span>
+            <span>نظام الحضور والدوام السيادي · تنزيل فوري وتلقائي لملف PDF عالي الدقة دون الحاجة للطباعة.</span>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="asas-btn" onClick={onClose}>إغلاق</button>
-            <button className="asas-btn primary" onClick={handleExportPdf}>
-              <Icon name="file" />
-              تصدير وحفظ PDF (A4)
+            <button className="asas-btn" onClick={onClose} disabled={exporting}>إغلاق</button>
+            <button className="asas-btn primary" onClick={handleExportPdf} disabled={exporting}>
+              {exporting ? (
+                <>
+                  <span className="asas-spinner" />
+                  جاري التصدير...
+                </>
+              ) : exportDone ? (
+                <>
+                  <Icon name="check" />
+                  تم التنزيل بنجاح!
+                </>
+              ) : (
+                <>
+                  <Icon name="download" />
+                  تصدير وتنزيل PDF تلقائياً
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -1985,8 +2068,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                             </div>
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                               <button className="asas-btn primary" onClick={() => setShowPrintModal('both')}>
-                                <Icon name="file" />
-                                معاينة وتصدير PDF (A4)
+                                <Icon name="download" />
+                                تصدير ملصق A4 كـ PDF تلقائياً
                               </button>
                               <button className="asas-btn danger" onClick={async () => {
                                 const reason = window.prompt('سبب إبطال الرموز وتجديدها:');
@@ -2016,8 +2099,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                                   فتح صفحة الدخول
                                 </a>
                                 <button className="asas-btn sm" onClick={() => setShowPrintModal('enter')}>
-                                  <Icon name="file" />
-                                  تصدير PDF (دخول)
+                                  <Icon name="download" />
+                                  تصدير كود الدخول PDF
                                 </button>
                               </div>
                             </div>
@@ -2034,8 +2117,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                                   فتح صفحة الخروج
                                 </a>
                                 <button className="asas-btn sm" onClick={() => setShowPrintModal('exit')}>
-                                  <Icon name="file" />
-                                  تصدير PDF (خروج)
+                                  <Icon name="download" />
+                                  تصدير كود الخروج PDF
                                 </button>
                               </div>
                             </div>
