@@ -568,8 +568,9 @@ app.delete('/api/admin/announcements/:id',admin,wrap(async(req,res)=>{
 }));
 
 const employee=(req,res,next)=>['employee','super_admin','hr_admin','branch_manager'].includes(req.user.role)?next():next(new AppError('FORBIDDEN','هذه العملية لحساب الموظف',403));
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const uuid=value=>{
- if(typeof value==='string'&&value.trim()&&value.trim().length<=100)return value.trim();
+ if(typeof value==='string'&&UUID_REGEX.test(value.trim()))return value.trim().toLowerCase();
  return require('node:crypto').randomUUID();
 };
 async function event(c,user,record,kind,body,details){

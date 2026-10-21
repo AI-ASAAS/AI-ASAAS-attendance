@@ -2732,6 +2732,17 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme }) {
 }
 
 // EMPLOYEE PORTAL
+function generateUUID() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    try { return crypto.randomUUID(); } catch (_) {}
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : ((r & 0x3) | 0x8);
+    return v.toString(16);
+  });
+}
+
 function decodeQrToken(tokenStr) {
   if (!tokenStr || typeof tokenStr !== 'string') return null;
   const dotIndex = tokenStr.indexOf('.');
@@ -3022,7 +3033,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
       const fix = { latitude: p.coords.latitude, longitude: p.coords.longitude, accuracy: Math.round(p.coords.accuracy), captured_at: new Date(p.timestamp || Date.now()).toISOString() };
       const device_id = getDeviceId();
-      const reqId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('req-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
+      const reqId = generateUUID();
       const r = await api('/attendance/action', 'POST', { action, token: currentToken, request_id: reqId, device_id, fix });
 
       const isEnterAction = r.action === 'enter' || action === 'enter';
@@ -3096,9 +3107,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         accuracy: Math.round(coords.accuracy),
         captured_at: new Date(timestamp || nowMs).toISOString()
       };
-      const reqId = typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : ('loc-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
+      const reqId = generateUUID();
 
       const res = await api('/attendance/action', 'POST', {
         action: 'location',
@@ -3164,7 +3173,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           try {
             const qrData = await api('/attendance/active-qr?action=enter');
             if (qrData?.token) {
-              const enterReqId = 'auto-' + Date.now().toString(36);
+              const enterReqId = generateUUID();
               const enterRes = await api('/attendance/action', 'POST', {
                 action: 'enter',
                 token: qrData.token,
