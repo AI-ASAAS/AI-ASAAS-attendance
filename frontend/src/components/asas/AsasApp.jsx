@@ -543,8 +543,8 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
                 <div className="asas-a4-header">
                   <div className="asas-a4-logo-row">
                     <div style={{ textAlign: 'right' }}>
-                      <p className="asas-a4-brand-title">مَنظُومَة أَسَاس السِّيَادِيَّة</p>
-                      <p className="asas-a4-subtitle">AI-ASAAS SOVEREIGN ATTENDANCE SYSTEM</p>
+                      <p className="asas-a4-brand-title">نظام الحضور والدوام السيادي</p>
+                      <p className="asas-a4-subtitle">SOVEREIGN ATTENDANCE & DUTY SYSTEM · AI-ASAAS</p>
                     </div>
                     <div style={{ textAlign: 'left', fontSize: 11, color: '#55524e', fontWeight: 600 }}>
                       <div>وثيقة اعتماد المقر الرسمية</div>
@@ -607,7 +607,7 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
                     تنبيه نظامي وحوكمة إدارية: هذا الرمز وثيقة معتمدة ومقيدة جغرافياً بنطاق هذا المقر وبأجهزة الموظفين المسجلة. أي محاولة للمسح من خارج النطاق أو استخدام صور منقولة تُعد مخالفة لنظام العمل وترصد آلياً في سجل الرقابة والحوكمة.
                   </div>
                   <div className="asas-a4-footer-bottom">
-                    <span>منظومة أساس السيادية للرقابة والتحضير الذكي</span>
+                    <span>نظام الحضور والدوام السيادي للرقابة والتحضير الذكي</span>
                     <span>تاريخ الاعتماد: {currentDate}</span>
                     <span dir="ltr">ai-asaas-attendance.vercel.app</span>
                   </div>
