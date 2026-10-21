@@ -1674,11 +1674,11 @@ function AsasAppInner({ defaultAction = 'auto' }) {
 
                           <div className="asas-qr-grid">
                             <div className="asas-qr-card">
-                              <span className="asas-badge inside" style={{ marginBottom: 8 }}>كود الحضور (دخول)</span>
+                              <span className="asas-badge inside" style={{ marginBottom: 8, fontSize: 12 }}>كود الحضور (دخول فقط)</span>
                               <div className="asas-qr-box">
                                 <QRCodeSVG value={enterUrl} size={210} level="M" includeMargin />
                               </div>
-                              <p className="asas-muted" style={{ fontSize: 12 }}>يُعلق عند المدخل · يمسحه الموظف للدخول</p>
+                              <p className="asas-muted" style={{ fontSize: 12 }}>يُعلق عند المدخل · مخصص حصرياً لتسجيل الدخول والعودة (لا يقبل الخروج)</p>
                               <a className="asas-btn primary sm" href={enterUrl} target="_blank" rel="noreferrer" style={{ marginTop: 8 }}>
                                 <Icon name="logIn" />
                                 فتح صفحة الدخول
@@ -1686,12 +1686,12 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                             </div>
 
                             <div className="asas-qr-card">
-                              <span className="asas-badge outside" style={{ marginBottom: 8 }}>كود الانصراف (خروج)</span>
+                              <span className="asas-badge urgent" style={{ marginBottom: 8, fontSize: 12 }}>كود الانصراف (خروج فقط)</span>
                               <div className="asas-qr-box">
                                 <QRCodeSVG value={exitUrl} size={210} level="M" includeMargin />
                               </div>
-                              <p className="asas-muted" style={{ fontSize: 12 }}>يُعلق عند المخرج · يمسحه الموظف للانصراف</p>
-                              <a className="asas-btn sm" href={exitUrl} target="_blank" rel="noreferrer" style={{ marginTop: 8 }}>
+                              <p className="asas-muted" style={{ fontSize: 12 }}>يُعلق عند المخرج · مخصص حصرياً لتسجيل الانصراف والخروج (لا يقبل الدخول)</p>
+                              <a className="asas-btn sm" href={exitUrl} target="_blank" rel="noreferrer" style={{ marginTop: 8, borderColor: 'var(--unpaid)', color: 'var(--unpaid)' }}>
                                 <Icon name="pause" />
                                 فتح صفحة الخروج
                               </a>
@@ -2361,6 +2361,20 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme }) {
 }
 
 // EMPLOYEE PORTAL
+function decodeQrToken(tokenStr) {
+  if (!tokenStr || typeof tokenStr !== 'string') return null;
+  const dotIndex = tokenStr.indexOf('.');
+  if (dotIndex === -1) return null;
+  try {
+    const payload = tokenStr.slice(0, dotIndex);
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = JSON.parse(decodeURIComponent(escape(atob(base64))));
+    return json;
+  } catch (_) {
+    return null;
+  }
+}
+
 function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProfile, onOpenInstall, installPrompt, defaultAction = 'auto' }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -2393,13 +2407,17 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               const raw = codes[0].rawValue;
               stopCamera();
               let t = raw;
+              let urlAction = null;
               try {
                 const u = new URL(raw);
                 const hash = new URLSearchParams(u.hash.replace(/^#/, ''));
                 t = hash.get('qr') || u.searchParams.get('token') || raw;
+                urlAction = u.searchParams.get('action') || hash.get('action');
               } catch (_) {}
+              const qrMeta = decodeQrToken(t);
+              const targetAction = qrMeta?.action || urlAction || 'auto';
               setToken(t);
-              act('auto', t);
+              act(targetAction, t);
               clearInterval(interval);
             }
           } catch (_) {}
@@ -2440,8 +2458,12 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const search = new URLSearchParams(window.location.search);
     const foundToken = hash.get('qr') || search.get('qr') || search.get('token') || '';
+    const urlAction = search.get('action') || hash.get('action') || '';
     if (foundToken) {
       setToken(foundToken);
+      const qrMeta = decodeQrToken(foundToken);
+      const targetAction = qrMeta?.action || urlAction || (defaultAction !== 'auto' ? defaultAction : 'auto');
+      act(targetAction, foundToken);
     }
     window.history.replaceState(null, '', window.location.pathname);
 
@@ -2456,7 +2478,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       clearInterval(poll);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [load]);
+  }, [load, defaultAction]);
 
   async function act(action, customToken = null) {
     setBusy(true);
@@ -2470,6 +2492,18 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         } catch (err) {}
       }
       if (!currentToken) throw new Error('يرجى مسح رمز QR الخاص بالفرع لتأكيد التواجد');
+
+      // Pre-validation to reject crossed actions immediately on client
+      const qrMeta = decodeQrToken(currentToken);
+      if (qrMeta?.action) {
+        if (action === 'enter' && qrMeta.action === 'exit') {
+          throw new Error('عفواً، رمز QR هذا مخصص لتسجيل الانصراف والخروج فقط، ولا يمكن استخدامه لتسجيل الدخول.');
+        }
+        if (action === 'exit' && qrMeta.action === 'enter') {
+          throw new Error('عفواً، رمز QR هذا مخصص لتسجيل الدخول فقط، ولا يمكن استخدامه لتسجيل الانصراف والخروج.');
+        }
+      }
+
       const p = await new Promise((resolve, reject) => {
         if (!navigator.geolocation) return reject(new Error('الموقع غير متاح'));
         navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
@@ -2575,16 +2609,58 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             </div>
           </div>
 
+          {token && (() => {
+            const meta = decodeQrToken(token);
+            const isEnter = meta?.action === 'enter';
+            const isExit = meta?.action === 'exit';
+            return (
+              <div style={{ background: 'var(--glass-inset)', border: '1px solid var(--hairline)', padding: '8px 12px', borderRadius: 10, marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ color: 'var(--text-3)' }}>الرمز المقترن:</span>
+                  <span className={`asas-badge ${isEnter ? 'inside' : isExit ? 'urgent' : 'outside'}`} style={{ fontSize: 11 }}>
+                    <Icon name={isEnter ? 'logIn' : isExit ? 'pause' : 'qrCode'} style={{ width: 13, height: 13 }} />
+                    {isEnter ? 'كود الحضور (دخول فقط)' : isExit ? 'كود الانصراف (خروج فقط)' : 'رمز الفرع'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="asas-btn sm"
+                  style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                  onClick={() => setToken('')}
+                  title="إلغاء الرمز المؤقت"
+                >
+                  إلغاء
+                </button>
+              </div>
+            );
+          })()}
+
           {/* Smart Button */}
-          <button
-            className={`asas-btn ${isInside ? 'danger' : 'primary'}`}
-            disabled={busy}
-            onClick={() => act('auto')}
-            style={{ width: '100%', height: 52, fontSize: 16, marginBottom: 10 }}
-          >
-            <Icon name={isInside ? 'pause' : 'logIn'} />
-            {isInside ? 'تسجيل الانصراف التلقائي الآن' : 'تسجيل الحضور التلقائي الآن'}
-          </button>
+          {(() => {
+            const meta = decodeQrToken(token);
+            const isEnterQr = meta?.action === 'enter';
+            const isExitQr = meta?.action === 'exit';
+            const targetAction = isEnterQr ? 'enter' : (isExitQr ? 'exit' : (isInside ? 'exit' : 'enter'));
+            const btnColor = targetAction === 'exit' ? 'danger' : 'primary';
+            const btnIcon = targetAction === 'exit' ? 'pause' : 'logIn';
+            const btnLabel = isEnterQr
+              ? 'تسجيل الحضور الآن (بكود الدخول)'
+              : (isExitQr
+                ? 'تسجيل الانصراف الآن (بكود الخروج)'
+                : (isInside ? 'تسجيل الانصراف التلقائي الآن' : 'تسجيل الحضور التلقائي الآن'));
+
+            return (
+              <button
+                className={`asas-btn ${btnColor}`}
+                disabled={busy}
+                onClick={() => act(targetAction)}
+                style={{ width: '100%', height: 52, fontSize: 16, marginBottom: 10 }}
+              >
+                <Icon name={btnIcon} />
+                {btnLabel}
+              </button>
+            );
+          })()}
 
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="asas-btn" onClick={startCamera} style={{ flex: 1, justifyContent: 'center' }}>

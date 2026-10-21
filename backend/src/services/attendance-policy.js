@@ -21,6 +21,17 @@ function issueQr(branch, secret, now = new Date(), action = null) {
   return `${payload}.${signature}`;
 }
 
+function decodeQr(token) {
+  if (typeof token !== 'string') return null;
+  const dotIndex = token.indexOf('.');
+  if (dotIndex === -1) return null;
+  try {
+    return JSON.parse(Buffer.from(token.slice(0, dotIndex), 'base64url').toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
 function verifyQr(token, branch, secret, now = new Date(), expectedAction = null) {
   if (typeof token !== 'string' || token.length > 1024) fail('QR_INVALID', 'رمز الحضور غير صالح');
   const dotIndex = token.indexOf('.');
@@ -40,7 +51,7 @@ function verifyQr(token, branch, secret, now = new Date(), expectedAction = null
     fail('QR_INVALID', 'رمز الحضور ملغى أو لا ينتمي لهذا الفرع');
   }
   if (expectedAction && expectedAction !== 'auto' && data.action && data.action !== expectedAction) {
-    fail('QR_ACTION_MISMATCH', data.action === 'enter' ? 'هذا الرمز مخصص لتسجيل الدخول فقط' : 'هذا الرمز مخصص لتسجيل الخروج فقط');
+    fail('QR_ACTION_MISMATCH', data.action === 'enter' ? 'عفواً، رمز QR هذا مخصص لتسجيل الدخول فقط، ولا يمكن استخدامه لتسجيل الانصراف والخروج.' : 'عفواً، رمز QR هذا مخصص لتسجيل الانصراف والخروج فقط، ولا يمكن استخدامه لتسجيل الدخول.');
   }
   return true;
 }
@@ -101,4 +112,4 @@ function parseTime(value) {
   return Number(value.slice(0,2))*60+Number(value.slice(3,5));
 }
 
-module.exports = { localDay, issueQr, verifyQr, validateFix, classifyFix, advanceExit, shiftWindow, distanceMeters, parseTime };
+module.exports = { localDay, issueQr, verifyQr, decodeQr, validateFix, classifyFix, advanceExit, shiftWindow, distanceMeters, parseTime };

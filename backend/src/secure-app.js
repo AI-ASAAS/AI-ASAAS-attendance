@@ -267,36 +267,28 @@ app.get('/api/admin/branches/:id/qr',admin,allow('qr.manage'),wrap(async(req,res
  const now=new Date();
  const tokenEnter=policy.issueQr(branch,process.env.QR_SECRET,now,'enter');
  const tokenExit=policy.issueQr(branch,process.env.QR_SECRET,now,'exit');
- const tokenGeneral=policy.issueQr(branch,process.env.QR_SECRET,now);
-  const base = 'https://ai-asaas-attendance.vercel.app';
-  respond(res,{
-   day:policy.localDay(now),
-   branch:branch.name,
-   branch_id:branch.id,
-   token:tokenGeneral,
-   url:`${base}/asas?branch=${branch.id}#qr=${tokenGeneral}`,
-   auto:{
-    token:tokenGeneral,
-    action:'auto',
-    label:'رمز الحضور والانصراف الموحد التلقائي',
-    url:`${base}/asas?branch=${branch.id}#qr=${tokenGeneral}`,
-    html_url:`${base}/asas?branch=${branch.id}#qr=${tokenGeneral}`
-   },
-   enter:{
-    token:tokenEnter,
-    action:'enter',
-    label:'رمز تسجيل الدخول والعودة',
-    url:`${base}/asas?branch=${branch.id}&action=enter#qr=${tokenEnter}`,
-    html_url:`${base}/asas?branch=${branch.id}&action=enter#qr=${tokenEnter}`
-   },
-   exit:{
-    token:tokenExit,
-    action:'exit',
-    label:'رمز تسجيل الخروج والانصراف',
-    url:`${base}/asas?branch=${branch.id}&action=exit#qr=${tokenExit}`,
-    html_url:`${base}/asas?branch=${branch.id}&action=exit#qr=${tokenExit}`
-   }
-  });
+ const base = 'https://ai-asaas-attendance.vercel.app';
+ respond(res,{
+  day:policy.localDay(now),
+  branch:branch.name,
+  branch_id:branch.id,
+  token:tokenEnter,
+  url:`${base}/asas?branch=${branch.id}&action=enter#qr=${tokenEnter}`,
+  enter:{
+   token:tokenEnter,
+   action:'enter',
+   label:'رمز تسجيل الدخول والعودة (مخصص للحضور فقط)',
+   url:`${base}/asas?branch=${branch.id}&action=enter#qr=${tokenEnter}`,
+   html_url:`${base}/asas?branch=${branch.id}&action=enter#qr=${tokenEnter}`
+  },
+  exit:{
+   token:tokenExit,
+   action:'exit',
+   label:'رمز تسجيل الخروج والانصراف (مخصص للانصراف فقط)',
+   url:`${base}/asas?branch=${branch.id}&action=exit#qr=${tokenExit}`,
+   html_url:`${base}/asas?branch=${branch.id}&action=exit#qr=${tokenExit}`
+  }
+ });
 }));
 app.post('/api/admin/branches/:id/qr/revoke',admin,allow('qr.manage'),wrap(async(req,res)=>{
  const branchId=id(req.params.id);scope(req.user,branchId);const reason=string(req.body.reason,500);
@@ -601,9 +593,13 @@ app.get('/api/attendance/active-qr',employee,wrap(async(req,res)=>{
  const branch=(await db.query('SELECT * FROM branches WHERE id=$1 AND active=TRUE',[branchId])).rows[0];
  if(!branch)error('NOT_FOUND','الموقع غير مفعل',404);
  const now=new Date();
- const action=req.query.action==='exit'?'exit':(req.query.action==='enter'?'enter':null);
- const token=policy.issueQr(branch,process.env.QR_SECRET,now,action);
- respond(res,{token,branch_id:branch.id,branch_name:branch.name,latitude:Number(branch.latitude),longitude:Number(branch.longitude),entry_radius:branch.entry_radius,action:action||'auto'});
+ let targetAction=req.query.action==='exit'?'exit':(req.query.action==='enter'?'enter':null);
+ if(!targetAction){
+  const lastRecord=(await db.query("SELECT state FROM duty_records WHERE employee_id=$1 ORDER BY shift_start DESC LIMIT 1",[req.user.id])).rows[0];
+  targetAction=(lastRecord&&lastRecord.state==='inside')?'exit':'enter';
+ }
+ const token=policy.issueQr(branch,process.env.QR_SECRET,now,targetAction);
+ respond(res,{token,branch_id:branch.id,branch_name:branch.name,latitude:Number(branch.latitude),longitude:Number(branch.longitude),entry_radius:branch.entry_radius,action:targetAction});
 }));
 app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
  const b=req.body;if(!['enter','exit','location','auto'].includes(b.action))error('VALIDATION','إجراء غير صالح');
@@ -623,10 +619,31 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
   const now=new Date();
   let record=(await c.query("SELECT * FROM duty_records WHERE employee_id=$1 ORDER BY shift_start DESC LIMIT 1 FOR UPDATE",[req.user.id])).rows[0];
 
-  // Smart automatic action resolution based on employee state
-  const isAuto = b.action === 'auto';
-  if(isAuto){
-   b.action = (record && record.state === 'inside') ? 'exit' : 'enter';
+  // Strict separation of QR enter vs exit actions
+  const tokenData = policy.decodeQr(b.token);
+  const qrAction = tokenData?.action; // 'enter' | 'exit' | undefined
+
+  if (qrAction) {
+   // Reject if employee attempts to EXIT using an ENTER QR
+   if (b.action === 'exit' || (b.action === 'auto' && record && record.state === 'inside')) {
+    if (qrAction === 'enter') {
+     error('QR_ACTION_MISMATCH', 'عفواً، رمز QR هذا مخصص لتسجيل الدخول فقط، ولا يمكن استخدامه لتسجيل الانصراف والخروج. يرجى مسح رمز كود الانصراف (خروج).', 422);
+    }
+   }
+   // Reject if employee attempts to ENTER using an EXIT QR
+   if (b.action === 'enter' || (b.action === 'auto' && (!record || record.state !== 'inside'))) {
+    if (qrAction === 'exit') {
+     error('QR_ACTION_MISMATCH', 'عفواً، رمز QR هذا مخصص لتسجيل الانصراف والخروج فقط، ولا يمكن استخدامه لتسجيل الدخول. يرجى مسح رمز كود الحضور (دخول).', 422);
+    }
+   }
+   // If action was 'auto', strictly bind it to the scanned QR's intended action
+   if (b.action === 'auto') {
+    b.action = qrAction;
+   }
+  } else {
+   if (b.action === 'auto') {
+    b.action = (record && record.state === 'inside') ? 'exit' : 'enter';
+   }
   }
 
   const branchId=record?.state==='inside'?record.branch_id:(req.user.branch_id||1);
@@ -634,7 +651,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
   if(!branch)error('NO_BRANCH','لم يتم تعيين موقع لك');
   const location=policy.classifyFix(b.fix,branch,now);
   if(b.action!=='location'){
-   policy.verifyQr(b.token,branch,process.env.QR_SECRET,now,isAuto?'auto':b.action);
+   policy.verifyQr(b.token,branch,process.env.QR_SECRET,now,b.action);
    const dist=Math.round(location.distance);
    const maxAccuracy=Math.max(Number(branch.max_accuracy||200),250);
    if(b.fix.accuracy>maxAccuracy){
