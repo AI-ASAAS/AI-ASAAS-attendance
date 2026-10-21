@@ -957,6 +957,224 @@ app.get('/api/admin/dashboard',admin,wrap(async(req,res)=>{
  const fresh=active.filter(r=>r.last_seen&&Date.now()-new Date(r.last_seen)<90000&&r.gps_state==='inside').length;
  respond(res,{total:accounts.length,present:new Set(records.map(r=>r.employee_id)).size,inside:fresh,uncertain:active.length-fresh,late:records.filter(r=>r.late_minutes>0).length,records:records.map(r=>({...r,counted_minutes:countedMinutes(r)}))});
 }));
+
+app.get('/api/admin/analytics',admin,wrap(async(req,res)=>{
+ await closeScheduled();
+ const broad=['super_admin','hr_admin'].includes(req.user.role);
+ const branchFilter = req.query.branch_id ? Number(req.query.branch_id) : (broad ? null : req.user.branch_id);
+ if(!broad && branchFilter && branchFilter !== req.user.branch_id) error('FORBIDDEN','هذا الفرع خارج صلاحيتك',403);
+
+ const empQuery = branchFilter
+   ? await db.query("SELECT id, name, identifier, branch_id FROM accounts WHERE role='employee' AND active=TRUE AND branch_id=$1 ORDER BY name ASC", [branchFilter])
+   : await db.query("SELECT id, name, identifier, branch_id FROM accounts WHERE role='employee' AND active=TRUE ORDER BY name ASC");
+ const totalEmployees = empQuery.rows;
+
+ const mode = req.query.mode === 'monthly' ? 'monthly' : 'daily';
+
+ if(mode === 'daily') {
+   const targetDate = (req.query.date && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)) ? req.query.date : policy.localDay();
+   const rows = await db.query(`
+     SELECT r.*, a.name, a.identifier, b.name AS branch_name, s.name AS shift_name, s.start_time, s.end_time, s.grace_minutes
+     FROM duty_records r
+     JOIN accounts a ON a.id = r.employee_id
+     JOIN branches b ON b.id = r.branch_id
+     JOIN shifts s ON s.id = r.shift_id
+     WHERE ($1::int IS NULL OR r.branch_id = $1)
+       AND (r.shift_start AT TIME ZONE 'Asia/Aden')::date = $2::date
+     ORDER BY r.first_in ASC
+   `, [branchFilter, targetDate]);
+
+   const records = rows.rows.map(r => ({
+     ...r,
+     counted_minutes: countedMinutes(r),
+     ...resolveRecordStatus(r)
+   }));
+
+   const attendedEmpIds = new Set(records.map(r => r.employee_id));
+   const presentCount = attendedEmpIds.size;
+   const totalCount = totalEmployees.length;
+   const absentCount = Math.max(0, totalCount - presentCount);
+   const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+   const onDutyCount = records.filter(r => r.state === 'inside').length;
+   const lateRecords = records.filter(r => (r.late_minutes || 0) > 0);
+   const lateCount = lateRecords.length;
+   const totalLateMinutes = lateRecords.reduce((sum, r) => sum + (r.late_minutes || 0), 0);
+
+   const countedRecords = records.filter(r => r.counted_minutes != null);
+   const totalCountedMinutes = countedRecords.reduce((sum, r) => sum + r.counted_minutes, 0);
+   const totalCountedHours = Number((totalCountedMinutes / 60).toFixed(1));
+   const avgWorkingHours = presentCount > 0 ? Number((totalCountedMinutes / 60 / presentCount).toFixed(1)) : 0;
+
+   const absentEmployees = totalEmployees.filter(e => !attendedEmpIds.has(e.id)).map(e => ({
+     id: e.id,
+     name: e.name,
+     identifier: e.identifier,
+     branch_id: e.branch_id
+   }));
+
+   return respond(res, {
+     mode: 'daily',
+     date: targetDate,
+     total_employees: totalCount,
+     present_count: presentCount,
+     absent_count: absentCount,
+     attendance_rate: attendanceRate,
+     on_duty_count: onDutyCount,
+     late_count: lateCount,
+     total_late_minutes: totalLateMinutes,
+     total_counted_minutes: totalCountedMinutes,
+     total_counted_hours: totalCountedHours,
+     avg_working_hours: avgWorkingHours,
+     records,
+     absent_employees: absentEmployees
+   });
+ }
+
+ // Monthly mode
+ const targetMonth = (req.query.month && /^\d{4}-\d{2}$/.test(req.query.month)) ? req.query.month : policy.localDay().slice(0, 7);
+ const fromDate = `${targetMonth}-01`;
+ const [yearStr, monthStr] = targetMonth.split('-');
+ const year = parseInt(yearStr, 10);
+ const month = parseInt(monthStr, 10);
+ const daysInMonth = new Date(year, month, 0).getDate();
+ const toDate = `${targetMonth}-${String(daysInMonth).padStart(2, '0')}`;
+
+ const rows = await db.query(`
+   SELECT r.*, a.name, a.identifier, b.name AS branch_name, s.name AS shift_name, s.start_time, s.end_time, s.grace_minutes,
+          (r.shift_start AT TIME ZONE 'Asia/Aden')::date as work_date
+   FROM duty_records r
+   JOIN accounts a ON a.id = r.employee_id
+   JOIN branches b ON b.id = r.branch_id
+   JOIN shifts s ON s.id = r.shift_id
+   WHERE ($1::int IS NULL OR r.branch_id = $1)
+     AND (r.shift_start AT TIME ZONE 'Asia/Aden')::date BETWEEN $2::date AND $3::date
+   ORDER BY r.shift_start ASC
+ `, [branchFilter, fromDate, toDate]);
+
+ const allRecords = rows.rows.map(r => ({
+   ...r,
+   counted_minutes: countedMinutes(r),
+   ...resolveRecordStatus(r)
+ }));
+
+ const totalRecords = allRecords.length;
+ const lateRecords = allRecords.filter(r => (r.late_minutes || 0) > 0);
+ const totalLateMinutes = lateRecords.reduce((sum, r) => sum + (r.late_minutes || 0), 0);
+ const totalLateCount = lateRecords.length;
+
+ const countedRecords = allRecords.filter(r => r.counted_minutes != null);
+ const totalCountedMinutes = countedRecords.reduce((sum, r) => sum + r.counted_minutes, 0);
+ const totalCountedHours = Number((totalCountedMinutes / 60).toFixed(1));
+
+ const leavesCount = (await db.query(`
+   SELECT COUNT(*) as count FROM leave_requests
+   WHERE status='approved' AND (($1::date <= to_date AND $2::date >= from_date))
+ `, [fromDate, toDate])).rows[0]?.count || 0;
+
+ const dailyMap = {};
+ for (let day = 1; day <= daysInMonth; day++) {
+   const dStr = `${targetMonth}-${String(day).padStart(2, '0')}`;
+   const dayDate = new Date(`${dStr}T00:00:00`);
+   const dayName = dayDate.toLocaleDateString('ar-YE', { weekday: 'short' });
+   dailyMap[dStr] = {
+     date: dStr,
+     day,
+     day_name: dayName,
+     present_count: 0,
+     late_count: 0,
+     total_minutes: 0,
+     total_hours: 0,
+     records_count: 0
+   };
+ }
+
+ const dailyEmps = {};
+ for (const r of allRecords) {
+   const dStr = r.work_date ? new Date(r.work_date).toISOString().slice(0, 10) : (r.shift_start ? new Date(r.shift_start).toISOString().slice(0, 10) : null);
+   if (dStr && dailyMap[dStr]) {
+     if (!dailyEmps[dStr]) dailyEmps[dStr] = new Set();
+     dailyEmps[dStr].add(r.employee_id);
+     dailyMap[dStr].present_count = dailyEmps[dStr].size;
+     dailyMap[dStr].records_count += 1;
+     if ((r.late_minutes || 0) > 0) dailyMap[dStr].late_count += 1;
+     if (r.counted_minutes) {
+       dailyMap[dStr].total_minutes += r.counted_minutes;
+       dailyMap[dStr].total_hours = Number((dailyMap[dStr].total_minutes / 60).toFixed(1));
+     }
+   }
+ }
+
+ const totalEmployeesCount = totalEmployees.length;
+ const dailyBreakdown = Object.values(dailyMap).map(d => ({
+   ...d,
+   attendance_rate: totalEmployeesCount > 0 ? Math.min(100, Math.round((d.present_count / totalEmployeesCount) * 100)) : 0
+ }));
+
+ const empMap = {};
+ for (const e of totalEmployees) {
+   empMap[e.id] = {
+     id: e.id,
+     name: e.name,
+     identifier: e.identifier,
+     attended_days: 0,
+     total_minutes: 0,
+     total_hours: 0,
+     late_count: 0,
+     late_minutes: 0,
+     distinct_dates: new Set()
+   };
+ }
+
+ for (const r of allRecords) {
+   if (empMap[r.employee_id]) {
+     const dStr = r.work_date ? new Date(r.work_date).toISOString().slice(0, 10) : null;
+     if (dStr) empMap[r.employee_id].distinct_dates.add(dStr);
+     if (r.counted_minutes) empMap[r.employee_id].total_minutes += r.counted_minutes;
+     if ((r.late_minutes || 0) > 0) {
+       empMap[r.employee_id].late_count += 1;
+       empMap[r.employee_id].late_minutes += r.late_minutes;
+     }
+   }
+ }
+
+ const workDaysCount = dailyBreakdown.filter(d => d.present_count > 0).length || Math.min(22, daysInMonth);
+
+ const employeeBreakdown = Object.values(empMap).map(e => {
+   const attendedDays = e.distinct_dates.size;
+   const commitmentRate = workDaysCount > 0 ? Math.min(100, Math.round((attendedDays / workDaysCount) * 100)) : 0;
+   return {
+     id: e.id,
+     name: e.name,
+     identifier: e.identifier,
+     attended_days: attendedDays,
+     total_hours: Number((e.total_minutes / 60).toFixed(1)),
+     late_count: e.late_count,
+     late_minutes: e.late_minutes,
+     commitment_rate: commitmentRate
+   };
+ }).sort((a, b) => b.attended_days - a.attended_days);
+
+ const activeDaysWithAttendance = dailyBreakdown.filter(d => d.present_count > 0);
+ const avgMonthlyRate = activeDaysWithAttendance.length > 0
+   ? Math.round(activeDaysWithAttendance.reduce((sum, d) => sum + d.attendance_rate, 0) / activeDaysWithAttendance.length)
+   : 0;
+
+ respond(res, {
+   mode: 'monthly',
+   month: targetMonth,
+   days_in_month: daysInMonth,
+   total_employees: totalEmployeesCount,
+   work_days_count: workDaysCount,
+   total_records: totalRecords,
+   total_counted_hours: totalCountedHours,
+   total_late_count: totalLateCount,
+   total_late_minutes: totalLateMinutes,
+   avg_attendance_rate: avgMonthlyRate,
+   approved_leaves: Number(leavesCount),
+   daily_breakdown: dailyBreakdown,
+   employee_breakdown: employeeBreakdown
+ });
+}));
 app.get('/api/admin/reports.csv',admin,allow('reports.export'),wrap(async(req,res)=>{
  const [from,to]=dateRange(req);
  const rows=await recordsFor(req.user,from,to);

@@ -133,9 +133,10 @@ const date = v => {
 const states = { inside: 'حضور مفتوح', outside: 'تم الخروج', closed: 'مغلق', pending: 'قيد المراجعة', approved: 'مقبولة', rejected: 'مرفوضة' };
 const roles = { super_admin: 'مدير النظام التنفيذي', hr_admin: 'الموارد البشرية', branch_manager: 'مدير الفرع', viewer: 'للعرض فقط', employee: 'موظف' };
 
-// UNIQUE ICON FOR EVERY TAB: dashboard, calendar, users, bell, mapPin, qrCode, clock, receipt, shieldCheck, settings
+// UNIQUE ICON FOR EVERY TAB: dashboard, trend, calendar, users, bell, mapPin, qrCode, clock, receipt, shieldCheck, settings
 const tabs = [
   ['dashboard', 'نظرة عامة', 'dashboard'],
+  ['analytics', 'الإحصائيات والتحليلات', 'trend'],
   ['records', 'الحضور والانصراف', 'calendar'],
   ['accounts', 'الموظفون والأجهزة', 'users'],
   ['announcements', 'التعميمات الرسمية', 'bell'],
@@ -954,6 +955,607 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// ============================================================================
+// ANALYTICS & STATISTICS SPACE (مساحة الإحصائيات والتحليلات اليومية والشهرية)
+// ============================================================================
+function AnalyticsView({
+  data,
+  mode,
+  setMode,
+  date,
+  setDate,
+  month,
+  setMonth,
+  branchId,
+  setBranchId,
+  branches = [],
+  onRefresh,
+  busy
+}) {
+  const [empSearch, setEmpSearch] = useState('');
+
+  if (!data) {
+    return (
+      <div style={{ textAlign: 'center', padding: 50 }}>
+        <Icon name="refresh" className="asas-spin" style={{ width: 32, height: 32, color: 'var(--accent)' }} />
+        <p className="asas-muted" style={{ marginTop: 14 }}>جاري تجميع الإحصائيات وسجلات الاحتساب...</p>
+      </div>
+    );
+  }
+
+  const isDaily = mode === 'daily';
+
+  const setToday = () => setDate(today());
+  const setYesterday = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    setDate(d.toISOString().slice(0, 10));
+  };
+  const setCurrentMonth = () => setMonth(today().slice(0, 7));
+
+  return (
+    <div className="asas-analytics-space" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* 1. Header Toolbar */}
+      <Glass className="asas-analytics-toolbar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div className="asas-segmented-control">
+            <button
+              type="button"
+              className={`asas-segmented-btn ${isDaily ? 'active' : ''}`}
+              onClick={() => setMode('daily')}
+            >
+              <Icon name="calendar" style={{ width: 15, height: 15 }} />
+              <span>إحصائيات يومية</span>
+            </button>
+            <button
+              type="button"
+              className={`asas-segmented-btn ${!isDaily ? 'active' : ''}`}
+              onClick={() => setMode('monthly')}
+            >
+              <Icon name="trend" style={{ width: 15, height: 15 }} />
+              <span>إحصائيات شهرية</span>
+            </button>
+          </div>
+
+          {isDaily ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <input
+                type="date"
+                className="asas-input"
+                style={{ width: 155, height: 36, padding: '0 10px', fontSize: 13 }}
+                value={date}
+                onChange={e => setDate(e.target.value)}
+              />
+              <button type="button" className={`asas-btn sm ${date === today() ? 'primary' : ''}`} onClick={setToday}>
+                اليوم
+              </button>
+              <button type="button" className="asas-btn sm" onClick={setYesterday}>
+                أمس
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <input
+                type="month"
+                className="asas-input"
+                style={{ width: 165, height: 36, padding: '0 10px', fontSize: 13 }}
+                value={month}
+                onChange={e => setMonth(e.target.value)}
+              />
+              <button type="button" className={`asas-btn sm ${month === today().slice(0, 7) ? 'primary' : ''}`} onClick={setCurrentMonth}>
+                الشهر الحالي
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {branches.length > 0 && (
+            <select
+              className="asas-input"
+              style={{ height: 36, fontSize: 13, minWidth: 150 }}
+              value={branchId}
+              onChange={e => setBranchId(e.target.value)}
+            >
+              <option value="">جميع الفروع</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
+
+          <button type="button" className="asas-btn sm" onClick={onRefresh} disabled={busy} title="تحديث البيانات">
+            <Icon name="refresh" className={busy ? 'asas-spin' : ''} style={{ width: 14, height: 14 }} />
+            تحديث
+          </button>
+          <button type="button" className="asas-btn sm" onClick={() => window.print()} title="طباعة تقرير الإحصائيات">
+            <Icon name="printer" style={{ width: 14, height: 14 }} />
+            طباعة الكشف
+          </button>
+        </div>
+      </Glass>
+
+      {/* 2. DAILY ANALYTICS VIEW */}
+      {isDaily && (
+        <>
+          <div className="asas-stats-grid">
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>نسبة الحضور اليومي</span>
+                <div className="asas-stat-icon-wrap"><Icon name="trend" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: data.attendance_rate >= 80 ? 'var(--paid)' : 'var(--accent)' }}>
+                {data.attendance_rate || 0}%
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: 'var(--glass-inset)', overflow: 'hidden', marginTop: 2 }}>
+                <div style={{ width: `${Math.min(100, data.attendance_rate || 0)}%`, height: '100%', background: 'var(--paid)', borderRadius: 3 }} />
+              </div>
+              <div className="asas-stat-caption">
+                حضر {data.present_count || 0} من أصل {data.total_employees || 0} موظف
+              </div>
+            </Glass>
+
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>الموظفون الحاضرون</span>
+                <div className="asas-stat-icon-wrap"><Icon name="checkCircle" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: 'var(--paid)' }}>
+                {formatNumber(data.present_count || 0)}
+              </div>
+              <div className="asas-stat-caption">
+                منهم {data.on_duty_count || 0} على رأس العمل حالياً
+              </div>
+            </Glass>
+
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>حالات الغياب</span>
+                <div className="asas-stat-icon-wrap"><Icon name="alert" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: (data.absent_count || 0) > 0 ? 'var(--unpaid)' : 'var(--text-3)' }}>
+                {formatNumber(data.absent_count || 0)}
+              </div>
+              <div className="asas-stat-caption">
+                {(data.absent_count || 0) > 0 ? 'موظفون لم يسجلوا حضوراً اليوم' : 'لا يوجد أي غياب مسجل اليوم'}
+              </div>
+            </Glass>
+
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>إجمالي الوقت المحتسب</span>
+                <div className="asas-stat-icon-wrap"><Icon name="clock" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: 'var(--accent)' }}>
+                {data.total_counted_hours || 0} <small style={{ fontSize: 16 }}>ساعة</small>
+              </div>
+              <div className="asas-stat-caption">
+                بمتوسط {data.avg_working_hours || 0} ساعة لكل موظف حاضر
+              </div>
+            </Glass>
+
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>التأخير المرصود</span>
+                <div className="asas-stat-icon-wrap"><Icon name="alert" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: (data.late_count || 0) > 0 ? 'var(--partial)' : 'var(--paid)' }}>
+                {formatNumber(data.late_count || 0)} <small style={{ fontSize: 16 }}>موظف</small>
+              </div>
+              <div className="asas-stat-caption">
+                إجمالي {data.total_late_minutes || 0} دقيقة تأخير عن بداية الدوام
+              </div>
+            </Glass>
+
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>داخل المقر حالياً</span>
+                <div className="asas-stat-icon-wrap"><Icon name="mapPin" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: 'var(--text)' }}>
+                {formatNumber(data.on_duty_count || 0)}
+              </div>
+              <div className="asas-stat-caption">
+                حسب قراءات الفحص الجغرافي النشطة
+              </div>
+            </Glass>
+          </div>
+
+          {/* Daily Table 1: Detailed Attendance & Time Sheet */}
+          <Card
+            title={`كشف أوقات الحضور والانصراف والوقت المحتسب (${date})`}
+            icon="calendar"
+            actions={
+              <input
+                type="text"
+                placeholder="بحث باسم الموظف أو الرقم..."
+                className="asas-input sm"
+                style={{ width: 200, height: 30 }}
+                value={empSearch}
+                onChange={e => setEmpSearch(e.target.value)}
+              />
+            }
+          >
+            {(() => {
+              const recordsList = (data.records || []).filter(r => {
+                if (!empSearch) return true;
+                const q = empSearch.toLowerCase();
+                return (r.name && r.name.toLowerCase().includes(q)) || (r.identifier && r.identifier.toLowerCase().includes(q));
+              });
+
+              if (recordsList.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '30px 10px' }}>
+                    <p className="asas-muted">لم يتم رصد أي سجلات حضور لهذا التاريخ المحدد.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="asas-table-wrap">
+                  <table className="asas-table">
+                    <thead>
+                      <tr>
+                        <th>الموظف</th>
+                        <th>الفرع</th>
+                        <th>الدوام</th>
+                        <th>الوقت الذي حضر فيه (أول دخول)</th>
+                        <th>وقت الانصراف (آخر خروج)</th>
+                        <th>الوقت المحتسب</th>
+                        <th>المغادرات المخصومة</th>
+                        <th>الحالة وسبب الخروج</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recordsList.map(r => {
+                        const isInside = r.state === 'inside';
+                        const isLate = (r.late_minutes || 0) > 0;
+                        const countedH = r.counted_minutes != null ? Math.floor(r.counted_minutes / 60) : 0;
+                        const countedM = r.counted_minutes != null ? (r.counted_minutes % 60) : 0;
+                        const awayM = r.away_seconds ? Math.floor(r.away_seconds / 60) : 0;
+
+                        return (
+                          <tr key={r.id}>
+                            <td>
+                              <strong>{r.name}</strong>
+                              <small style={{ fontFamily: 'monospace', color: 'var(--accent)', display: 'block' }}>{r.identifier}</small>
+                            </td>
+                            <td>{r.branch_name}</td>
+                            <td>
+                              <span>{r.shift_name}</span>
+                              <small style={{ display: 'block', color: 'var(--text-3)', fontSize: 11 }}>
+                                {r.start_time?.slice(0, 5)} - {r.end_time?.slice(0, 5)}
+                              </small>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ color: 'var(--paid)', fontWeight: 700 }}>
+                                  {time(r.first_in)}
+                                </span>
+                                {isLate ? (
+                                  <span className="asas-badge urgent" style={{ fontSize: 10, padding: '1px 6px' }}>
+                                    تأخير {r.late_minutes} د
+                                  </span>
+                                ) : (
+                                  <span className="asas-badge inside" style={{ fontSize: 10, padding: '1px 6px' }}>
+                                    في الموعد
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              {isInside ? (
+                                <span className="asas-badge inside" style={{ fontSize: 11 }}>
+                                  <span className="asas-radar-pulse pulse-green" style={{ width: 8, height: 8, display: 'inline-block', position: 'static', marginRight: 4 }} />
+                                  على رأس العمل
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text)', fontWeight: 600 }}>
+                                  {time(r.last_out)}
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              {r.counted_minutes != null ? (
+                                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>
+                                  {countedH > 0 ? `${countedH} س ` : ''}{countedM} د
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-3)', fontStyle: 'italic', fontSize: 12 }}>
+                                  قيد الاحتساب
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              {awayM > 0 ? (
+                                <span style={{ color: 'var(--unpaid)', fontWeight: 600 }}>
+                                  {awayM} دقيقة مغادرة
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-3)' }}>—</span>
+                              )}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`} style={{ fontSize: 11 }}>
+                                  <Icon name={isInside ? 'checkCircle' : 'pause'} style={{ width: 12, height: 12 }} />
+                                  {r.status_label || (isInside ? 'حاضر' : 'تم الانصراف')}
+                                </span>
+                                {r.exit_reason_label && !isInside && (
+                                  <small style={{ color: 'var(--text-3)', fontSize: 10.5 }}>
+                                    {r.exit_reason_label}
+                                  </small>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </Card>
+
+          {/* Daily Table 2: Absent Employees List */}
+          <Card title={`كشف الغياب لليوم (${data.absent_count || 0} موظف)`} icon="users">
+            {data.absent_employees && data.absent_employees.length > 0 ? (
+              <div className="asas-table-wrap">
+                <table className="asas-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>الموظف الغائب</th>
+                      <th>الرقم الوظيفي</th>
+                      <th>الحالة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.absent_employees.map((emp, i) => (
+                      <tr key={emp.id}>
+                        <td>{i + 1}</td>
+                        <td><strong>{emp.name}</strong></td>
+                        <td style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{emp.identifier}</td>
+                        <td>
+                          <span className="asas-badge urgent" style={{ fontSize: 11 }}>
+                            <Icon name="alert" style={{ width: 12, height: 12 }} />
+                            غائب (لم يسجل حضور)
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '24px 10px', background: 'rgba(34, 197, 94, 0.05)', borderRadius: 10, border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                <span style={{ fontSize: 28 }}>🎉</span>
+                <h3 style={{ margin: '8px 0 4px', color: 'var(--paid)' }}>انضباط تام بنسبة 100%!</h3>
+                <p className="asas-muted" style={{ margin: 0 }}>جميع الموظفين سجلوا حضورهم اليوم ولا يوجد أي غياب مسجل.</p>
+              </div>
+            )}
+          </Card>
+        </>
+      )}
+
+      {/* 3. MONTHLY ANALYTICS VIEW */}
+      {!isDaily && (
+        <>
+          <div className="asas-stats-grid">
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>معدل الحضور الشهري</span>
+                <div className="asas-stat-icon-wrap"><Icon name="trend" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: (data.avg_attendance_rate || 0) >= 80 ? 'var(--paid)' : 'var(--accent)' }}>
+                {data.avg_attendance_rate || 0}%
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: 'var(--glass-inset)', overflow: 'hidden', marginTop: 2 }}>
+                <div style={{ width: `${Math.min(100, data.avg_attendance_rate || 0)}%`, height: '100%', background: 'linear-gradient(90deg, var(--brand-gold), #8f6a2e)', borderRadius: 3 }} />
+              </div>
+              <div className="asas-stat-caption">
+                متوسط الالتزام اليومي لشهر {data.month}
+              </div>
+            </Glass>
+
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>إجمالي الساعات المحتسبة</span>
+                <div className="asas-stat-icon-wrap"><Icon name="clock" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: 'var(--accent)' }}>
+                {formatNumber(data.total_counted_hours || 0)} <small style={{ fontSize: 16 }}>ساعة</small>
+              </div>
+              <div className="asas-stat-caption">
+                ساعات عمل موثقة ومحتسبة لكافة الموظفين
+              </div>
+            </Glass>
+
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>إجمالي جلسات الحضور</span>
+                <div className="asas-stat-icon-wrap"><Icon name="calendar" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: 'var(--paid)' }}>
+                {formatNumber(data.total_records || 0)}
+              </div>
+              <div className="asas-stat-caption">
+                حضور وانصراف موثق عبر QR والـ GPS
+              </div>
+            </Glass>
+
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>إجمالي دقائق التأخير</span>
+                <div className="asas-stat-icon-wrap"><Icon name="alert" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: (data.total_late_minutes || 0) > 0 ? 'var(--partial)' : 'var(--paid)' }}>
+                {formatNumber(data.total_late_minutes || 0)} <small style={{ fontSize: 16 }}>دقيقة</small>
+              </div>
+              <div className="asas-stat-caption">
+                في {data.total_late_count || 0} حالة تأخير طوال الشهر
+              </div>
+            </Glass>
+
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>أيام الدوام المنفذة</span>
+                <div className="asas-stat-icon-wrap"><Icon name="building" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: 'var(--text)' }}>
+                {formatNumber(data.work_days_count || 0)} <small style={{ fontSize: 16 }}>يوم</small>
+              </div>
+              <div className="asas-stat-caption">
+                من إجمالي {data.days_in_month || 30} يوماً في شهر {data.month}
+              </div>
+            </Glass>
+
+            <Glass className="asas-stat-card">
+              <div className="asas-stat-card-top">
+                <span>الإجازات المعتمدة</span>
+                <div className="asas-stat-icon-wrap"><Icon name="receipt" /></div>
+              </div>
+              <div className="asas-stat-value" style={{ color: 'var(--text)' }}>
+                {formatNumber(data.approved_leaves || 0)}
+              </div>
+              <div className="asas-stat-caption">
+                طلبات إجازة مقبولة خلال الشهر
+              </div>
+            </Glass>
+          </div>
+
+          {/* Daily Trend Interactive Bar Chart */}
+          <Card title={`الرسم البياني اليومي لحضور شهر (${data.month})`} icon="trend">
+            <div style={{ padding: '10px 4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, fontSize: 12, color: 'var(--text-3)', flexWrap: 'wrap', gap: 10 }}>
+                <span>معدل الحضور اليومي على مدار أيام الشهر (1 إلى {data.days_in_month})</span>
+                <div style={{ display: 'flex', gap: 14 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 10, height: 10, background: 'var(--paid)', borderRadius: 2 }} />
+                    حضور مرتفع (≥ 80%)
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 10, height: 10, background: 'var(--accent)', borderRadius: 2 }} />
+                    حضور متوسط
+                  </span>
+                </div>
+              </div>
+
+              <div className="asas-chart-container">
+                {(data.daily_breakdown || []).map(d => {
+                  const rate = d.attendance_rate || 0;
+                  const barColor = rate >= 80 ? 'var(--paid)' : (rate > 0 ? 'var(--accent)' : 'rgba(255, 255, 255, 0.08)');
+                  return (
+                    <div
+                      key={d.date}
+                      className="asas-chart-col"
+                      title={`${d.day_name} (${d.date}):\nحضور: ${d.present_count} موظف (${rate}%)\nساعات: ${d.total_hours} س`}
+                      onClick={() => {
+                        setDate(d.date);
+                        setMode('daily');
+                      }}
+                    >
+                      <div className="asas-chart-bar-wrap">
+                        <div
+                          className="asas-chart-bar"
+                          style={{
+                            height: rate > 0 ? `${Math.max(8, rate)}%` : '4px',
+                            background: barColor,
+                            boxShadow: rate >= 80 ? '0 0 8px rgba(34, 197, 94, 0.3)' : 'none'
+                          }}
+                        />
+                      </div>
+                      <span className="asas-chart-label">{d.day}</span>
+                      <span className="asas-chart-day-name">{d.day_name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <small style={{ display: 'block', textAlign: 'center', color: 'var(--text-3)', marginTop: 8 }}>
+                💡 اضغط على أي عمود بالرسم البياني للانتقال المباشر إلى إحصائيات ذلك اليوم
+              </small>
+            </div>
+          </Card>
+
+          {/* Monthly Employee Performance Leaderboard */}
+          <Card title={`جدول التزام وساعات الموظفين لشهر (${data.month})`} icon="users">
+            {data.employee_breakdown && data.employee_breakdown.length > 0 ? (
+              <div className="asas-table-wrap">
+                <table className="asas-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>الموظف</th>
+                      <th>أيام الحضور</th>
+                      <th>إجمالي الساعات المحتسبة</th>
+                      <th>إجمالي التأخير</th>
+                      <th>معدل الالتزام الشهري</th>
+                      <th>التقييم</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.employee_breakdown.map((emp, idx) => {
+                      const comm = emp.commitment_rate;
+                      const badgeClass = comm >= 95 ? 'inside' : (comm >= 75 ? 'outside' : 'urgent');
+                      const grade = comm >= 95 ? 'منضبط ممتاز' : (comm >= 75 ? 'جيد جداً' : 'بحاجة لمتابعة');
+
+                      return (
+                        <tr key={emp.id}>
+                          <td><strong>{idx + 1}</strong></td>
+                          <td>
+                            <strong>{emp.name}</strong>
+                            <small style={{ fontFamily: 'monospace', color: 'var(--accent)', display: 'block' }}>{emp.identifier}</small>
+                          </td>
+                          <td>
+                            <strong style={{ color: 'var(--text)' }}>{emp.attended_days}</strong>
+                            <span style={{ color: 'var(--text-3)', fontSize: 11 }}> / {data.work_days_count} يوم</span>
+                          </td>
+                          <td>
+                            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>
+                              {emp.total_hours} ساعة
+                            </span>
+                          </td>
+                          <td>
+                            {emp.late_minutes > 0 ? (
+                              <span style={{ color: 'var(--partial)', fontWeight: 600 }}>
+                                {emp.late_minutes} د ({emp.late_count} مرات)
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--paid)', fontSize: 12 }}>
+                                منضبط 100%
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ minWidth: 140 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ flex: 1, height: 6, background: 'var(--glass-inset)', borderRadius: 3, overflow: 'hidden' }}>
+                                <div style={{ width: `${Math.min(100, comm)}%`, height: '100%', background: comm >= 90 ? 'var(--paid)' : 'var(--brand-gold)', borderRadius: 3 }} />
+                              </div>
+                              <strong style={{ fontSize: 12, minWidth: 36 }}>{comm}%</strong>
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`asas-badge ${badgeClass}`} style={{ fontSize: 11 }}>
+                              {grade}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <Empty>لا توجد بيانات موظفين لهذا الشهر بعد</Empty>
+            )}
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
+
 function AsasAppInner({ defaultAction = 'auto' }) {
   const [theme, toggleTheme] = useTheme();
   const [user, setUser] = useState(() => {
@@ -986,6 +1588,10 @@ function AsasAppInner({ defaultAction = 'auto' }) {
   const [branchId, setBranchId] = useState('');
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
+  const [analyticsMode, setAnalyticsMode] = useState('daily');
+  const [analyticsDate, setAnalyticsDate] = useState(today);
+  const [analyticsMonth, setAnalyticsMonth] = useState(() => today().slice(0, 7));
+  const [analyticsBranch, setAnalyticsBranch] = useState('');
   const [search, setSearch] = useState('');
   const [liveTime, setLiveTime] = useState('');
   const [announcements, setAnnouncements] = useState([]);
@@ -1086,6 +1692,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
       const path = tab === 'qr' ? '/admin/branches'
         : tab === 'leave' ? '/leave'
         : tab === 'records' ? `/admin/records?from=${from}&to=${to}`
+        : tab === 'analytics' ? `/admin/analytics?mode=${analyticsMode}&date=${analyticsDate}&month=${analyticsMonth}${analyticsBranch ? `&branch_id=${analyticsBranch}` : ''}`
         : tab === 'settings' ? '/admin/settings'
         : tab === 'announcements' ? '/announcements'
         : `/admin/${tab}`;
@@ -1103,7 +1710,13 @@ function AsasAppInner({ defaultAction = 'auto' }) {
     } finally {
       if (showBusy) setBusy(false);
     }
-  }, [user, tab, from, to]);
+  }, [user, tab, from, to, analyticsMode, analyticsDate, analyticsMonth, analyticsBranch]);
+
+  useEffect(() => {
+    if (user && user.role !== 'employee' && branches.length === 0) {
+      api('/admin/branches').then(b => { if (Array.isArray(b)) setBranches(b); }).catch(() => {});
+    }
+  }, [user, branches.length]);
 
   useEffect(() => {
     load(true);
@@ -1536,7 +2149,11 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                   <h2><Stretch before="أهْـ" after="ـلاً" length={3} /> بك في لوحة تحكم أساس</h2>
                   <p>حضور مؤكد جغرافياً ومقيد بأجهزة الموظفين مع تحديث لحظي على السحابة وقواعد البيانات.</p>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
-                    <button className="asas-btn primary" onClick={() => setTab('qr')}>
+                    <button className="asas-btn primary" onClick={() => setTab('analytics')}>
+                      <Icon name="trend" />
+                      مساحة الإحصائيات والتحليلات
+                    </button>
+                    <button className="asas-btn" onClick={() => setTab('qr')}>
                       <Icon name="qrCode" />
                       عرض الرموز المعتمدة
                     </button>
@@ -1636,6 +2253,24 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                 <Records rows={data.records.slice(0, 10)} onEdit={r => edit('records', r)} canEdit={can('attendance.edit')} />
               </Card>
             </>
+          )}
+
+          {/* ANALYTICS & STATISTICS TAB */}
+          {tab === 'analytics' && (
+            <AnalyticsView
+              data={data}
+              mode={analyticsMode}
+              setMode={setAnalyticsMode}
+              date={analyticsDate}
+              setDate={setAnalyticsDate}
+              month={analyticsMonth}
+              setMonth={setAnalyticsMonth}
+              branchId={analyticsBranch}
+              setBranchId={setAnalyticsBranch}
+              branches={branches}
+              onRefresh={() => load(true)}
+              busy={busy}
+            />
           )}
 
           {/* RECORDS TAB */}

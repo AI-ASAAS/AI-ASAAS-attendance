@@ -2078,3 +2078,102 @@ select.asas-input option {
   50% { box-shadow: 0 0 26px rgba(34, 197, 94, 0.7); }
 }
 
+/* ============================================================================
+   ANALYTICS & STATISTICS DASHBOARD
+   ============================================================================ */
+.asas-analytics-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+.asas-segmented-control {
+  display: inline-flex;
+  background: var(--glass-inset);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+.asas-segmented-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.asas-segmented-btn.active {
+  background: var(--accent);
+  color: #12100e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.asas-segmented-btn:not(.active):hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.asas-chart-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 180px;
+  padding: 24px 12px 12px;
+  background: var(--glass-inset);
+  border-radius: 14px;
+  border: 1px solid var(--hairline);
+  overflow-x: auto;
+  position: relative;
+}
+.asas-chart-col {
+  flex: 1;
+  min-width: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  justify-content: flex-end;
+  cursor: pointer;
+}
+.asas-chart-col:hover .asas-chart-bar {
+  filter: brightness(1.2);
+  transform: scaleY(1.02);
+}
+.asas-chart-bar-wrap {
+  width: 100%;
+  height: 110px;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+.asas-chart-bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom;
+}
+.asas-chart-label {
+  font-size: 10.5px;
+  color: var(--text-3);
+  text-align: center;
+  line-height: 1.1;
+  user-select: none;
+}
+.asas-chart-day-name {
+  font-size: 9px;
+  color: var(--text-3);
+  opacity: 0.75;
+}
+
+
