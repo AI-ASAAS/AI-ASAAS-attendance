@@ -2775,54 +2775,62 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         </div>
       </Glass>
 
-      {/* Employee Subpage Navigation Tabs */}
-      <nav className="asas-employee-tabs" role="tablist" aria-label="أقسام بوابة الموظف">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={empPage === 'duty'}
-          className={`asas-employee-tab ${empPage === 'duty' ? 'active' : ''}`}
-          onClick={() => setEmpPage('duty')}
-        >
-          <Icon name="clock" />
-          <span>حالة وتسجيل الحضور</span>
-          {isInside && (
-            <span className="asas-badge inside" style={{ fontSize: 10, padding: '1px 6px', marginRight: 4 }}>
-              على رأس العمل
-            </span>
-          )}
-        </button>
+      {/* Employee Subpage Navigation Tabs (Responsive Segmented Control) */}
+      <div className="asas-employee-nav-wrap">
+        <nav className="asas-employee-tabs" role="tablist" aria-label="أقسام بوابة الموظف">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={empPage === 'duty'}
+            className={`asas-employee-tab ${empPage === 'duty' ? 'active' : ''}`}
+            onClick={() => setEmpPage('duty')}
+          >
+            <Icon name="clock" />
+            <span className="asas-tab-text-full">حالة وتسجيل الحضور</span>
+            <span className="asas-tab-text-short">تسجيل الحضور</span>
+            {isInside && (
+              <>
+                <span className="asas-tab-duty-dot" title="على رأس العمل" />
+                <span className="asas-tab-badge inside desktop-only">على رأس العمل</span>
+              </>
+            )}
+          </button>
 
-        <button
-          type="button"
-          role="tab"
-          aria-selected={empPage === 'leave'}
-          className={`asas-employee-tab ${empPage === 'leave' ? 'active' : ''}`}
-          onClick={() => { setEmpPage('leave'); loadLeaves(); }}
-        >
-          <Icon name="receipt" />
-          <span>طلب إجازة</span>
-          {leaves.filter(l => l.status === 'pending').length > 0 && (
-            <span className="asas-badge urgent" style={{ fontSize: 10, padding: '1px 6px', marginRight: 4 }}>
-              {leaves.filter(l => l.status === 'pending').length}
-            </span>
-          )}
-        </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={empPage === 'leave'}
+            className={`asas-employee-tab ${empPage === 'leave' ? 'active' : ''}`}
+            onClick={() => { setEmpPage('leave'); loadLeaves(); }}
+          >
+            <Icon name="receipt" />
+            <span className="asas-tab-text-full">تقديم طلب إجازة</span>
+            <span className="asas-tab-text-short">طلب إجازة</span>
+            {leaves.filter(l => l.status === 'pending').length > 0 && (
+              <span className="asas-tab-badge urgent">
+                {leaves.filter(l => l.status === 'pending').length}
+              </span>
+            )}
+          </button>
 
-        <button
-          type="button"
-          role="tab"
-          aria-selected={empPage === 'history'}
-          className={`asas-employee-tab ${empPage === 'history' ? 'active' : ''}`}
-          onClick={() => setEmpPage('history')}
-        >
-          <Icon name="calendar" />
-          <span>السجل الحظوري</span>
-          <span className="asas-badge" style={{ fontSize: 10, padding: '1px 6px', marginRight: 4 }}>
-            {(data?.records || []).length}
-          </span>
-        </button>
-      </nav>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={empPage === 'history'}
+            className={`asas-employee-tab ${empPage === 'history' ? 'active' : ''}`}
+            onClick={() => setEmpPage('history')}
+          >
+            <Icon name="calendar" />
+            <span className="asas-tab-text-full">السجل الحظوري</span>
+            <span className="asas-tab-text-short">السجل</span>
+            {(data?.records || []).length > 0 && (
+              <span className="asas-tab-badge">
+                {(data?.records || []).length}
+              </span>
+            )}
+          </button>
+        </nav>
+      </div>
 
       {error && (
         <div className="asas-notice error" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
