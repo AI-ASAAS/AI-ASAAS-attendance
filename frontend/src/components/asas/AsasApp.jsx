@@ -1570,19 +1570,19 @@ function AsasAppInner({ defaultAction = 'auto' }) {
             <div className="asas-form-grid">
               {rows.map(s => (
                 <Glass key={s.id} style={{ padding: 22 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <div>
-                      <p className="asas-eyebrow" style={{ fontSize: 11, marginBottom: 2 }}>سياسة واحتساب الدوام</p>
-                      <h2 style={{ margin: 0, fontSize: 18 }}>{s.name}</h2>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span className="asas-badge inside" style={{ fontSize: 11 }}>
-                        {s.close_policy === 'scheduled' ? 'إغلاق تلقائي' : 'انصراف فعلي'}
-                      </span>
-                      <div className="asas-stat-icon-wrap" style={{ width: 38, height: 38, borderRadius: 12 }}>
-                        <Icon name="clock" style={{ width: 18, height: 18, color: 'var(--accent)' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div className="asas-tile-icon">
+                        <Icon name="clock" width={14} height={14} />
+                      </div>
+                      <div>
+                        <p className="asas-eyebrow" style={{ fontSize: 11, marginBottom: 2 }}>سياسة واحتساب الدوام</p>
+                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{s.name}</h2>
                       </div>
                     </div>
+                    <span className="asas-badge inside" style={{ fontSize: 11, padding: '4px 9px', borderRadius: 6, flexShrink: 0 }}>
+                      {s.close_policy === 'scheduled' ? 'إغلاق تلقائي' : 'انصراف فعلي'}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, color: 'var(--text-2)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--glass-inset)', borderRadius: 10, border: '1px solid var(--hairline)' }}>
@@ -1597,7 +1597,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>خصم مدد المغادرة:</span>
-                      <span className={`asas-badge ${s.deduct_away ? 'urgent' : 'inside'}`} style={{ fontSize: 11 }}>
+                      <span className={`asas-badge ${s.deduct_away ? 'urgent' : 'inside'}`} style={{ fontSize: 11, borderRadius: 6 }}>
                         {s.deduct_away ? 'مفعّل' : 'غير مفعّل'}
                       </span>
                     </div>
@@ -1801,8 +1801,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               <Glass style={{ gridColumn: '1 / -1', padding: 26 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                   <h2 style={{ margin: 0, fontSize: 20 }}>إعدادات النظام وسياسات التشغيل الحقيقية</h2>
-                  <div className="asas-stat-icon-wrap" style={{ width: 36, height: 36, borderRadius: 10 }}>
-                    <Icon name="settings" style={{ width: 18, height: 18, color: 'var(--accent)' }} />
+                  <div className="asas-tile-icon" style={{ width: 30, height: 30 }}>
+                    <Icon name="settings" width={15} height={15} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1859,8 +1859,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               <Glass style={{ padding: 22 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <h3 style={{ margin: 0, fontSize: 16 }}>أمان البيانات والتشفير</h3>
-                  <div className="asas-stat-icon-wrap" style={{ width: 34, height: 34, borderRadius: 10 }}>
-                    <Icon name="vault" style={{ width: 17, height: 17, color: 'var(--accent)' }} />
+                  <div className="asas-tile-icon">
+                    <Icon name="vault" width={14} height={14} />
                   </div>
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1873,8 +1873,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               <Glass style={{ padding: 22 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <h3 style={{ margin: 0, fontSize: 16 }}>الهوية والخطوط</h3>
-                  <div className="asas-stat-icon-wrap" style={{ width: 34, height: 34, borderRadius: 10 }}>
-                    <Icon name="sparkle" style={{ width: 17, height: 17, color: 'var(--accent)' }} />
+                  <div className="asas-tile-icon">
+                    <Icon name="sparkle" width={14} height={14} />
                   </div>
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: 8 }}>
