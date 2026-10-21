@@ -698,13 +698,8 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    if(b.fix.accuracy>maxAccuracy){
     error('GPS_LOW_ACCURACY',`إشارة تحديد الموقع ضعيفة (الدقة: ${Math.round(b.fix.accuracy)} متر، والحد الأقصى للدقة المقبولة هو ${maxAccuracy} متر). يرجى تفعيل "الموقع الدقيق Precise Location" في الهاتف والاقتراب من نافذة والمحاولة مجدداً.`,422);
    }
-   const maxAllowedDist=b.action==='enter'?Number(branch.entry_radius):Math.max(Number(branch.exit_radius),500);
-   if(dist>maxAllowedDist){
-    if(b.action==='enter'){
-     error('GPS_REJECTED',`أنت خارج نطاق الفرع (${dist} متر). النطاق المسموح للدخول: ${branch.entry_radius} متر. يرجى التواجد في مقر الفرع أو تعديل إحداثيات الفرع في الإدارة لموقعك الحالي.`,422);
-    }else{
-     error('GPS_REJECTED',`أنت بعيد جداً عن مقر الفرع (${dist} متر) لتسجيل الخروج يدوياً. يمكنك مغادرة الموقع ليتم تسجيل خروجك التلقائي.`,422);
-    }
+   if(b.action==='enter'&&dist>Number(branch.entry_radius)){
+    error('GPS_REJECTED',`أنت خارج نطاق الفرع (${dist} متر). النطاق المسموح للدخول: ${branch.entry_radius} متر. يرجى التواجد في مقر الفرع أو تعديل إحداثيات الفرع في الإدارة لموقعك الحالي.`,422);
    }
    location.state='inside';
   }
@@ -768,11 +763,15 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    location.state=currentGpsState==='inside'?'inside':(dist>exitRadius?'outside':(location.state||'inside'));
    candidate=policy.advanceExit(record.exit_candidate,location,b.fix,branch,now);
 
-   // Accelerate exit if clearly distant (>= 1.5x exit radius) or confirmed by policy
-   if(dist>=exitRadius*1.5&&b.fix.accuracy<=maxAcc&&candidate?.count>=1){
-    automatic=true;
+   // Accelerate exit when outside perimeter:
+   if(dist>exitRadius||location.state==='outside'){
+    if(dist>=exitRadius*1.2||candidate?.count>=2||(candidate?.since&&(now-Date.parse(candidate.since))>=8000)){
+     automatic=true;
+    }else{
+     automatic=candidate.exit;
+    }
    }else{
-    automatic=candidate.exit;
+    automatic=false;
    }
 
    if(candidate.ignored&&!automatic){

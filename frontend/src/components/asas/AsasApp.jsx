@@ -234,7 +234,7 @@ function Records({ rows = [], onEdit, canEdit }) {
                 <td><span style={{ color: isInside ? 'var(--partial)' : 'var(--text)' }}>{time(r.last_out)}</span></td>
                 <td>
                   <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`}>
-                    <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : 'pause'} style={{ width: 13, height: 13 }} />
+                    <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : 'logOut'} style={{ width: 13, height: 13 }} />
                     {statusLabel}
                   </span>
                 </td>
@@ -2035,7 +2035,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                               <p className="asas-muted" style={{ fontSize: 12 }}>يُعلق عند المخرج · مخصص حصرياً لتسجيل الانصراف والخروج (لا يقبل الدخول)</p>
                               <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
                                 <a className="asas-btn sm" href={exitUrl} target="_blank" rel="noreferrer" style={{ borderColor: 'var(--unpaid)', color: 'var(--unpaid)' }}>
-                                  <Icon name="pause" />
+                                  <Icon name="logOut" />
                                   فتح صفحة الخروج
                                 </a>
                                 <button className="asas-btn sm" onClick={() => setShowPrintModal('exit')}>
@@ -2850,6 +2850,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   autoCheckInRef.current = autoCheckIn;
   const hasAutoEnteredRef = useRef(false);
   const hasWarnedExitRef = useRef(false);
+  const exitTimerRef = useRef(null);
   const branchCoordsRef = useRef({
     latitude: 15.306023604211699,
     longitude: 44.19817994690613,
@@ -3131,16 +3132,29 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           (dist != null && dist <= effectiveRadius)
         );
 
-        // Warning when on duty and outside perimeter
-        if (isInside && (res.pending_exit > 0 || (!isCurrentlyInside && dist != null && dist > exitRadius))) {
+        // Auto-exit acceleration: when employee is on duty and outside the exit perimeter
+        if (isInside && !isCurrentlyInside && dist != null && dist > exitRadius) {
           if (!hasWarnedExitRef.current) {
             hasWarnedExitRef.current = true;
             playChime('warning');
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
             sendSystemNotification('⚠️ تنبيه مغادرة نطاق العمل', `تم رصد تواجدك خارج نطاق العمل (${dist} م). جاري التحقق من تأكيد الانصراف التلقائي.`);
           }
+          // Immediately schedule verification fix in 2.5s to confirm auto-exit
+          if (!exitTimerRef.current) {
+            exitTimerRef.current = setTimeout(() => {
+              exitTimerRef.current = null;
+              if (lastCoordsRef.current?.coords) {
+                sendLocationFix(lastCoordsRef.current.coords, Date.now(), true);
+              }
+            }, 2500);
+          }
         } else {
           hasWarnedExitRef.current = false;
+          if (exitTimerRef.current) {
+            clearTimeout(exitTimerRef.current);
+            exitTimerRef.current = null;
+          }
         }
 
         // Auto check-in if arrived at branch while off duty
@@ -3250,14 +3264,14 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           { enableHighAccuracy: true, timeout: 5000, maximumAge: 4000 }
         );
       }
-    }, geofenceStatus.pending > 0 ? 5000 : 8000);
+    }, (geofenceStatus.pending > 0 || (isInside && geofenceStatus.distance > 180)) ? 3000 : 8000);
 
     return () => {
       isCancelled = true;
       navigator.geolocation.clearWatch(watchId);
       clearInterval(intervalId);
     };
-  }, [sendLocationFix, geofenceStatus.pending]);
+  }, [sendLocationFix, geofenceStatus.pending, geofenceStatus.distance, isInside]);
 
   return (
     <div className="asas-employee-page">
@@ -3382,7 +3396,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               <div>
                 <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block' }}>الحالة اللحظية:</span>
                 <strong style={{ fontSize: 16, color: isInside ? 'var(--paid)' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                  <Icon name={isInside ? 'checkCircle' : 'pause'} style={{ width: 18, height: 18 }} />
+                  <Icon name={isInside ? 'checkCircle' : 'logOut'} style={{ width: 18, height: 18 }} />
                   {isInside ? 'داخل مقر العمل (حضور مفتوح)' : (todayRecord?.last_out ? 'تم تسجيل الانصراف وإنهاء الدوام' : 'جاهز لتسجيل الحضور')}
                 </strong>
               </div>
@@ -3508,7 +3522,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ color: 'var(--text-3)' }}>الرمز المقترن:</span>
                     <span className={`asas-badge ${isEnter ? 'inside' : isExit ? 'urgent' : 'outside'}`} style={{ fontSize: 11 }}>
-                      <Icon name={isEnter ? 'logIn' : isExit ? 'pause' : 'qrCode'} style={{ width: 13, height: 13 }} />
+                      <Icon name={isEnter ? 'logIn' : isExit ? 'logOut' : 'qrCode'} style={{ width: 13, height: 13 }} />
                       {isEnter ? 'كود الحضور (دخول فقط)' : isExit ? 'كود الانصراف (خروج فقط)' : 'رمز الفرع'}
                     </span>
                   </div>
@@ -3532,7 +3546,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               const isExitQr = meta?.action === 'exit';
               const targetAction = isEnterQr ? 'enter' : (isExitQr ? 'exit' : (isInside ? 'exit' : 'enter'));
               const btnColor = targetAction === 'exit' ? 'danger' : 'primary';
-              const btnIcon = targetAction === 'exit' ? 'pause' : 'logIn';
+              const btnIcon = targetAction === 'exit' ? 'logOut' : 'logIn';
               const btnLabel = isEnterQr
                 ? 'تسجيل الحضور الآن (بكود الدخول)'
                 : (isExitQr
@@ -3562,7 +3576,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 دخول يدوي
               </button>
               <button className="asas-btn" onClick={() => act('exit')} disabled={busy}>
-                <Icon name="pause" />
+                <Icon name="logOut" />
                 خروج يدوي
               </button>
             </div>
