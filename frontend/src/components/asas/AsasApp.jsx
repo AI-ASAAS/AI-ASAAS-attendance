@@ -3075,7 +3075,8 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         }
 
         const dist = res.distance != null ? res.distance : null;
-        const isInsideRadius = res.state === 'inside' || (dist != null && dist <= 80);
+        const entryRadius = res.branch_radius?.entry || res.branch?.entry_radius || 120;
+        const isInsideRadius = res.state === 'inside' || (dist != null && dist <= entryRadius);
 
         // Warning when on duty and outside perimeter
         if (isInside && (res.pending_exit > 0 || res.state === 'outside')) {
@@ -3135,48 +3136,68 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   const triggerLocationCheck = useCallback(() => {
     if (typeof window === 'undefined' || !navigator.geolocation) return;
     setCheckingGps(true);
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        sendLocationFix(pos.coords, pos.timestamp, true);
-        setTimeout(() => setCheckingGps(false), 600);
-      },
-      err => {
-        setError('تعذر تحديد الموقع بدقة: ' + err.message);
-        setCheckingGps(false);
-      },
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
-    );
+    const onPos = (pos) => {
+      sendLocationFix(pos.coords, pos.timestamp, true);
+      setTimeout(() => setCheckingGps(false), 500);
+    };
+    const onFallback = (err) => {
+      navigator.geolocation.getCurrentPosition(
+        onPos,
+        finalErr => {
+          setError('تعذر تحديد الموقع: ' + (finalErr?.message || err?.message));
+          setCheckingGps(false);
+        },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 10000 }
+      );
+    };
+    navigator.geolocation.getCurrentPosition(onPos, onFallback, { enableHighAccuracy: true, timeout: 5000, maximumAge: 2000 });
   }, [sendLocationFix]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !navigator.geolocation) return;
 
     let isCancelled = false;
+    const onPos = (pos) => {
+      if (!isCancelled && pos?.coords) {
+        sendLocationFix(pos.coords, pos.timestamp);
+      }
+    };
 
-    // 1. Initial quick fix
+    // 1. Initial quick fix with immediate cached fallback
     navigator.geolocation.getCurrentPosition(
-      pos => { if (!isCancelled) sendLocationFix(pos.coords, pos.timestamp, true); },
-      () => {},
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 5000 }
+      onPos,
+      () => {
+        if (!isCancelled) {
+          navigator.geolocation.getCurrentPosition(onPos, () => {}, { enableHighAccuracy: false, timeout: 6000, maximumAge: 15000 });
+        }
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 5000 }
     );
 
-    // 2. Continuous watchPosition for movement tracking
-    const watchId = navigator.geolocation.watchPosition(
-      pos => { if (!isCancelled) sendLocationFix(pos.coords, pos.timestamp); },
-      () => {},
+    // 2. Continuous watchPosition for live movement tracking
+    let watchId = navigator.geolocation.watchPosition(
+      onPos,
+      (err) => {
+        if (!isCancelled && err?.code === 3) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = navigator.geolocation.watchPosition(onPos, () => {}, { enableHighAccuracy: false, timeout: 10000, maximumAge: 5000 });
+        }
+      },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 }
     );
 
-    // 3. Heartbeat (10s if visible, accelerated to 6s if pending exit)
+    // 3. Heartbeat (8s if visible, accelerated to 5s if pending exit)
     const intervalId = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         navigator.geolocation.getCurrentPosition(
-          pos => { if (!isCancelled) sendLocationFix(pos.coords, pos.timestamp); },
-          () => {},
-          { enableHighAccuracy: true, timeout: 6000, maximumAge: 4000 }
+          onPos,
+          () => {
+            navigator.geolocation.getCurrentPosition(onPos, () => {}, { enableHighAccuracy: false, timeout: 5000, maximumAge: 10000 });
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 4000 }
         );
       }
-    }, geofenceStatus.pending > 0 ? 6000 : 10000);
+    }, geofenceStatus.pending > 0 ? 5000 : 8000);
 
     return () => {
       isCancelled = true;
@@ -3354,26 +3375,37 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                     width: 9,
                     height: 9,
                     borderRadius: '50%',
-                    background: geofenceStatus.state === 'inside' ? 'var(--paid)' : 'var(--unpaid)',
-                    boxShadow: geofenceStatus.state === 'inside' ? '0 0 10px var(--paid)' : '0 0 10px var(--unpaid)',
+                    background: geofenceStatus.state === 'inside'
+                      ? 'var(--paid)'
+                      : (geofenceStatus.state === 'idle' ? 'var(--accent)' : 'var(--unpaid)'),
+                    boxShadow: geofenceStatus.state === 'inside'
+                      ? '0 0 10px var(--paid)'
+                      : (geofenceStatus.state === 'idle' ? '0 0 10px var(--accent)' : '0 0 10px var(--unpaid)'),
                     display: 'inline-block',
                     flexShrink: 0
                   }}
                 />
                 <strong style={{ color: 'var(--text)' }}>مراقبة النطاق الجغرافي:</strong>
-                <span style={{ color: geofenceStatus.state === 'inside' ? 'var(--paid)' : 'var(--unpaid)', fontWeight: 700 }}>
-                  {isInside
-                    ? (geofenceStatus.pending > 0
-                        ? `قيد فحص وتأكيد المغادرة (${geofenceStatus.remaining_seconds || 15} ث)`
-                        : (geofenceStatus.state === 'inside' ? 'متواجد داخل مقر العمل' : 'خارج نطاق العمل'))
-                    : (geofenceStatus.state === 'inside'
-                        ? 'متواجد داخل مقر العمل (جاهز للدخول)'
-                        : 'خارج نطاق التغطية الجغرافية')}
+                <span style={{
+                  color: geofenceStatus.state === 'inside'
+                    ? 'var(--paid)'
+                    : (geofenceStatus.state === 'idle' ? 'var(--accent)' : 'var(--unpaid)'),
+                  fontWeight: 700
+                }}>
+                  {geofenceStatus.state === 'idle'
+                    ? 'جاري فحص الإحداثيات والتواجد...'
+                    : (isInside
+                        ? (geofenceStatus.pending > 0
+                            ? `قيد فحص وتأكيد المغادرة (${geofenceStatus.remaining_seconds || 15} ث)`
+                            : (geofenceStatus.state === 'inside' ? 'متواجد داخل مقر العمل' : 'خارج نطاق العمل'))
+                        : (geofenceStatus.state === 'inside'
+                            ? 'متواجد داخل مقر العمل (جاهز للدخول)'
+                            : 'خارج نطاق مقر العمل'))}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ color: 'var(--text-3)', fontSize: 11.5 }}>
-                  {geofenceStatus.distance != null ? `المسافة الحالية: ${geofenceStatus.distance} م` : 'جهاز الفحص نشط'}
+                  {geofenceStatus.distance != null ? `المسافة الحالية: ${geofenceStatus.distance} م` : 'جاري فحص المسافة...'}
                 </span>
                 <button
                   type="button"
