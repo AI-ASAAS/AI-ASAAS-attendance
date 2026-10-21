@@ -9,12 +9,16 @@ export const metadata = {
   icons: {
     icon: [
       { url: '/brand/attendance_icon_user_check.svg', type: 'image/svg+xml' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
       { url: '/favicon.png', type: 'image/png' },
     ],
     apple: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
       { url: '/brand/attendance_icon_user_check.svg', type: 'image/svg+xml' },
     ],
-    shortcut: ['/brand/attendance_icon_user_check.svg'],
+    shortcut: ['/icon-192.png'],
   },
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'أساس حضور' },
@@ -31,7 +35,10 @@ export default function RootLayout({ children }) {
     <html lang="ar" dir="rtl">
       <head>
         <link rel="icon" type="image/svg+xml" href="/brand/attendance_icon_user_check.svg" />
-        <link rel="apple-touch-icon" href="/brand/attendance_icon_user_check.svg" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
