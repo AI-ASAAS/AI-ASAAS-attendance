@@ -3332,107 +3332,59 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               </div>
             </div>
 
-            {/* جهاز الفحص والمراقبة الجغرافية الذكي */}
+            {/* Live Geofence Monitoring Capsule (التصميم الكبسولي السيادي الأصلي) */}
             <div
-              className="asas-geofence-card"
               style={{
-                background: 'linear-gradient(135deg, rgba(20, 24, 33, 0.88) 0%, rgba(15, 18, 26, 0.96) 100%)',
-                border: `1px solid ${
-                  isInside
-                    ? (geofenceStatus.pending > 0 ? 'rgba(239, 68, 68, 0.45)' : 'rgba(34, 197, 94, 0.35)')
-                    : (geofenceStatus.state === 'inside' ? 'rgba(34, 197, 94, 0.45)' : 'var(--hairline)')
-                }`,
-                borderRadius: 16,
-                padding: '16px 18px',
-                marginBottom: 16,
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
-                position: 'relative',
-                overflow: 'hidden'
+                background: 'var(--glass-inset)',
+                border: '1px solid var(--hairline)',
+                padding: '10px 14px',
+                borderRadius: 12,
+                marginBottom: 14,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                fontSize: 12.5,
+                flexWrap: 'wrap'
               }}
             >
-              {/* Device Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div className="asas-radar-wrap" style={{ position: 'relative', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span className={`asas-radar-pulse ${geofenceStatus.state === 'inside' ? 'pulse-green' : (geofenceStatus.pending > 0 ? 'pulse-red' : 'pulse-amber')}`} />
-                    <Icon name="mapPin" style={{ width: 16, height: 16, color: geofenceStatus.state === 'inside' ? 'var(--paid)' : (geofenceStatus.pending > 0 ? 'var(--unpaid)' : 'var(--accent)'), position: 'relative', zIndex: 2 }} />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: 14, color: 'var(--text)' }}>جهاز الفحص والمراقبة الجغرافية</strong>
-                      <span className={`asas-badge ${geofenceStatus.state === 'inside' ? 'inside' : (geofenceStatus.pending > 0 ? 'urgent' : 'outside')}`} style={{ fontSize: 11, padding: '2px 8px' }}>
-                        {isInside
-                          ? (geofenceStatus.pending > 0 ? `⚠️ قيد تأكيد الخروج (${geofenceStatus.remaining_seconds || 15} ث)` : '🟢 على رأس العمل (النطاق مؤكد)')
-                          : (geofenceStatus.state === 'inside' ? '🎯 داخل نطاق الفرع (جاهز للدخول)' : '📍 خارج نطاق الفرع')}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
-                      {geofenceStatus.lastChecked ? `آخر فحص لحظي: ${geofenceStatus.lastChecked}` : 'جاري الفحص المباشر عبر الأقمار الصناعية...'}
-                    </div>
-                  </div>
-                </div>
-
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  style={{
+                    width: 9,
+                    height: 9,
+                    borderRadius: '50%',
+                    background: geofenceStatus.state === 'inside' ? 'var(--paid)' : 'var(--unpaid)',
+                    boxShadow: geofenceStatus.state === 'inside' ? '0 0 10px var(--paid)' : '0 0 10px var(--unpaid)',
+                    display: 'inline-block',
+                    flexShrink: 0
+                  }}
+                />
+                <strong style={{ color: 'var(--text)' }}>مراقبة النطاق الجغرافي:</strong>
+                <span style={{ color: geofenceStatus.state === 'inside' ? 'var(--paid)' : 'var(--unpaid)', fontWeight: 700 }}>
+                  {isInside
+                    ? (geofenceStatus.pending > 0
+                        ? `قيد فحص وتأكيد المغادرة (${geofenceStatus.remaining_seconds || 15} ث)`
+                        : (geofenceStatus.state === 'inside' ? 'متواجد داخل مقر العمل' : 'خارج نطاق العمل'))
+                    : (geofenceStatus.state === 'inside'
+                        ? 'متواجد داخل مقر العمل (جاهز للدخول)'
+                        : 'خارج نطاق التغطية الجغرافية')}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: 'var(--text-3)', fontSize: 11.5 }}>
+                  {geofenceStatus.distance != null ? `المسافة الحالية: ${geofenceStatus.distance} م` : 'جهاز الفحص نشط'}
+                </span>
                 <button
                   type="button"
                   className="asas-btn sm"
-                  style={{ height: 30, fontSize: 11.5, display: 'flex', alignItems: 'center', gap: 6 }}
+                  style={{ height: 22, padding: '0 6px', fontSize: 11, border: 'none', background: 'transparent', color: 'var(--accent)', cursor: 'pointer' }}
                   onClick={triggerLocationCheck}
                   disabled={checkingGps}
-                  title="تحديث الموقع اللحظي الآن"
+                  title="إعادة فحص الإحداثيات اللحظية"
                 >
-                  <Icon name="refresh" className={checkingGps ? 'asas-spin' : ''} style={{ width: 13, height: 13 }} />
-                  {checkingGps ? 'جاري الفحص...' : 'فحص الإحداثيات الآن'}
+                  <Icon name="refresh" className={checkingGps ? 'asas-spin' : ''} style={{ width: 12, height: 12 }} />
                 </button>
-              </div>
-
-              {/* Metrics Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginTop: 10 }}>
-                <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--hairline)', borderRadius: 10, padding: '8px 12px' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>المسافة عن مقر الفرع</div>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: geofenceStatus.state === 'inside' ? 'var(--paid)' : 'var(--text)', marginTop: 2 }}>
-                    {geofenceStatus.distance != null ? `${geofenceStatus.distance} م` : 'جاري الفحص...'}
-                  </div>
-                </div>
-                <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--hairline)', borderRadius: 10, padding: '8px 12px' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>النطاق المسموح به</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginTop: 3 }}>
-                    {isInside ? 'حتى 120 م (خروج)' : 'حتى 80 م (دخول)'}
-                  </div>
-                </div>
-                <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--hairline)', borderRadius: 10, padding: '8px 12px' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>دقة إشارة GPS</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: geofenceStatus.accuracy && geofenceStatus.accuracy <= 30 ? 'var(--paid)' : 'var(--accent)', marginTop: 4 }}>
-                    {geofenceStatus.accuracy != null ? `±${geofenceStatus.accuracy} م (${geofenceStatus.accuracy <= 30 ? 'ممتازة' : 'جيدة'})` : '—'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Controls Footer */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--hairline)', fontSize: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none', color: 'var(--text-2)' }}>
-                  <input
-                    type="checkbox"
-                    checked={autoCheckIn}
-                    onChange={e => {
-                      setAutoCheckIn(e.target.checked);
-                      if (typeof localStorage !== 'undefined') localStorage.setItem('asas_auto_checkin', e.target.checked ? 'true' : 'false');
-                    }}
-                    style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
-                  />
-                  <span>⚡ تفعيل التحضير التلقائي الفوري فور الوصول لمقر العمل</span>
-                </label>
-
-                {notifPermission !== 'granted' && typeof Notification !== 'undefined' && (
-                  <button
-                    type="button"
-                    className="asas-btn sm"
-                    style={{ height: 26, fontSize: 11, padding: '0 10px', background: 'rgba(217, 119, 6, 0.15)', borderColor: 'rgba(217, 119, 6, 0.4)', color: '#f59e0b' }}
-                    onClick={requestNotifPermission}
-                  >
-                    <Icon name="bell" style={{ width: 12, height: 12 }} />
-                    تفعيل الإشعارات الفورية
-                  </button>
-                )}
               </div>
             </div>
 
@@ -3468,22 +3420,17 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               const isEnterQr = meta?.action === 'enter';
               const isExitQr = meta?.action === 'exit';
               const targetAction = isEnterQr ? 'enter' : (isExitQr ? 'exit' : (isInside ? 'exit' : 'enter'));
-              const isReadyInside = !isInside && geofenceStatus.state === 'inside';
               const btnColor = targetAction === 'exit' ? 'danger' : 'primary';
               const btnIcon = targetAction === 'exit' ? 'pause' : 'logIn';
               const btnLabel = isEnterQr
                 ? 'تسجيل الحضور الآن (بكود الدخول)'
                 : (isExitQr
                   ? 'تسجيل الانصراف الآن (بكود الخروج)'
-                  : (isInside
-                    ? 'تسجيل الانصراف التلقائي الفوري'
-                    : (isReadyInside
-                      ? '✨ تسجيل الحضور التلقائي الفوري (أنت داخل النطاق المصرح)'
-                      : 'تسجيل الحضور التلقائي الآن')));
+                  : (isInside ? 'تسجيل الانصراف التلقائي الآن' : 'تسجيل الحضور التلقائي الآن'));
 
               return (
                 <button
-                  className={`asas-btn ${btnColor} ${isReadyInside ? 'asas-btn-glow' : ''}`}
+                  className={`asas-btn ${btnColor}`}
                   disabled={busy}
                   onClick={() => act(targetAction)}
                   style={{ width: '100%', height: 52, fontSize: 16, marginBottom: 10 }}
