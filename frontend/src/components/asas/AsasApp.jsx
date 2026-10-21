@@ -463,6 +463,172 @@ function InstallAppModal({ onClose, installPrompt }) {
   );
 }
 
+// A4 Official QR Poster Modal (منظومة أساس السيادية)
+function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
+  const [printMode, setPrintMode] = useState(initialMode || 'both');
+
+  function handlePrint() {
+    window.print();
+  }
+
+  const fixUrl = (u) => {
+    if (!u) return 'https://ai-asaas-attendance.vercel.app/asas';
+    try {
+      const p = new URL(u, 'https://ai-asaas-attendance.vercel.app');
+      return `https://ai-asaas-attendance.vercel.app/asas${p.search}${p.hash}`;
+    } catch (e) {
+      return 'https://ai-asaas-attendance.vercel.app/asas';
+    }
+  };
+
+  const enterUrl = fixUrl(qr?.enter?.url || qr?.url);
+  const exitUrl = fixUrl(qr?.exit?.url || qr?.url);
+  const effectiveBranch = qr?.branch || branchName || 'المقر الرئيسي';
+  const currentDate = new Intl.DateTimeFormat('ar-YE', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Aden' }).format(new Date());
+
+  return (
+    <div className="asas-modal-backdrop asas-print-mode" onClick={onClose}>
+      <section className="asas-modal asas-a4-preview-modal" onClick={e => e.stopPropagation()}>
+        <div className="asas-modal-head">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="printer" style={{ width: 22, height: 22, color: 'var(--accent)' }} />
+            <div>
+              <h2 style={{ fontSize: 18, margin: 0 }}>معاينة وطباعة ملصق A4 المعتمد</h2>
+              <p className="asas-muted" style={{ fontSize: 11.5, margin: 0 }}>مُسطر ومتوافق بدقة مع معايير طباعة الورق الرسمي (A4 Portrait)</p>
+            </div>
+          </div>
+          <button className="asas-btn sm" onClick={onClose} aria-label="إغلاق">
+            <Icon name="close" />
+          </button>
+        </div>
+
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--hairline)', display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', background: 'var(--glass-inset)' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>تنسيق الورقة:</span>
+            <button
+              type="button"
+              className={`asas-btn sm ${printMode === 'both' ? 'primary' : ''}`}
+              onClick={() => setPrintMode('both')}
+            >
+              ملصق مزدوج (دخول + خروج)
+            </button>
+            <button
+              type="button"
+              className={`asas-btn sm ${printMode === 'enter' ? 'primary' : ''}`}
+              onClick={() => setPrintMode('enter')}
+            >
+              كود الدخول فقط (A4 كامل)
+            </button>
+            <button
+              type="button"
+              className={`asas-btn sm ${printMode === 'exit' ? 'primary' : ''}`}
+              onClick={() => setPrintMode('exit')}
+            >
+              كود الخروج فقط (A4 كامل)
+            </button>
+          </div>
+
+          <button className="asas-btn primary" onClick={handlePrint}>
+            <Icon name="printer" />
+            طباعة الملصق الآن (A4)
+          </button>
+        </div>
+
+        <div className="asas-a4-preview-scroll">
+          {/* PRINTABLE AREA */}
+          <div className="asas-printable-area" id="asas-a4-printable">
+            <div className="asas-a4-sheet">
+              <div className="asas-a4-border">
+                {/* Official Ruled Header */}
+                <div className="asas-a4-header">
+                  <div className="asas-a4-logo-row">
+                    <div style={{ textAlign: 'right' }}>
+                      <p className="asas-a4-brand-title">مَنظُومَة أَسَاس السِّيَادِيَّة</p>
+                      <p className="asas-a4-subtitle">AI-ASAAS SOVEREIGN ATTENDANCE SYSTEM</p>
+                    </div>
+                    <div style={{ textAlign: 'left', fontSize: 11, color: '#55524e', fontWeight: 600 }}>
+                      <div>وثيقة اعتماد المقر الرسمية</div>
+                      <div dir="ltr" style={{ color: '#8c6928', fontWeight: 700 }}>REV-{qr?.revision || 1}</div>
+                    </div>
+                  </div>
+
+                  <div className="asas-a4-branch-badge">
+                    {effectiveBranch}
+                  </div>
+                  <div className="asas-a4-meta-line">
+                    رمز الاستجابة السريعة (QR) الدائم والمشفر بخوارزمية HMAC-SHA256 · مقيد جغرافياً بنطاق المقر وأجهزة الموظفين
+                  </div>
+                </div>
+
+                {/* Codes Ruled Body */}
+                <div className={`asas-a4-codes-grid ${printMode !== 'both' ? 'single' : ''}`}>
+                  {(printMode === 'both' || printMode === 'enter') && (
+                    <div className="asas-a4-code-card enter">
+                      <div className="asas-a4-code-title enter">
+                        كود تسجيل الحضور (دخول فقط)
+                      </div>
+                      <div className="asas-a4-qr-frame">
+                        <QRCodeSVG value={enterUrl} size={printMode === 'both' ? 200 : 280} level="H" includeMargin />
+                      </div>
+                      <div className="asas-a4-code-desc">
+                        يُعلق عند مدخل المقر لتسجيل بدء الدوام الرسمي
+                      </div>
+                      <ol className="asas-a4-steps-list">
+                        <li>وجّه كاميرا الهاتف أو تطبيق أساس نحو الرمز لتسجيل الحضور.</li>
+                        <li>تأكد من تفعيل خدمة تحديد الموقع الجغرافي (GPS) بهاتفك.</li>
+                        <li>مخصص حصرياً لتسجيل الدخول والعودة (لا يقبل الخروج).</li>
+                      </ol>
+                    </div>
+                  )}
+
+                  {(printMode === 'both' || printMode === 'exit') && (
+                    <div className="asas-a4-code-card exit">
+                      <div className="asas-a4-code-title exit">
+                        كود تسجيل الانصراف (خروج فقط)
+                      </div>
+                      <div className="asas-a4-qr-frame">
+                        <QRCodeSVG value={exitUrl} size={printMode === 'both' ? 200 : 280} level="H" includeMargin />
+                      </div>
+                      <div className="asas-a4-code-desc">
+                        يُعلق عند مخرج المقر لتوثيق إنهاء الدوام الرسمي
+                      </div>
+                      <ol className="asas-a4-steps-list">
+                        <li>وجّه كاميرا الهاتف أو تطبيق أساس نحو الرمز عند المغادرة.</li>
+                        <li>يتم توثيق وقت الانصراف بدقة واحتساب ساعات العمل الفعلية.</li>
+                        <li>مخصص حصرياً لتسجيل الانصراف والخروج (لا يقبل الدخول).</li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
+
+                {/* Official Ruled Footer */}
+                <div className="asas-a4-footer">
+                  <div className="asas-a4-warning-box">
+                    تنبيه نظامي وحوكمة إدارية: هذا الرمز وثيقة معتمدة ومقيدة جغرافياً بنطاق هذا المقر وبأجهزة الموظفين المسجلة. أي محاولة للمسح من خارج النطاق أو استخدام صور منقولة تُعد مخالفة لنظام العمل وترصد آلياً في سجل الرقابة والحوكمة.
+                  </div>
+                  <div className="asas-a4-footer-bottom">
+                    <span>منظومة أساس السيادية للرقابة والتحضير الذكي</span>
+                    <span>تاريخ الاعتماد: {currentDate}</span>
+                    <span dir="ltr">ai-asaas-attendance.vercel.app</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="asas-modal-footer" style={{ justifyContent: 'space-between' }}>
+          <button className="asas-btn" onClick={onClose}>إغلاق</button>
+          <button className="asas-btn primary" onClick={handlePrint}>
+            <Icon name="printer" />
+            طباعة الملصق الآن (A4)
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // Profile & Security Modal
 function ProfileModal({ user, onClose, onUpdated }) {
   const isImageAvatar = user?.avatar && (user.avatar.startsWith('data:image/') || user.avatar.startsWith('http') || user.avatar.startsWith('/'));
@@ -798,6 +964,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
   const [showAnnouncementsModal, setShowAnnouncementsModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
 
   useEffect(() => {
@@ -1789,10 +1956,10 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                               <h2 style={{ fontSize: 22, marginTop: 8 }}>{qr.branch}</h2>
                               <p className="asas-muted">رموز QR الدائمة المشفرة بـ HMAC-SHA256 · صالحة ومستمرة حتى الإبطال الإداري</p>
                             </div>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                              <button className="asas-btn" onClick={() => window.print()}>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              <button className="asas-btn primary" onClick={() => setShowPrintModal('both')}>
                                 <Icon name="printer" />
-                                طباعة الملصق (A4)
+                                معاينة وطباعة ملصق (A4)
                               </button>
                               <button className="asas-btn danger" onClick={async () => {
                                 const reason = window.prompt('سبب إبطال الرموز وتجديدها:');
@@ -1816,10 +1983,16 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                                 <QRCodeSVG value={enterUrl} size={210} level="M" includeMargin />
                               </div>
                               <p className="asas-muted" style={{ fontSize: 12 }}>يُعلق عند المدخل · مخصص حصرياً لتسجيل الدخول والعودة (لا يقبل الخروج)</p>
-                              <a className="asas-btn primary sm" href={enterUrl} target="_blank" rel="noreferrer" style={{ marginTop: 8 }}>
-                                <Icon name="logIn" />
-                                فتح صفحة الدخول
-                              </a>
+                              <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <a className="asas-btn primary sm" href={enterUrl} target="_blank" rel="noreferrer">
+                                  <Icon name="logIn" />
+                                  فتح صفحة الدخول
+                                </a>
+                                <button className="asas-btn sm" onClick={() => setShowPrintModal('enter')}>
+                                  <Icon name="printer" />
+                                  طباعة A4
+                                </button>
+                              </div>
                             </div>
 
                             <div className="asas-qr-card">
@@ -1828,10 +2001,16 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                                 <QRCodeSVG value={exitUrl} size={210} level="M" includeMargin />
                               </div>
                               <p className="asas-muted" style={{ fontSize: 12 }}>يُعلق عند المخرج · مخصص حصرياً لتسجيل الانصراف والخروج (لا يقبل الدخول)</p>
-                              <a className="asas-btn sm" href={exitUrl} target="_blank" rel="noreferrer" style={{ marginTop: 8, borderColor: 'var(--unpaid)', color: 'var(--unpaid)' }}>
-                                <Icon name="pause" />
-                                فتح صفحة الخروج
-                              </a>
+                              <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <a className="asas-btn sm" href={exitUrl} target="_blank" rel="noreferrer" style={{ borderColor: 'var(--unpaid)', color: 'var(--unpaid)' }}>
+                                  <Icon name="pause" />
+                                  فتح صفحة الخروج
+                                </a>
+                                <button className="asas-btn sm" onClick={() => setShowPrintModal('exit')}>
+                                  <Icon name="printer" />
+                                  طباعة A4
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </>
@@ -2082,6 +2261,15 @@ function AsasAppInner({ defaultAction = 'auto' }) {
         <InstallAppModal
           onClose={() => setShowInstallModal(false)}
           installPrompt={installPrompt}
+        />
+      )}
+
+      {showPrintModal && qr && (
+        <PrintPosterModal
+          qr={qr}
+          initialMode={typeof showPrintModal === 'string' ? showPrintModal : 'both'}
+          branchName={branches.find(b => String(b.id) === String(branchId))?.name || qr.branch}
+          onClose={() => setShowPrintModal(false)}
         />
       )}
 
