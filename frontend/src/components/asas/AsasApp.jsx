@@ -2746,6 +2746,68 @@ function decodeQrToken(tokenStr) {
   }
 }
 
+// Pure Web Audio API synthesizers for real-time haptic & audio feedback
+function playChime(type) {
+  try {
+    if (typeof window === 'undefined') return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === 'enter') {
+      // Ascending pleasant chord: C5 (523Hz) -> G5 (784Hz)
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now);
+      osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.12);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.25, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else if (type === 'exit') {
+      // Descending mellow tone: E5 (659Hz) -> A4 (440Hz)
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(659.25, now);
+      osc.frequency.exponentialRampToValueAtTime(440.0, now + 0.14);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.25, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      osc.start(now);
+      osc.stop(now + 0.48);
+    } else if (type === 'warning') {
+      // Gentle attention pings
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.setValueAtTime(554.37, now + 0.1);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.2, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.28);
+    }
+  } catch (_) {}
+}
+
+function sendSystemNotification(title, body) {
+  try {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        tag: 'asas-geofence',
+        renotify: true
+      });
+    }
+  } catch (_) {}
+}
+
 function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProfile, onOpenInstall, installPrompt, defaultAction = 'auto' }) {
   const [empPage, setEmpPage] = useState('duty');
   const [data, setData] = useState(null);
@@ -2758,6 +2820,37 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   const [leave, setLeave] = useState({ from_date: today(), to_date: today(), reason: '' });
   const [liveTime, setLiveTime] = useState('');
   const [cameraModal, setCameraModal] = useState(false);
+  const [autoCheckIn, setAutoCheckIn] = useState(() => {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('asas_auto_checkin') !== 'false';
+    }
+    return true;
+  });
+  const [checkingGps, setCheckingGps] = useState(false);
+  const [notifPermission, setNotifPermission] = useState(() => {
+    return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported';
+  });
+
+  const lastCoordsRef = useRef(null);
+  const lastCoordsTimeRef = useRef(0);
+  const isSendingRef = useRef(false);
+  const lastSentTimeRef = useRef(0);
+  const autoCheckInRef = useRef(autoCheckIn);
+  autoCheckInRef.current = autoCheckIn;
+  const hasAutoEnteredRef = useRef(false);
+  const hasWarnedExitRef = useRef(false);
+
+  const requestNotifPermission = useCallback(async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const perm = await Notification.requestPermission();
+        setNotifPermission(perm);
+        if (perm === 'granted') {
+          sendSystemNotification('🔔 تم تفعيل إشعارات أساس الذكية', 'ستصلك تنبيهات فورية عند تسجيل الحضور والانصراف ومراقبة النطاق.');
+        }
+      } catch (_) {}
+    }
+  }, []);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -2891,14 +2984,37 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         }
       }
 
-      const p = await new Promise((resolve, reject) => {
-        if (!navigator.geolocation) return reject(new Error('الموقع غير متاح'));
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
-      });
-      const fix = { latitude: p.coords.latitude, longitude: p.coords.longitude, accuracy: p.coords.accuracy, captured_at: new Date(p.timestamp).toISOString() };
+      // Fast coordinate retrieval: use recently cached fix if < 15 seconds old
+      let p;
+      if (lastCoordsRef.current && (Date.now() - lastCoordsTimeRef.current < 15000)) {
+        p = lastCoordsRef.current;
+      } else {
+        p = await new Promise((resolve, reject) => {
+          if (!navigator.geolocation) return reject(new Error('الموقع غير متاح'));
+          navigator.geolocation.getCurrentPosition(resolve, () => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 });
+          }, { enableHighAccuracy: true, timeout: 4000, maximumAge: 6000 });
+        });
+        lastCoordsRef.current = p;
+        lastCoordsTimeRef.current = Date.now();
+      }
+
+      const fix = { latitude: p.coords.latitude, longitude: p.coords.longitude, accuracy: Math.round(p.coords.accuracy), captured_at: new Date(p.timestamp || Date.now()).toISOString() };
       const device_id = getDeviceId();
       const reqId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('req-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
       const r = await api('/attendance/action', 'POST', { action, token: currentToken, request_id: reqId, device_id, fix });
+
+      const isEnterAction = r.action === 'enter' || action === 'enter';
+      if (isEnterAction) {
+        playChime('enter');
+        if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+        sendSystemNotification('✅ تم تسجيل الحضور', r.message || 'تم تسجيل حضورك بنجاح');
+      } else {
+        playChime('exit');
+        if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 400]);
+        sendSystemNotification('👋 تم تسجيل الانصراف', r.message || 'تم تسجيل انصرافك بنجاح');
+      }
+
       setMessage(r.message || 'تم توثيق الحضور بنجاح');
       await load();
     } catch (e) { setError(e.message); } finally { setBusy(false); }
@@ -2907,89 +3023,167 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   const todayRecord = data?.records?.[0];
   const isInside = todayRecord?.state === 'inside';
 
-  // Live Geofence Auto-Exit Monitor while on duty
-  const [geofenceStatus, setGeofenceStatus] = useState({ state: 'idle', distance: null, accuracy: null });
+  // Live Geofence Monitor & Auto Check-in/out Scanner
+  const [geofenceStatus, setGeofenceStatus] = useState({
+    state: 'idle',
+    distance: null,
+    accuracy: null,
+    pending: 0,
+    required_samples: 2,
+    remaining_seconds: 0,
+    lastChecked: null
+  });
+
+  const sendLocationFix = useCallback(async (coords, timestamp, force = false) => {
+    if (!coords || typeof window === 'undefined') return;
+    if (isSendingRef.current) return;
+    const nowMs = Date.now();
+    if (!force && nowMs - lastSentTimeRef.current < 4500) return;
+
+    isSendingRef.current = true;
+    lastSentTimeRef.current = nowMs;
+    lastCoordsRef.current = { coords, timestamp: timestamp || nowMs };
+    lastCoordsTimeRef.current = nowMs;
+
+    try {
+      const fix = {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: Math.round(coords.accuracy),
+        captured_at: new Date(timestamp || nowMs).toISOString()
+      };
+      const reqId = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : ('loc-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
+
+      const res = await api('/attendance/action', 'POST', {
+        action: 'location',
+        fix,
+        device_id: getDeviceId(),
+        request_id: reqId
+      });
+
+      if (res) {
+        // Auto-exit confirmed
+        if (res.action === 'exit' || res.automatic || res.record?.state === 'outside') {
+          playChime('exit');
+          if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 400]);
+          sendSystemNotification('👋 تم تسجيل الانصراف التلقائي', res.message || 'تم رصد مغادرتك لنطاق مقر العمل وتوثيق الانصراف تلقائياً.');
+          setMessage(res.message || '⚠️ تم رصد مغادرتك للنطاق بنجاح وتسجيل خروجك تلقائياً.');
+          load();
+          return;
+        }
+
+        const dist = res.distance != null ? res.distance : null;
+        const isInsideRadius = res.state === 'inside' || (dist != null && dist <= 80);
+
+        // Warning when on duty and outside perimeter
+        if (isInside && (res.pending_exit > 0 || res.state === 'outside')) {
+          if (!hasWarnedExitRef.current) {
+            hasWarnedExitRef.current = true;
+            playChime('warning');
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            sendSystemNotification('⚠️ تنبيه مغادرة نطاق العمل', `تم رصد تواجدك خارج نطاق العمل (${dist} م). جاري التحقق من تأكيد الانصراف التلقائي.`);
+          }
+        } else {
+          hasWarnedExitRef.current = false;
+        }
+
+        // Auto check-in if arrived at branch while off duty
+        if (!isInside && isInsideRadius && autoCheckInRef.current && !hasAutoEnteredRef.current && (!todayRecord || todayRecord.state !== 'inside')) {
+          hasAutoEnteredRef.current = true;
+          setMessage('🎯 تم رصد تواجدك داخل مقر العمل! جاري تسجيل الحضور التلقائي...');
+          try {
+            const qrData = await api('/attendance/active-qr?action=enter');
+            if (qrData?.token) {
+              const enterReqId = 'auto-' + Date.now().toString(36);
+              const enterRes = await api('/attendance/action', 'POST', {
+                action: 'enter',
+                token: qrData.token,
+                request_id: enterReqId,
+                device_id: getDeviceId(),
+                fix
+              });
+              playChime('enter');
+              if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+              sendSystemNotification('✅ تم تسجيل الحضور التلقائي', enterRes.message || 'مرحباً بك! تم تسجيل حضورك تلقائياً.');
+              setMessage(enterRes.message || 'تم توثيق حضورك التلقائي بنجاح!');
+              await load();
+              return;
+            }
+          } catch (autoErr) {
+            console.error('Auto check-in error:', autoErr);
+          }
+        }
+
+        setGeofenceStatus({
+          state: res.state || (isInsideRadius ? 'inside' : 'outside'),
+          distance: dist,
+          accuracy: Math.round(coords.accuracy),
+          pending: res.pending_exit || 0,
+          required_samples: res.required_samples || 2,
+          remaining_seconds: res.remaining_seconds || 0,
+          lastChecked: new Date().toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        });
+      }
+    } catch (_) {
+    } finally {
+      isSendingRef.current = false;
+    }
+  }, [isInside, load, todayRecord]);
+
+  const triggerLocationCheck = useCallback(() => {
+    if (typeof window === 'undefined' || !navigator.geolocation) return;
+    setCheckingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        sendLocationFix(pos.coords, pos.timestamp, true);
+        setTimeout(() => setCheckingGps(false), 600);
+      },
+      err => {
+        setError('تعذر تحديد الموقع بدقة: ' + err.message);
+        setCheckingGps(false);
+      },
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+    );
+  }, [sendLocationFix]);
 
   useEffect(() => {
-    if (!isInside) {
-      setGeofenceStatus({ state: 'idle', distance: null, accuracy: null });
-      return;
-    }
-
     if (typeof window === 'undefined' || !navigator.geolocation) return;
 
     let isCancelled = false;
 
-    async function sendLocationFix(coords, timestamp) {
-      if (isCancelled) return;
-      try {
-        const fix = {
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          accuracy: Math.round(coords.accuracy),
-          captured_at: new Date(timestamp || Date.now()).toISOString()
-        };
-        const reqId = typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : ('loc-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
-
-        const res = await api('/attendance/action', 'POST', {
-          action: 'location',
-          fix,
-          device_id: getDeviceId(),
-          request_id: reqId
-        });
-
-        if (isCancelled) return;
-
-        if (res) {
-          if (res.action === 'exit' || res.automatic || res.record?.state === 'outside') {
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
-            setMessage(res.message || '⚠️ تم رصد مغادرتك للنطاق بنجاح وتسجيل خروجك تلقائياً.');
-            load();
-            return;
-          }
-          setGeofenceStatus({
-            state: res.record?.gps_state || res.state || 'inside',
-            distance: res.distance != null ? res.distance : null,
-            accuracy: Math.round(coords.accuracy),
-            pending: res.pending_exit || 0
-          });
-        }
-      } catch (err) {}
-    }
-
-    // 1. Initial check immediately upon entry
+    // 1. Initial quick fix
     navigator.geolocation.getCurrentPosition(
-      pos => sendLocationFix(pos.coords, pos.timestamp),
+      pos => { if (!isCancelled) sendLocationFix(pos.coords, pos.timestamp, true); },
       () => {},
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 5000 }
     );
 
-    // 2. Real-time watchPosition for movement
+    // 2. Continuous watchPosition for movement tracking
     const watchId = navigator.geolocation.watchPosition(
-      pos => sendLocationFix(pos.coords, pos.timestamp),
+      pos => { if (!isCancelled) sendLocationFix(pos.coords, pos.timestamp); },
       () => {},
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 }
     );
 
-    // 3. Continuous 20-second heartbeat
+    // 3. Heartbeat (10s if visible, accelerated to 6s if pending exit)
     const intervalId = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         navigator.geolocation.getCurrentPosition(
-          pos => sendLocationFix(pos.coords, pos.timestamp),
+          pos => { if (!isCancelled) sendLocationFix(pos.coords, pos.timestamp); },
           () => {},
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          { enableHighAccuracy: true, timeout: 6000, maximumAge: 4000 }
         );
       }
-    }, 20000);
+    }, geofenceStatus.pending > 0 ? 6000 : 10000);
 
     return () => {
       isCancelled = true;
       navigator.geolocation.clearWatch(watchId);
       clearInterval(intervalId);
     };
-  }, [isInside, load]);
+  }, [sendLocationFix, geofenceStatus.pending]);
 
   return (
     <div className="asas-employee-page">
@@ -3138,44 +3332,109 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               </div>
             </div>
 
-            {/* Live Geofence Monitoring Capsule */}
-            {isInside && (
-              <div
-                style={{
-                  background: 'var(--glass-inset)',
-                  border: '1px solid var(--hairline)',
-                  padding: '10px 14px',
-                  borderRadius: 12,
-                  marginBottom: 14,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 10,
-                  fontSize: 12.5,
-                  flexWrap: 'wrap'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span
-                    style={{
-                      width: 9,
-                      height: 9,
-                      borderRadius: '50%',
-                      background: geofenceStatus.state === 'inside' ? 'var(--paid)' : 'var(--unpaid)',
-                      boxShadow: geofenceStatus.state === 'inside' ? '0 0 10px var(--paid)' : '0 0 10px var(--unpaid)',
-                      display: 'inline-block'
-                    }}
-                  />
-                  <strong style={{ color: 'var(--text)' }}>مراقبة النطاق الجغرافي (الخروج التلقائي):</strong>
-                  <span style={{ color: geofenceStatus.state === 'inside' ? 'var(--paid)' : 'var(--unpaid)', fontWeight: 700 }}>
-                    {geofenceStatus.state === 'inside' ? 'متواجد داخل مقر العمل' : 'قيد فحص وتأكيد المغادرة'}
-                  </span>
+            {/* جهاز الفحص والمراقبة الجغرافية الذكي */}
+            <div
+              className="asas-geofence-card"
+              style={{
+                background: 'linear-gradient(135deg, rgba(20, 24, 33, 0.88) 0%, rgba(15, 18, 26, 0.96) 100%)',
+                border: `1px solid ${
+                  isInside
+                    ? (geofenceStatus.pending > 0 ? 'rgba(239, 68, 68, 0.45)' : 'rgba(34, 197, 94, 0.35)')
+                    : (geofenceStatus.state === 'inside' ? 'rgba(34, 197, 94, 0.45)' : 'var(--hairline)')
+                }`,
+                borderRadius: 16,
+                padding: '16px 18px',
+                marginBottom: 16,
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              {/* Device Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div className="asas-radar-wrap" style={{ position: 'relative', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className={`asas-radar-pulse ${geofenceStatus.state === 'inside' ? 'pulse-green' : (geofenceStatus.pending > 0 ? 'pulse-red' : 'pulse-amber')}`} />
+                    <Icon name="mapPin" style={{ width: 16, height: 16, color: geofenceStatus.state === 'inside' ? 'var(--paid)' : (geofenceStatus.pending > 0 ? 'var(--unpaid)' : 'var(--accent)'), position: 'relative', zIndex: 2 }} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: 14, color: 'var(--text)' }}>جهاز الفحص والمراقبة الجغرافية</strong>
+                      <span className={`asas-badge ${geofenceStatus.state === 'inside' ? 'inside' : (geofenceStatus.pending > 0 ? 'urgent' : 'outside')}`} style={{ fontSize: 11, padding: '2px 8px' }}>
+                        {isInside
+                          ? (geofenceStatus.pending > 0 ? `⚠️ قيد تأكيد الخروج (${geofenceStatus.remaining_seconds || 15} ث)` : '🟢 على رأس العمل (النطاق مؤكد)')
+                          : (geofenceStatus.state === 'inside' ? '🎯 داخل نطاق الفرع (جاهز للدخول)' : '📍 خارج نطاق الفرع')}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
+                      {geofenceStatus.lastChecked ? `آخر فحص لحظي: ${geofenceStatus.lastChecked}` : 'جاري الفحص المباشر عبر الأقمار الصناعية...'}
+                    </div>
+                  </div>
                 </div>
-                <span style={{ color: 'var(--text-3)', fontSize: 11.5 }}>
-                  {geofenceStatus.distance != null ? `المسافة الحالية: ${geofenceStatus.distance} م` : 'جهاز الفحص الجغرافي نشط'}
-                </span>
+
+                <button
+                  type="button"
+                  className="asas-btn sm"
+                  style={{ height: 30, fontSize: 11.5, display: 'flex', alignItems: 'center', gap: 6 }}
+                  onClick={triggerLocationCheck}
+                  disabled={checkingGps}
+                  title="تحديث الموقع اللحظي الآن"
+                >
+                  <Icon name="refresh" className={checkingGps ? 'asas-spin' : ''} style={{ width: 13, height: 13 }} />
+                  {checkingGps ? 'جاري الفحص...' : 'فحص الإحداثيات الآن'}
+                </button>
               </div>
-            )}
+
+              {/* Metrics Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginTop: 10 }}>
+                <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--hairline)', borderRadius: 10, padding: '8px 12px' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>المسافة عن مقر الفرع</div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: geofenceStatus.state === 'inside' ? 'var(--paid)' : 'var(--text)', marginTop: 2 }}>
+                    {geofenceStatus.distance != null ? `${geofenceStatus.distance} م` : 'جاري الفحص...'}
+                  </div>
+                </div>
+                <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--hairline)', borderRadius: 10, padding: '8px 12px' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>النطاق المسموح به</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginTop: 3 }}>
+                    {isInside ? 'حتى 120 م (خروج)' : 'حتى 80 م (دخول)'}
+                  </div>
+                </div>
+                <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--hairline)', borderRadius: 10, padding: '8px 12px' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>دقة إشارة GPS</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: geofenceStatus.accuracy && geofenceStatus.accuracy <= 30 ? 'var(--paid)' : 'var(--accent)', marginTop: 4 }}>
+                    {geofenceStatus.accuracy != null ? `±${geofenceStatus.accuracy} م (${geofenceStatus.accuracy <= 30 ? 'ممتازة' : 'جيدة'})` : '—'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Controls Footer */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--hairline)', fontSize: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none', color: 'var(--text-2)' }}>
+                  <input
+                    type="checkbox"
+                    checked={autoCheckIn}
+                    onChange={e => {
+                      setAutoCheckIn(e.target.checked);
+                      if (typeof localStorage !== 'undefined') localStorage.setItem('asas_auto_checkin', e.target.checked ? 'true' : 'false');
+                    }}
+                    style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
+                  />
+                  <span>⚡ تفعيل التحضير التلقائي الفوري فور الوصول لمقر العمل</span>
+                </label>
+
+                {notifPermission !== 'granted' && typeof Notification !== 'undefined' && (
+                  <button
+                    type="button"
+                    className="asas-btn sm"
+                    style={{ height: 26, fontSize: 11, padding: '0 10px', background: 'rgba(217, 119, 6, 0.15)', borderColor: 'rgba(217, 119, 6, 0.4)', color: '#f59e0b' }}
+                    onClick={requestNotifPermission}
+                  >
+                    <Icon name="bell" style={{ width: 12, height: 12 }} />
+                    تفعيل الإشعارات الفورية
+                  </button>
+                )}
+              </div>
+            </div>
 
             {token && (() => {
               const meta = decodeQrToken(token);
@@ -3209,17 +3468,22 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               const isEnterQr = meta?.action === 'enter';
               const isExitQr = meta?.action === 'exit';
               const targetAction = isEnterQr ? 'enter' : (isExitQr ? 'exit' : (isInside ? 'exit' : 'enter'));
+              const isReadyInside = !isInside && geofenceStatus.state === 'inside';
               const btnColor = targetAction === 'exit' ? 'danger' : 'primary';
               const btnIcon = targetAction === 'exit' ? 'pause' : 'logIn';
               const btnLabel = isEnterQr
                 ? 'تسجيل الحضور الآن (بكود الدخول)'
                 : (isExitQr
                   ? 'تسجيل الانصراف الآن (بكود الخروج)'
-                  : (isInside ? 'تسجيل الانصراف التلقائي الآن' : 'تسجيل الحضور التلقائي الآن'));
+                  : (isInside
+                    ? 'تسجيل الانصراف التلقائي الفوري'
+                    : (isReadyInside
+                      ? '✨ تسجيل الحضور التلقائي الفوري (أنت داخل النطاق المصرح)'
+                      : 'تسجيل الحضور التلقائي الآن')));
 
               return (
                 <button
-                  className={`asas-btn ${btnColor}`}
+                  className={`asas-btn ${btnColor} ${isReadyInside ? 'asas-btn-glow' : ''}`}
                   disabled={busy}
                   onClick={() => act(targetAction)}
                   style={{ width: '100%', height: 52, fontSize: 16, marginBottom: 10 }}

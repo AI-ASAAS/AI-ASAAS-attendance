@@ -738,17 +738,46 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
      : (returning ? (isAuto ? 'تم تسجيل عودتك تلقائياً' : 'تم تسجيل عودتك') : (isAuto ? 'تم تسجيل حضورك تلقائياً بحسب حالتك' : 'تم تسجيل حضورك'));
    return {record:{...record,...resolved},action:'enter',automatic:isAuto,message:enterMsg,status_label:resolved.status_label,exit_reason_label:resolved.exit_reason_label};
   }
-  if(!record||record.state!=='inside')error('NOT_INSIDE','لا يوجد حضور مفتوح لتسجيل الخروج منه. يرجى تسجيل الدخول أولاً.',409);
   let automatic=false,candidate=null;
   if(b.action==='location'){
-   if(location.distance<=Number(branch.entry_radius)&&b.fix.accuracy<=Math.max(Number(branch.max_accuracy||200),250)){
-    location.state='inside';
-   } else if(location.distance>Number(branch.exit_radius)){
-    location.state='outside';
+   const dist=Math.round(location.distance);
+   const maxAcc=Math.max(Number(branch.max_accuracy||200),250);
+   const insideEntry=dist<=Number(branch.entry_radius)&&b.fix.accuracy<=maxAcc;
+   const currentGpsState=insideEntry?'inside':(dist>Number(branch.exit_radius)?'outside':'uncertain');
+
+   // Geofence check while NOT clocked in (instant response for automatic check-in & device scanner)
+   if(!record||record.state!=='inside'){
+    return {
+      action:'location',
+      duty_state:record?.state||'outside',
+      state:insideEntry?'inside':'outside',
+      inside_geofence:insideEntry,
+      distance:dist,
+      accuracy:Math.round(b.fix.accuracy),
+      branch:{id:branch.id,name:branch.name,entry_radius:Number(branch.entry_radius),exit_radius:Number(branch.exit_radius)},
+      message:insideEntry?'أنت داخل نطاق مقر العمل (جاهز لتسجيل الحضور التلقائي)':`أنت خارج نطاق الفرع (المسافة: ${dist} م)`
+    };
    }
+
+   // Geofence monitoring while on duty (Automatic Exit Candidate)
+   location.state=currentGpsState==='inside'?'inside':(dist>Number(branch.exit_radius)?'outside':(location.state||'inside'));
    candidate=policy.advanceExit(record.exit_candidate,location,b.fix,branch,now);
-   if(candidate.ignored)return {ignored:true,distance:Math.round(location.distance),state:location.state};automatic=candidate.exit;
+
+   // Accelerate exit if clearly distant (>= 1.5x exit radius) or confirmed by policy
+   if(dist>=Number(branch.exit_radius)*1.5&&b.fix.accuracy<=maxAcc&&candidate?.count>=1){
+    automatic=true;
+   }else{
+    automatic=candidate.exit;
+   }
+
+   if(candidate.ignored&&!automatic){
+    return {ignored:true,distance:dist,state:location.state,pending_exit:record.exit_candidate?.count||0};
+   }
+
    await c.query('UPDATE duty_records SET exit_candidate=$1,last_seen=$2,gps_state=$3 WHERE id=$4',[JSON.stringify(candidate),now,location.state,record.id]);
+  }
+  if(b.action!=='location'&&(!record||record.state!=='inside')){
+   error('NOT_INSIDE','لا يوجد حضور مفتوح لتسجيل الخروج منه. يرجى تسجيل الدخول أولاً.',409);
   }
   if(b.action==='exit'||automatic){
    let reason = automatic ? 'مغادرة نطاق الموقع تلقائياً (GPS)' : 'انتهاء ساعات الدوام الرسمي في الموعد';
@@ -785,8 +814,19 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
      exit_reason_label:resolved.exit_reason_label
    };
   }
-  await event(c,req.user,record,'location',b,{location,accuracy:b.fix.accuracy,revision:branch.location_revision});
-  return {record:{...record,gps_state:location.state,last_seen:now},pending_exit:candidate?.count||0,distance:Math.round(location.distance),state:location.state};
+  if(record.gps_state!==location.state||(!record.exit_candidate&&candidate?.count===1)){
+   await event(c,req.user,record,'location',b,{location,accuracy:b.fix.accuracy,revision:branch.location_revision});
+  }
+  const remainingSec=candidate?.since?Math.max(0,Math.ceil((Number(branch.exit_delay_seconds)*1000-(now-Date.parse(candidate.since)))/1000)):0;
+  return {
+    record:{...record,gps_state:location.state,last_seen:now},
+    pending_exit:candidate?.count||0,
+    required_samples:Number(branch.exit_samples||2),
+    remaining_seconds:remainingSec,
+    distance:Math.round(location.distance),
+    state:location.state,
+    branch_radius:{entry:Number(branch.entry_radius),exit:Number(branch.exit_radius)}
+  };
  });respond(res,result);
 }));
 app.get('/api/attendance/me',employee,wrap(async(req,res)=>{
