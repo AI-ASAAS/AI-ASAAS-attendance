@@ -2520,6 +2520,90 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   const todayRecord = data?.records?.[0];
   const isInside = todayRecord?.state === 'inside';
 
+  // Live Geofence Auto-Exit Monitor while on duty
+  const [geofenceStatus, setGeofenceStatus] = useState({ state: 'idle', distance: null, accuracy: null });
+
+  useEffect(() => {
+    if (!isInside) {
+      setGeofenceStatus({ state: 'idle', distance: null, accuracy: null });
+      return;
+    }
+
+    if (typeof window === 'undefined' || !navigator.geolocation) return;
+
+    let isCancelled = false;
+
+    async function sendLocationFix(coords, timestamp) {
+      if (isCancelled) return;
+      try {
+        const fix = {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          accuracy: Math.round(coords.accuracy),
+          captured_at: new Date(timestamp || Date.now()).toISOString()
+        };
+        const reqId = typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : ('loc-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
+
+        const res = await api('/attendance/action', 'POST', {
+          action: 'location',
+          fix,
+          device_id: getDeviceId(),
+          request_id: reqId
+        });
+
+        if (isCancelled) return;
+
+        if (res) {
+          if (res.action === 'exit' || res.automatic || res.record?.state === 'outside') {
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+            setMessage(res.message || '⚠️ تم رصد مغادرتك للنطاق بنجاح وتسجيل خروجك تلقائياً.');
+            load();
+            return;
+          }
+          setGeofenceStatus({
+            state: res.record?.gps_state || res.state || 'inside',
+            distance: res.distance != null ? res.distance : null,
+            accuracy: Math.round(coords.accuracy),
+            pending: res.pending_exit || 0
+          });
+        }
+      } catch (err) {}
+    }
+
+    // 1. Initial check immediately upon entry
+    navigator.geolocation.getCurrentPosition(
+      pos => sendLocationFix(pos.coords, pos.timestamp),
+      () => {},
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+    );
+
+    // 2. Real-time watchPosition for movement
+    const watchId = navigator.geolocation.watchPosition(
+      pos => sendLocationFix(pos.coords, pos.timestamp),
+      () => {},
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+    );
+
+    // 3. Continuous 20-second heartbeat
+    const intervalId = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        navigator.geolocation.getCurrentPosition(
+          pos => sendLocationFix(pos.coords, pos.timestamp),
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+    }, 20000);
+
+    return () => {
+      isCancelled = true;
+      navigator.geolocation.clearWatch(watchId);
+      clearInterval(intervalId);
+    };
+  }, [isInside, load]);
+
   return (
     <div className="asas-employee-page">
       {/* Top Header */}
@@ -2608,6 +2692,45 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginTop: 4 }}>{todayRecord?.exit_reason_label || (isInside ? 'قيد الدوام' : '—')}</div>
             </div>
           </div>
+
+          {/* Live Geofence Monitoring Capsule */}
+          {isInside && (
+            <div
+              style={{
+                background: 'var(--glass-inset)',
+                border: '1px solid var(--hairline)',
+                padding: '10px 14px',
+                borderRadius: 12,
+                marginBottom: 14,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                fontSize: 12.5,
+                flexWrap: 'wrap'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  style={{
+                    width: 9,
+                    height: 9,
+                    borderRadius: '50%',
+                    background: geofenceStatus.state === 'inside' ? 'var(--paid)' : 'var(--unpaid)',
+                    boxShadow: geofenceStatus.state === 'inside' ? '0 0 10px var(--paid)' : '0 0 10px var(--unpaid)',
+                    display: 'inline-block'
+                  }}
+                />
+                <strong style={{ color: 'var(--text)' }}>مراقبة النطاق الجغرافي (الخروج التلقائي):</strong>
+                <span style={{ color: geofenceStatus.state === 'inside' ? 'var(--paid)' : 'var(--unpaid)', fontWeight: 700 }}>
+                  {geofenceStatus.state === 'inside' ? 'متواجد داخل مقر العمل' : 'قيد فحص وتأكيد المغادرة'}
+                </span>
+              </div>
+              <span style={{ color: 'var(--text-3)', fontSize: 11.5 }}>
+                {geofenceStatus.distance != null ? `المسافة الحالية: ${geofenceStatus.distance} م` : 'جهاز الفحص الجغرافي نشط'}
+              </span>
+            </div>
+          )}
 
           {token && (() => {
             const meta = decodeQrToken(token);

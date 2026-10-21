@@ -706,7 +706,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
     location.state='outside';
    }
    candidate=policy.advanceExit(record.exit_candidate,location,b.fix,branch,now);
-   if(candidate.ignored)return {ignored:true};automatic=candidate.exit;
+   if(candidate.ignored)return {ignored:true,distance:Math.round(location.distance),state:location.state};automatic=candidate.exit;
    await c.query('UPDATE duty_records SET exit_candidate=$1,last_seen=$2,gps_state=$3 WHERE id=$4',[JSON.stringify(candidate),now,location.state,record.id]);
   }
   if(b.action==='exit'||automatic){
@@ -745,7 +745,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    };
   }
   await event(c,req.user,record,'location',b,{location,accuracy:b.fix.accuracy,revision:branch.location_revision});
-  return {record:{...record,gps_state:location.state,last_seen:now},pending_exit:candidate?.count||0};
+  return {record:{...record,gps_state:location.state,last_seen:now},pending_exit:candidate?.count||0,distance:Math.round(location.distance),state:location.state};
  });respond(res,result);
 }));
 app.get('/api/attendance/me',employee,wrap(async(req,res)=>{
