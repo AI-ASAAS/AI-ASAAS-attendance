@@ -268,45 +268,35 @@ app.get('/api/admin/branches/:id/qr',admin,allow('qr.manage'),wrap(async(req,res
  const tokenEnter=policy.issueQr(branch,process.env.QR_SECRET,now,'enter');
  const tokenExit=policy.issueQr(branch,process.env.QR_SECRET,now,'exit');
  const tokenGeneral=policy.issueQr(branch,process.env.QR_SECRET,now);
- const reqOrigin=req.headers.origin;
- const fwdHost=req.headers['x-forwarded-host']||req.headers.host;
- const fwdProto=req.headers['x-forwarded-proto']||'https';
- let base='https://ai-asaas-attendance.vercel.app';
- if(reqOrigin && (reqOrigin.includes('vercel.app')||reqOrigin.includes('trycloudflare.com'))){
-  base=reqOrigin;
- } else if(fwdHost && (fwdHost.includes('vercel.app')||fwdHost.includes('trycloudflare.com'))){
-  base=`${fwdProto}://${fwdHost}`;
- } else if(process.env.WEB_ORIGIN && !process.env.WEB_ORIGIN.includes('localhost')){
-  base=process.env.WEB_ORIGIN.split(',')[0].trim();
- }
- respond(res,{
-  day:policy.localDay(now),
-  branch:branch.name,
-  branch_id:branch.id,
-  token:tokenGeneral,
-  url:`${base}/attend?branch=${branch.id}#qr=${tokenGeneral}`,
-  auto:{
+  const base = 'https://ai-asaas-attendance.vercel.app';
+  respond(res,{
+   day:policy.localDay(now),
+   branch:branch.name,
+   branch_id:branch.id,
    token:tokenGeneral,
-   action:'auto',
-   label:'رمز الحضور والانصراف الموحد التلقائي',
-   url:`${base}/attend?branch=${branch.id}#qr=${tokenGeneral}`,
-   html_url:`${base}/attend.html?branch=${branch.id}#qr=${tokenGeneral}`
-  },
-  enter:{
-   token:tokenEnter,
-   action:'enter',
-   label:'رمز تسجيل الدخول والعودة',
-   url:`${base}/attend/enter?branch=${branch.id}#qr=${tokenEnter}`,
-   html_url:`${base}/enter.html?branch=${branch.id}#qr=${tokenEnter}`
-  },
-  exit:{
-   token:tokenExit,
-   action:'exit',
-   label:'رمز تسجيل الخروج والانصراف',
-   url:`${base}/attend/exit?branch=${branch.id}#qr=${tokenExit}`,
-   html_url:`${base}/exit.html?branch=${branch.id}#qr=${tokenExit}`
-  }
- });
+   url:`${base}/asas?branch=${branch.id}#qr=${tokenGeneral}`,
+   auto:{
+    token:tokenGeneral,
+    action:'auto',
+    label:'رمز الحضور والانصراف الموحد التلقائي',
+    url:`${base}/asas?branch=${branch.id}#qr=${tokenGeneral}`,
+    html_url:`${base}/asas?branch=${branch.id}#qr=${tokenGeneral}`
+   },
+   enter:{
+    token:tokenEnter,
+    action:'enter',
+    label:'رمز تسجيل الدخول والعودة',
+    url:`${base}/asas?branch=${branch.id}&action=enter#qr=${tokenEnter}`,
+    html_url:`${base}/asas?branch=${branch.id}&action=enter#qr=${tokenEnter}`
+   },
+   exit:{
+    token:tokenExit,
+    action:'exit',
+    label:'رمز تسجيل الخروج والانصراف',
+    url:`${base}/asas?branch=${branch.id}&action=exit#qr=${tokenExit}`,
+    html_url:`${base}/asas?branch=${branch.id}&action=exit#qr=${tokenExit}`
+   }
+  });
 }));
 app.post('/api/admin/branches/:id/qr/revoke',admin,allow('qr.manage'),wrap(async(req,res)=>{
  const branchId=id(req.params.id);scope(req.user,branchId);const reason=string(req.body.reason,500);

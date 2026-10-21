@@ -1,8 +1,10 @@
 {
   "name": "أساس - نظام إدارة الحضور الذكي",
-  "short_name": "أساس حضور",
+  "short_name": "أساس",
   "description": "نظام الحضور والدوام السيادي لشركة أساس الذكاء الاصطناعي",
-  "start_url": "/asas",
+  "start_url": "https://ai-asaas-attendance.vercel.app/asas",
+  "scope": "https://ai-asaas-attendance.vercel.app/",
+  "id": "https://ai-asaas-attendance.vercel.app/",
   "display": "standalone",
   "background_color": "#181616",
   "theme_color": "#221f1f",
@@ -19,12 +21,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    },
-    {
-      "src": "/brand/attendance_icon_user_check.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
   ],
   "categories": ["business", "productivity"]

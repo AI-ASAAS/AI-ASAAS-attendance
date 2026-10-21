@@ -86,20 +86,14 @@ html, body {
 }
 .asas-mark {
   width: 44px;
-  height: 44px;
+  height: 48px;
   flex-shrink: 0;
-  border-radius: var(--radius-md, 14px);
-  background: url('/brand/attendance_icon_user_check.svg') center / contain no-repeat;
-  filter: drop-shadow(0 4px 12px rgba(186, 149, 85, 0.35));
-  transition: transform 0.25s var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)), filter 0.25s ease;
-}
-.asas-mark:hover {
-  transform: scale(1.06);
-  filter: drop-shadow(0 6px 18px rgba(186, 149, 85, 0.55));
+  border-radius: var(--radius-md);
+  background: url('/logo-dark.png') center / contain no-repeat;
+  filter: drop-shadow(0 4px 8px rgba(186, 149, 85, 0.3));
 }
 :root[data-theme='dark'] .asas-mark {
-  background-image: url('/brand/attendance_icon_user_check.svg');
-  filter: drop-shadow(0 4px 14px rgba(216, 179, 111, 0.45));
+  background-image: url('/logo-light.png');
 }
 
 /* Liquid-Glass Sidebar */

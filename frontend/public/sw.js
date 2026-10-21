@@ -1,13 +1,13 @@
 // public/sw.js — AI-ASAAS Sovereign Attendance Service Worker
-const CACHE_NAME = 'asas-attendance-v2.1';
+const CACHE_NAME = 'asas-attendance-v3.0';
 const ASSETS_TO_CACHE = [
   '/',
   '/asas',
   '/manifest.json',
-  '/brand/attendance_icon_user_check.svg',
   '/icon-192.png',
   '/icon-512.png',
-  '/favicon.png'
+  '/favicon.png',
+  '/apple-touch-icon.png'
 ];
 
 // ─── Install: cache shell assets & force immediate activation ──
@@ -18,7 +18,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// ─── Activate: purge ALL old caches (including manikstu-v1) ─────
+// ─── Activate: purge ALL old caches (including previous versions) ──
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>

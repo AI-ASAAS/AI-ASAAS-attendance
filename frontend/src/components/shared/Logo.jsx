@@ -5,8 +5,8 @@ export default function Logo({ size = 44, showText = true, className = '' }) {
     <div className={`flex items-center gap-3 ${className}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
       <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
         <img
-          src="/brand/attendance_icon_user_check.svg"
-          alt="أساس حضور"
+          src="/logo-dark.png"
+          alt="أساس"
           width={size}
           height={size}
           style={{ width: '100%', height: '100%', borderRadius: 12, objectFit: 'contain' }}

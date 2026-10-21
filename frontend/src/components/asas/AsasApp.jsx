@@ -333,7 +333,7 @@ function InstallAppModal({ onClose, installPrompt }) {
     return 'android';
   });
 
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://ai-asaas-attendance.vercel.app';
+  const appUrl = 'https://ai-asaas-attendance.vercel.app/asas';
 
   return (
     <div className="asas-modal-backdrop" onClick={onClose}>
@@ -352,7 +352,7 @@ function InstallAppModal({ onClose, installPrompt }) {
           {/* App Brand Icon with Glow */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <img
-              src="/brand/attendance_icon_user_check.svg"
+              src="/icon-512.png"
               alt="تطبيق أساس للحضور"
               style={{
                 width: 80,
@@ -1623,15 +1623,13 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                   <div>
                     {(() => {
                       const fixUrl = (u) => {
-                        if (!u) return '';
-                        if (typeof window === 'undefined') return u;
+                        if (!u) return 'https://ai-asaas-attendance.vercel.app/asas';
                         try {
-                          const p = new URL(u, window.location.origin);
-                          if (p.hostname === 'localhost' || p.hostname === '127.0.0.1') {
-                            return `${window.location.origin}${p.pathname}${p.search}${p.hash}`;
-                          }
-                          return p.toString();
-                        } catch (e) { return u; }
+                          const p = new URL(u, 'https://ai-asaas-attendance.vercel.app');
+                          return `https://ai-asaas-attendance.vercel.app/asas${p.search}${p.hash}`;
+                        } catch (e) {
+                          return 'https://ai-asaas-attendance.vercel.app/asas';
+                        }
                       };
                       const enterUrl = fixUrl(qr.enter?.url || qr.url);
                       const exitUrl = fixUrl(qr.exit?.url || qr.url);
