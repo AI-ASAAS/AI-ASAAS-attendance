@@ -1137,25 +1137,6 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               <span>صنعاء: <strong>{liveTime || '—'}</strong></span>
             </div>
 
-            <button
-              className="asas-btn sm"
-              onClick={() => {
-                if (installPrompt) installPrompt.prompt();
-                else setShowInstallModal(true);
-              }}
-              style={{
-                background: 'var(--glass-tint)',
-                borderColor: 'var(--accent)',
-                color: 'var(--accent)',
-                fontWeight: 600,
-                gap: 6
-              }}
-              title="تحميل وتثبيت التطبيق على الجوال أو الحاسوب"
-            >
-              <Icon name="download" style={{ width: 15, height: 15 }} />
-              <span>تحميل التطبيق</span>
-            </button>
-
             <button className="asas-bell-btn" onClick={() => setShowAnnouncementsModal(true)} aria-label="التعميمات">
               <Icon name="bell" />
               {announcements.length > 0 && <span className="asas-bell-badge">{announcements.length}</span>}
@@ -2460,21 +2441,6 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       <Glass style={{ padding: '16px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Brand />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            className="asas-btn sm"
-            onClick={onOpenInstall}
-            style={{
-              background: 'var(--glass-tint)',
-              borderColor: 'var(--accent)',
-              color: 'var(--accent)',
-              fontWeight: 600,
-              gap: 6
-            }}
-            title="تحميل وتثبيت التطبيق على الجوال"
-          >
-            <Icon name="download" style={{ width: 15, height: 15 }} />
-            <span>تحميل التطبيق</span>
-          </button>
           <button className="asas-bell-btn" onClick={onOpenAnnouncements} aria-label="الإشعارات">
             <Icon name="bell" />
             {announcements.length > 0 && <span className="asas-bell-badge">{announcements.length}</span>}
