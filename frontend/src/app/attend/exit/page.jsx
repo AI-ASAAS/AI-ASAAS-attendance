@@ -1,7 +1,6 @@
 'use client';
-
-import AttendPage from '../page';
+import AsasApp from '@/components/asas/AsasApp';
 
 export default function AttendExitPage() {
-  return <AttendPage forcedAction="exit" />;
+  return <AsasApp defaultAction="exit" />;
 }

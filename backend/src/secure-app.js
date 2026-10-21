@@ -659,6 +659,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
   if(replay.rows.length)return {duplicate:true};
   const now=new Date();
   let record=(await c.query("SELECT * FROM duty_records WHERE employee_id=$1 ORDER BY shift_start DESC LIMIT 1 FOR UPDATE",[req.user.id])).rows[0];
+   const isAuto = b.action === 'auto' || Boolean(b.is_auto);
 
   // Strict separation of QR enter vs exit actions
   const tokenData = policy.decodeQr(b.token);
@@ -788,6 +789,10 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    await c.query('UPDATE duty_records SET exit_candidate=$1,last_seen=$2,gps_state=$3 WHERE id=$4',[JSON.stringify(candidate),now,location.state,record.id]);
   }
   if(b.action!=='location'&&(!record||record.state!=='inside')){
+   if(b.action==='exit'){
+    const resolved = resolveRecordStatus(record);
+    return {already_outside:true,record:{...(record||{}),...resolved},action:'exit',message:'أنت مسجل خروج بالفعل ومناوبتك مغلقة',status_label:resolved.status_label,exit_reason_label:resolved.exit_reason_label};
+   }
    error('NOT_INSIDE','لا يوجد حضور مفتوح لتسجيل الخروج منه. يرجى تسجيل الدخول أولاً.',409);
   }
   if(b.action==='exit'||automatic){
@@ -815,7 +820,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    const resolved = resolveRecordStatus(record);
    const exitMsg = automatic
      ? 'تم تسجيل خروجك التلقائي بنجاح لمغادرتك نطاق الفرع'
-     : (earlyMins > 0 ? `تم تسجيل انصرافك بنجاح (${reason})` : (isAuto ? 'تم تسجيل انصرافك تلقائياً بنهاية دوامك' : 'تم تسجيل الخروج'));
+     : (earlyMins > 0 ? `تم تسجيل انصرافك بنجاح (${reason})` : (isAuto ? 'تم تسجيل انصرافك تلقائياً بنهاية دوامك' : 'تم تسجيل انصرافك بنجاح'));
    return {
      record:{...record,...resolved},
      action:'exit',

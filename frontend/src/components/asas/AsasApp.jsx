@@ -2930,7 +2930,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   }, []);
 
   const load = useCallback(() => {
-    api('/attendance/me')
+    return api('/attendance/me')
       .then(res => {
         setData(res);
         if (res?.branch) branchCoordsRef.current = res.branch;

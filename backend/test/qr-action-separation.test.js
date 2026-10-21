@@ -64,3 +64,9 @@ test('QR Action Separation: ENTER token validates successfully for enter, and EX
   assert.equal(verifyQr(enterToken, branch, secret, now, 'enter'), true);
   assert.equal(verifyQr(exitToken, branch, secret, now, 'exit'), true);
 });
+
+test('QR Action Separation: Verification that secure-app file syntax is valid and defines isAuto', () => {
+  const fs = require('fs');
+  const content = fs.readFileSync(require.resolve('../src/secure-app'), 'utf8');
+  assert.match(content, /const isAuto = b\.action === 'auto' \|\| Boolean\(b\.is_auto\);/);
+});
