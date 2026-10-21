@@ -1037,7 +1037,13 @@ function AsasAppInner({ defaultAction = 'auto' }) {
     return (
       <>
         <Ambient />
-        <Login onLogin={setUser} initialError={error} onRetry={() => checkAuth(true)} />
+        <Login
+          onLogin={setUser}
+          initialError={error}
+          onRetry={() => checkAuth(true)}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
       </>
     );
   }
@@ -2098,7 +2104,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
 }
 
 // LOGIN COMPONENT
-function Login({ onLogin, initialError, onRetry }) {
+function Login({ onLogin, initialError, onRetry, theme, onToggleTheme }) {
   const [identifier, setIdentifier] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('asas_saved_identifier') || '';
@@ -2145,7 +2151,7 @@ function Login({ onLogin, initialError, onRetry }) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    function initGsi() {
+    function renderGsiButton() {
       if (!window.google?.accounts?.id) return;
       try {
         window.google.accounts.id.initialize({
@@ -2157,12 +2163,14 @@ function Login({ onLogin, initialError, onRetry }) {
         const el = document.getElementById('google-btn-container');
         if (el) {
           el.innerHTML = '';
+          const parentWidth = el.parentElement?.offsetWidth || el.offsetWidth || (window.innerWidth ? window.innerWidth - 64 : 280);
+          const computedWidth = Math.min(320, Math.max(200, Math.floor(parentWidth)));
           window.google.accounts.id.renderButton(el, {
-            theme: 'outline',
+            theme: theme === 'dark' ? 'filled_black' : 'outline',
             size: 'large',
             text: 'continue_with',
             shape: 'rectangular',
-            width: 320,
+            width: computedWidth,
             locale: 'ar'
           });
         }
@@ -2172,17 +2180,21 @@ function Login({ onLogin, initialError, onRetry }) {
     }
 
     if (window.google?.accounts?.id) {
-      initGsi();
+      renderGsiButton();
     } else {
       const timer = setInterval(() => {
         if (window.google?.accounts?.id) {
           clearInterval(timer);
-          initGsi();
+          renderGsiButton();
         }
       }, 300);
       return () => clearInterval(timer);
     }
-  }, [handleGoogleCredentialResponse]);
+
+    const onResize = () => renderGsiButton();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [handleGoogleCredentialResponse, theme]);
 
   useEffect(() => {
     setError(initialError);
@@ -2218,6 +2230,16 @@ function Login({ onLogin, initialError, onRetry }) {
 
   return (
     <div className="asas-login">
+      {onToggleTheme && (
+        <button
+          className="asas-theme-btn asas-login-theme-btn"
+          onClick={onToggleTheme}
+          aria-label="تبديل مظهر النظام"
+          style={{ position: 'fixed', top: 18, left: 18, zIndex: 30 }}
+        >
+          <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+        </button>
+      )}
       <section className="asas-login-hero">
         <Brand />
         <div>
