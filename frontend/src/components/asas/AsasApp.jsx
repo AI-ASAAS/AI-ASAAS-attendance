@@ -213,52 +213,104 @@ function Records({ rows = [], onEdit, canEdit }) {
         <tbody>
           {list.map((r, idx) => {
             const isInside = r.state === 'inside';
+            const isAbsent = r.state === 'absent';
+            const isLeave = r.state === 'leave';
             const isEarly = r.status_key === 'early_exit';
             const isLate = r.status_key && typeof r.status_key === 'string' && r.status_key.startsWith('late');
-            const statusLabel = r.status_label || (isInside ? 'حاضر في الموعد' : 'تم الانصراف');
-            const rawExitReason = r.exit_reason_label || (isInside ? 'قيد الدوام (على رأس العمل)' : ({
-              geofence: 'مغادرة نطاق الموقع تلقائياً (GPS)',
-              manual: 'انتهاء ساعات الدوام الرسمي في الموعد',
-              scheduled: 'انتهاء فترة المناوبة المجدولة تلقائياً',
-              admin_correction: 'تصحيح إداري'
-            }[r.exit_reason] || r.exit_reason || 'انتهاء الدوام الرسمي'));
+            const statusLabel = r.status_label || (
+              isInside ? 'حاضر في الموعد' :
+              isAbsent ? 'لم يسجل اليوم (غائب)' :
+              isLeave ? 'في إجازة رسمية' :
+              'تم الانصراف'
+            );
+            const rawExitReason = r.exit_reason_label || (
+              isInside ? 'قيد الدوام (على رأس العمل)' :
+              isAbsent ? 'لم يحضر اليوم' :
+              isLeave ? 'إجازة معتمدة' :
+              ({
+                geofence: 'مغادرة نطاق الموقع تلقائياً (GPS)',
+                manual: 'انتهاء ساعات الدوام الرسمي في الموعد',
+                scheduled: 'انتهاء فترة المناوبة المجدولة تلقائياً',
+                admin_correction: 'تصحيح إداري'
+              }[r.exit_reason] || r.exit_reason || 'انتهاء الدوام الرسمي')
+            );
             const exitReasonLabel = String(rawExitReason || '—');
 
             return (
-              <tr key={r.id || ('rec-' + idx)}>
+              <tr key={r.id || ('emp-' + (r.employee_id || idx))}>
                 <td>
                   <strong>{r.name}</strong>
                   <small style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{r.identifier}</small>
                 </td>
-                <td>{r.branch_name}</td>
+                <td>{r.branch_name || 'الفرع الرئيسي'}</td>
                 <td>{date(r.shift_start)}</td>
-                <td><span style={{ color: 'var(--paid)', fontWeight: 600 }}>{time(r.first_in)}</span></td>
-                <td><span style={{ color: isInside ? 'var(--partial)' : 'var(--text)' }}>{time(r.last_out)}</span></td>
                 <td>
-                  <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`}>
-                    <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : 'logOut'} style={{ width: 13, height: 13 }} />
+                  {r.first_in ? (
+                    <span style={{ color: 'var(--paid)', fontWeight: 600 }}>{time(r.first_in)}</span>
+                  ) : (
+                    <span style={{ color: isAbsent ? '#ef4444' : 'var(--text-3)', fontWeight: 500 }}>
+                      {isAbsent ? 'لم يحضر' : '—'}
+                    </span>
+                  )}
+                </td>
+                <td>
+                  {r.last_out ? (
+                    <span style={{ color: 'var(--text)' }}>{time(r.last_out)}</span>
+                  ) : (
+                    <span style={{ color: isInside ? 'var(--partial)' : 'var(--text-3)', fontWeight: isInside ? 600 : 400 }}>
+                      {isInside ? 'حاضر الآن' : '—'}
+                    </span>
+                  )}
+                </td>
+                <td>
+                  <span 
+                    className={`asas-badge ${isInside ? 'inside' : 'outside'}`}
+                    style={
+                      isAbsent ? { background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' } :
+                      isLeave ? { background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)' } :
+                      {}
+                    }
+                  >
+                    <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : (isAbsent ? 'alert' : (isLeave ? 'calendar' : (isEarly ? 'alert' : 'logOut')))} style={{ width: 13, height: 13 }} />
                     {statusLabel}
                   </span>
                 </td>
                 <td>
                   <span style={{
                     fontSize: 12,
-                    color: isInside ? 'var(--text-3)' : (exitReasonLabel.includes('مبكر') ? 'var(--unpaid)' : 'var(--paid)'),
+                    color: isInside ? 'var(--text-3)' : (isAbsent ? '#ef4444' : (exitReasonLabel.includes('مبكر') ? 'var(--unpaid)' : 'var(--paid)')),
                     fontWeight: 600
                   }}>
                     {exitReasonLabel}
                   </span>
                 </td>
                 <td>
-                  {r.counted_minutes == null ? 'مفتوح' : `${formatNumber(r.counted_minutes)} دقيقة`}
-                  <small>{r.deduct_away ? 'مع خصم المغادرة' : 'دون خصم المغادرة'}</small>
+                  {isAbsent ? (
+                    <span style={{ color: '#ef4444', fontSize: 12, fontWeight: 500 }}>0 دقيقة (غائب)</span>
+                  ) : isLeave ? (
+                    <span style={{ color: '#3b82f6', fontSize: 12, fontWeight: 500 }}>إجازة معتمدة</span>
+                  ) : r.counted_minutes == null ? (
+                    <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}>مفتوح (قيد الاحتساب)</span>
+                  ) : (
+                    <>
+                      <strong>{formatNumber(r.counted_minutes)} دقيقة</strong>
+                      <small>{r.deduct_away ? 'مع خصم المغادرة' : 'دون خصم المغادرة'}</small>
+                    </>
+                  )}
                 </td>
                 {canEdit && (
                   <td>
-                    <button className="asas-btn sm" onClick={() => onEdit(r)}>
-                      <Icon name="edit" />
-                      تصحيح
-                    </button>
+                    {r.id ? (
+                      <button className="asas-btn sm" onClick={() => onEdit(r)} title="تصحيح سجل الحضور">
+                        <Icon name="edit" />
+                        تصحيح
+                      </button>
+                    ) : (
+                      <button className="asas-btn sm primary" onClick={() => onEdit(r)} title="تسجيل حضور يدوي للموظف الغائب">
+                        <Icon name="checkCircle" />
+                        تحضير يدوي
+                      </button>
+                    )}
                   </td>
                 )}
               </tr>
@@ -1023,6 +1075,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
   const [to, setTo] = useState(today);
   const [search, setSearch] = useState('');
   const [accountFilter, setAccountFilter] = useState('all');
+  const [recordFilter, setRecordFilter] = useState('all');
   const [liveTime, setLiveTime] = useState('');
   const [announcements, setAnnouncements] = useState([]);
   const [showAnnouncementsModal, setShowAnnouncementsModal] = useState(false);
@@ -1174,14 +1227,15 @@ function AsasAppInner({ defaultAction = 'auto' }) {
     if (kind === 'records') {
       const isoLocal = d => d ? new Date(new Date(d).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
       setForm({
-        id: item.id,
+        id: item.id || null,
+        employee_id: item.employee_id || item.id,
         name: item.name,
-        first_in: isoLocal(item.first_in),
+        first_in: isoLocal(item.first_in) || isoLocal(new Date()),
         last_out: isoLocal(item.last_out),
-        state: item.state,
+        state: item.state === 'absent' || item.state === 'leave' ? 'inside' : (item.state || 'inside'),
         exit_reason: item.exit_reason || 'admin_correction',
         deduct_away: Boolean(item.deduct_away),
-        reason: ''
+        reason: item.id ? '' : 'تسجيل حضور يدوي من الإدارة'
       });
       setModal('records');
       return;
@@ -1311,9 +1365,22 @@ function AsasAppInner({ defaultAction = 'auto' }) {
           deduct_away: form.deduct_away,
           reason: form.reason
         };
-        await api(`/admin/records/${form.id}`, 'PATCH', body);
+        if (form.id) {
+          await api(`/admin/records/${form.id}`, 'PATCH', body);
+          setNotice('تم حفظ تصحيح الحضور وتوثيقه في سجل العمليات');
+        } else {
+          await api('/admin/records', 'POST', {
+            employee_id: form.employee_id,
+            first_in: body.first_in,
+            last_out: body.last_out,
+            state: body.state,
+            exit_reason: body.exit_reason,
+            deduct_away: body.deduct_away,
+            reason: form.reason || 'تسجيل حضور يدوي من لوحة التحكم'
+          });
+          setNotice('تم تسجيل حضور الموظف يدوياً بنجاح وتوثيقه في النظام');
+        }
         setModal(null);
-        setNotice('تم حفظ تصحيح الحضور وتوثيقه في سجل العمليات');
         await load();
         return;
       }
@@ -1526,7 +1593,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               ? data.filter(a => !a.active).length
               : 0;
             return (
-              <button className={tab === key ? 'active' : ''} key={key} onClick={() => { setTab(key); setOpen(false); setData(null); setNotice(''); setSearch(''); setAccountFilter('all'); }}>
+              <button className={tab === key ? 'active' : ''} key={key} onClick={() => { setTab(key); setOpen(false); setData(null); setNotice(''); setSearch(''); setAccountFilter('all'); setRecordFilter('all'); }}>
                 <Icon name={iconName} />
                 <span>{label}</span>
                 {key === 'announcements' && announcements.length > 0 && (
@@ -1730,40 +1797,116 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                 </Card>
               </div>
 
-              <Card title="آخر سجلات الحضور والانصراف" icon="calendar" actions={<button className="asas-btn sm" onClick={() => setTab('records')}>جميع السجلات</button>}>
-                <Records rows={data.records.slice(0, 10)} onEdit={r => edit('records', r)} canEdit={can('attendance.edit')} />
+              <Card 
+                title={`سجل حضور وانصراف الموظفين اليوم (${(data.records || []).length} موظف)`} 
+                icon="calendar" 
+                actions={
+                  <button className="asas-btn sm" onClick={() => setTab('records')}>
+                    <Icon name="list" />
+                    جميع السجلات والتقارير
+                  </button>
+                }
+              >
+                <Records rows={data.records || []} onEdit={r => edit('records', r)} canEdit={can('attendance.edit')} />
               </Card>
             </>
           )}
 
           {/* RECORDS TAB */}
-          {tab === 'records' && (
-            <>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
-                <Field label="من تاريخ" type="date" value={from} onChange={e => setFrom(e.target.value)} />
-                <Field label="إلى تاريخ" type="date" value={to} onChange={e => setTo(e.target.value)} />
-                {can('reports.export') && (
-                  <div style={{ display: 'inline-flex', gap: 8 }}>
-                    <button className="asas-btn sm" disabled={busy} onClick={exportCsv}>
-                      <Icon name="fileSpreadsheet" />
-                      Excel / CSV
-                    </button>
-                    <button className="asas-btn sm" disabled={busy} onClick={exportWord}>
-                      <Icon name="fileText" />
-                      Word (DOC)
-                    </button>
-                    <button className="asas-btn sm" disabled={busy} onClick={exportTxt}>
-                      <Icon name="file" />
-                      تقرير TXT
-                    </button>
+          {tab === 'records' && (() => {
+            const allRecords = rows;
+            const insideCount = allRecords.filter(r => r.state === 'inside').length;
+            const outsideCount = allRecords.filter(r => r.state === 'outside' || r.state === 'closed').length;
+            const absentCount = allRecords.filter(r => r.state === 'absent').length;
+            const leaveCount = allRecords.filter(r => r.state === 'leave').length;
+
+            const filteredRecords = allRecords.filter(r => {
+              if (recordFilter === 'inside' && r.state !== 'inside') return false;
+              if (recordFilter === 'outside' && r.state !== 'outside' && r.state !== 'closed') return false;
+              if (recordFilter === 'absent' && r.state !== 'absent') return false;
+              if (recordFilter === 'leave' && r.state !== 'leave') return false;
+              if (search.trim()) {
+                const q = search.trim().toLowerCase();
+                const name = (r.name || '').toLowerCase();
+                const ident = (r.identifier || '').toLowerCase();
+                const branch = (r.branch_name || '').toLowerCase();
+                if (!name.includes(q) && !ident.includes(q) && !branch.includes(q)) return false;
+              }
+              return true;
+            });
+
+            return (
+              <>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+                    <Field label="من تاريخ" type="date" value={from} onChange={e => setFrom(e.target.value)} />
+                    <Field label="إلى تاريخ" type="date" value={to} onChange={e => setTo(e.target.value)} />
+                    <div style={{ width: 220 }}>
+                      <Field label="بحث بالاسم أو الرقم">
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            className="asas-input"
+                            type="search"
+                            placeholder="بحث في الموظفين..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            style={{ paddingRight: 32 }}
+                          />
+                          <Icon name="search" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: 'var(--text-3)', pointerEvents: 'none' }} />
+                        </div>
+                      </Field>
+                    </div>
                   </div>
-                )}
-              </div>
-              <Card title="سجل الحركات التفصيلي" icon="calendar">
-                <Records rows={rows} onEdit={r => edit('records', r)} canEdit={can('attendance.edit')} />
-              </Card>
-            </>
-          )}
+
+                  {can('reports.export') && (
+                    <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button className="asas-btn sm" disabled={busy} onClick={exportCsv}>
+                        <Icon name="fileSpreadsheet" />
+                        Excel / CSV
+                      </button>
+                      <button className="asas-btn sm" disabled={busy} onClick={exportWord}>
+                        <Icon name="fileText" />
+                        Word (DOC)
+                      </button>
+                      <button className="asas-btn sm" disabled={busy} onClick={exportTxt}>
+                        <Icon name="file" />
+                        تقرير TXT
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Filter Tabs */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
+                  {[
+                    ['all', `الكل (${allRecords.length})`, 'users'],
+                    ['inside', `حاضرون الآن (${insideCount})`, 'checkCircle'],
+                    ['outside', `انصرفوا (${outsideCount})`, 'logOut'],
+                    ['absent', `لم يسجلوا اليوم / غائبون (${absentCount})`, 'alert'],
+                    ['leave', `في إجازة (${leaveCount})`, 'calendar']
+                  ].map(([fKey, fLabel, fIcon]) => (
+                    <button
+                      key={fKey}
+                      className={`asas-btn sm ${recordFilter === fKey ? 'primary' : ''}`}
+                      onClick={() => setRecordFilter(fKey)}
+                      style={{
+                        whiteSpace: 'nowrap',
+                        fontWeight: recordFilter === fKey ? 700 : 500,
+                        backgroundColor: recordFilter === fKey ? undefined : 'rgba(255, 255, 255, 0.04)'
+                      }}
+                    >
+                      <Icon name={fIcon} style={{ width: 14, height: 14 }} />
+                      {fLabel}
+                    </button>
+                  ))}
+                </div>
+
+                <Card title={`سجل الحركات والتفاصيل (${filteredRecords.length} من إجمالي ${allRecords.length} موظف)`} icon="calendar">
+                  <Records rows={filteredRecords} onEdit={r => edit('records', r)} canEdit={can('attendance.edit')} />
+                </Card>
+              </>
+            );
+          })()}
 
           {/* ACCOUNTS / EMPLOYEES TAB */}
           {tab === 'accounts' && (
@@ -2555,12 +2698,13 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               <h2>
                 {modal === 'announcements'
                   ? (form.id ? 'تعديل التعميم الرسمي' : 'نشر تعميم رسمي')
-                  : `${form.id ? 'تعديل' : 'إضافة'} ${
-                      modal === 'branches' ? 'موقع الشركة'
-                        : modal === 'shifts' ? 'الدوام وسياسة الاحتساب'
-                        : modal === 'records' ? 'سجل الحضور'
-                        : modal === 'accounts' ? 'حساب موظف' : ''
-                    }`}
+                  : modal === 'records'
+                    ? (form.id ? 'تصحيح سجل الحضور' : `تسجيل حضور يدوي - ${form.name || ''}`)
+                    : `${form.id ? 'تعديل' : 'إضافة'} ${
+                        modal === 'branches' ? 'موقع الشركة'
+                          : modal === 'shifts' ? 'الدوام وسياسة الاحتساب'
+                          : modal === 'accounts' ? 'حساب موظف' : ''
+                      }`}
               </h2>
               <button className="asas-btn sm" onClick={() => setModal(null)} aria-label="إغلاق">
                 <Icon name="close" />

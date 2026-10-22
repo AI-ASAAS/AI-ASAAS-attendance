@@ -701,7 +701,10 @@ async function event(c,user,record,kind,body,details){
 }
 
 function resolveRecordStatus(r){
- if(!r)return {status_key:'absent',status_label:'لم يسجل حضور اليوم',exit_reason_label:'—'};
+ if(!r||!r.id||r.state==='absent'||r.active_leave_id||r.state==='leave'){
+  if(r?.active_leave_id||r?.state==='leave') return { status_key:'leave', status_label:'في إجازة رسمية', exit_reason_label:'إجازة معتمدة' };
+  return { status_key:'absent', status_label:'لم يسجل اليوم (غائب)', exit_reason_label:'لم يحضر' };
+ }
  const isInside = r.state === 'inside';
  const late = Number(r.late_minutes || 0);
 
@@ -1014,10 +1017,82 @@ app.post('/api/attendance/offline',employee,wrap(async(req,res)=>{
 
 async function recordsFor(user,from,to){
  const broad=['super_admin','hr_admin'].includes(user.role);
- return (await db.query("SELECT r.*,a.name,a.identifier,b.name AS branch_name,s.name AS shift_name,s.start_time,s.end_time,s.grace_minutes FROM duty_records r JOIN accounts a ON a.id=r.employee_id JOIN branches b ON b.id=r.branch_id JOIN shifts s ON s.id=r.shift_id WHERE ($1::boolean OR r.branch_id=$2) AND (r.shift_start AT TIME ZONE 'Asia/Aden')::date BETWEEN $3::date AND $4::date ORDER BY r.shift_start DESC LIMIT 5000",[broad,user.branch_id,from,to])).rows;
+ if(from === to){
+  return (await db.query(`
+    SELECT 
+      a.id AS employee_id,
+      a.name,
+      a.identifier,
+      COALESCE(b.id, a.branch_id) AS branch_id,
+      COALESCE(b.name, 'الفرع الرئيسي') AS branch_name,
+      COALESCE(s.id, a.shift_id) AS shift_id,
+      COALESCE(s.name, 'الدوام الافتراضي') AS shift_name,
+      s.start_time,
+      s.end_time,
+      s.grace_minutes,
+      r.id,
+      COALESCE(r.shift_start, ($3::text || ' ' || COALESCE(s.start_time, '08:00:00'))::timestamptz) AS shift_start,
+      r.first_in,
+      r.last_out,
+      CASE 
+        WHEN r.state IS NOT NULL THEN r.state
+        WHEN lr.id IS NOT NULL THEN 'leave'
+        ELSE 'absent'
+      END AS state,
+      r.exit_reason,
+      r.close_policy,
+      r.deduct_away,
+      r.away_seconds,
+      r.late_minutes,
+      lr.id AS active_leave_id
+    FROM accounts a
+    LEFT JOIN branches b ON b.id = a.branch_id
+    LEFT JOIN shifts s ON s.id = a.shift_id
+    LEFT JOIN LATERAL (
+      SELECT *
+      FROM duty_records
+      WHERE employee_id = a.id AND (shift_start AT TIME ZONE 'Asia/Aden')::date = $3::date
+      ORDER BY shift_start DESC LIMIT 1
+    ) r ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT id
+      FROM leave_requests
+      WHERE employee_id = a.id AND status = 'approved' AND $3::date BETWEEN from_date AND to_date
+      LIMIT 1
+    ) lr ON TRUE
+    WHERE a.role = 'employee' AND a.active = TRUE AND ($1::boolean OR a.branch_id = $2)
+    ORDER BY 
+      CASE 
+        WHEN r.state = 'inside' THEN 1
+        WHEN r.state = 'outside' THEN 2
+        WHEN lr.id IS NOT NULL THEN 3
+        ELSE 4
+      END,
+      a.name ASC
+  `, [broad, user.branch_id, from])).rows;
+ }
+
+ return (await db.query(`
+   SELECT 
+     r.*,
+     a.name,
+     a.identifier,
+     COALESCE(b.name, 'الفرع الرئيسي') AS branch_name,
+     COALESCE(s.name, 'الدوام الافتراضي') AS shift_name,
+     s.start_time,
+     s.end_time,
+     s.grace_minutes
+   FROM duty_records r
+   JOIN accounts a ON a.id = r.employee_id
+   LEFT JOIN branches b ON b.id = r.branch_id
+   LEFT JOIN shifts s ON s.id = r.shift_id
+   WHERE a.active = TRUE AND ($1::boolean OR r.branch_id = $2)
+     AND (r.shift_start AT TIME ZONE 'Asia/Aden')::date BETWEEN $3::date AND $4::date
+   ORDER BY r.shift_start DESC LIMIT 5000
+ `, [broad, user.branch_id, from, to])).rows;
 }
 function dateRange(req){const today=policy.localDay();const from=req.query.from||today,to=req.query.to||today;for(const d of [from,to])if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!Number.isFinite(Date.parse(d)))error('DATE','تاريخ غير صالح');if(from>to||Date.parse(to)-Date.parse(from)>366*86400000)error('DATE','الفترة لا تتجاوز سنة');return [from,to];}
-function countedMinutes(r){if(r.state==='inside'||!r.last_out)return null;return Math.max(0,Math.floor((new Date(r.last_out)-new Date(r.first_in))/60000)-(r.deduct_away?Math.floor(r.away_seconds/60):0));}
+function countedMinutes(r){if(!r||r.state==='inside'||r.state==='absent'||!r.last_out)return null;return Math.max(0,Math.floor((new Date(r.last_out)-new Date(r.first_in))/60000)-(r.deduct_away?Math.floor(r.away_seconds/60):0));}
 app.get('/api/admin/records',admin,wrap(async(req,res)=>{
  const rows=await recordsFor(req.user,...dateRange(req));
  respond(res,rows.map(r=>({
@@ -1025,6 +1100,27 @@ app.get('/api/admin/records',admin,wrap(async(req,res)=>{
   counted_minutes:countedMinutes(r),
   ...resolveRecordStatus(r)
  })));
+}));
+app.post('/api/admin/records',admin,allow('attendance.edit'),wrap(async(req,res)=>{
+ const b=req.body,reason=string(b.reason||'تسجيل حضور يدوي من لوحة التحكم',500);
+ const employeeId=id(b.employee_id);
+ const firstIn=b.first_in?new Date(b.first_in):new Date();
+ const lastOut=b.last_out?new Date(b.last_out):null;
+ const state=b.state||(lastOut?'outside':'inside');
+ respond(res,await db.transaction(async c=>{
+  const emp=(await c.query('SELECT * FROM accounts WHERE id=$1',[employeeId])).rows[0];
+  if(!emp)error('NOT_FOUND','الموظف غير موجود',404);
+  scope(req.user,emp.branch_id);
+  const shiftStart = new Date(firstIn);
+  const r = await c.query(
+   `INSERT INTO duty_records(employee_id,branch_id,shift_id,shift_start,shift_end,first_in,last_out,state,exit_reason,close_policy)
+    VALUES($1,$2,$3,$4,$4 + INTERVAL '8 hours',$5,$6,$7,'manual','manual')
+    RETURNING *`,
+   [emp.id, emp.branch_id, emp.shift_id, shiftStart, firstIn, lastOut, state]
+  );
+  await audit(c,req.user,'record.create_manual',r.rows[0].id,reason,{employee_id:emp.id,first_in:firstIn,last_out:lastOut});
+  return r.rows[0];
+ }));
 }));
 app.patch('/api/admin/records/:id',admin,allow('attendance.edit'),wrap(async(req,res)=>{
  const recordId=id(req.params.id),b=req.body,reason=string(b.reason,500);
@@ -1102,7 +1198,18 @@ app.get('/api/admin/dashboard',admin,wrap(async(req,res)=>{
  const today=policy.localDay(),records=await recordsFor(req.user,today,today);
  const active=(await db.query("SELECT r.* FROM duty_records r WHERE state='inside' AND ($1::boolean OR branch_id=$2)",[broad,req.user.branch_id])).rows;
  const fresh=active.filter(r=>r.last_seen&&Date.now()-new Date(r.last_seen)<90000&&r.gps_state==='inside').length;
- respond(res,{total:accounts.length,present:new Set(records.map(r=>r.employee_id)).size,inside:fresh,uncertain:active.length-fresh,late:records.filter(r=>r.late_minutes>0).length,records:records.map(r=>({...r,counted_minutes:countedMinutes(r)}))});
+ respond(res,{
+  total:accounts.length,
+  present:new Set(records.filter(r=>r.id&&r.first_in).map(r=>r.employee_id)).size,
+  inside:fresh,
+  uncertain:active.length-fresh,
+  late:records.filter(r=>r.late_minutes>0).length,
+  records:records.map(r=>({
+   ...r,
+   counted_minutes:countedMinutes(r),
+   ...resolveRecordStatus(r)
+  }))
+ });
 }));
 app.get('/api/admin/reports.csv',admin,allow('reports.export'),wrap(async(req,res)=>{
  const [from,to]=dateRange(req);
@@ -1115,9 +1222,9 @@ app.get('/api/admin/reports.csv',admin,allow('reports.export'),wrap(async(req,re
    r.identifier,
    r.name,
    r.branch_name,
-   new Date(r.shift_start).toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'}),
-   new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}),
-   r.last_out?new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'قيد الدوام',
+   r.shift_start ? new Date(r.shift_start).toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'}) : '—',
+   r.first_in ? new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : 'لم يحضر',
+   r.last_out ? new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (r.state === 'inside' ? 'حاضر الآن' : '—'),
    auto.status_label,
    auto.exit_reason_label,
    countedMinutes(r)||0,
@@ -1147,8 +1254,8 @@ app.get('/api/admin/reports.txt',admin,allow('reports.export'),wrap(async(req,re
   const name=(r.name||'').padEnd(20).slice(0,20);
   const id=(r.identifier||'').padEnd(14).slice(0,14);
   const branch=(r.branch_name||'').padEnd(14).slice(0,14);
-  const inTime=new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}).padEnd(12);
-  const outTime=(r.last_out?new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'قيد الدوام').padEnd(12);
+  const inTime=(r.first_in ? new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : 'لم يحضر').padEnd(12);
+  const outTime=(r.last_out ? new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (r.state === 'inside' ? 'حاضر الآن' : '—')).padEnd(12);
   const state=(auto.status_label||'').padEnd(20).slice(0,20);
   const reason=(auto.exit_reason_label||'').padEnd(30).slice(0,30);
   const mins=String(countedMinutes(r)||0).padEnd(8);
@@ -1191,6 +1298,7 @@ tr:nth-child(even) { background-color: #faf9f5; }
 .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
 .badge-in { background-color: #eaf4ee; color: #2d6a4f; }
 .badge-out { background-color: #f5f3f0; color: #474143; }
+.badge-absent { background-color: #fee2e2; color: #b91c1c; }
 .footer { margin-top: 24px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0; padding-top: 10px; }
 </style>
 </head>
@@ -1222,15 +1330,18 @@ tr:nth-child(even) { background-color: #faf9f5; }
  <tbody>
   ${rows.map(r=>{
    const auto=resolveRecordStatus(r);
+   const inDisplay = r.first_in ? new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : '<span style="color:#ef4444; font-weight:bold;">لم يسجل حضور (غائب)</span>';
+   const outDisplay = r.last_out ? new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (r.state === 'inside' ? '<span class="badge badge-in">حاضر الآن</span>' : '—');
+   const badgeClass = r.state === 'inside' ? 'badge-in' : (r.state === 'absent' ? 'badge-absent' : 'badge-out');
    return `
   <tr>
    <td><strong>${r.identifier}</strong></td>
    <td>${r.name}</td>
    <td>${r.branch_name}</td>
-   <td>${new Date(r.shift_start).toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'})}</td>
-   <td style='color:#2d6a4f; font-weight:bold;'>${new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'})}</td>
-   <td>${r.last_out?new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}):'<span class="badge badge-in">قيد الدوام</span>'}</td>
-   <td><span class='badge ${auto.status_key.includes('inside')?'badge-in':'badge-out'}'>${auto.status_label}</span></td>
+   <td>${r.shift_start ? new Date(r.shift_start).toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'}) : '—'}</td>
+   <td style='color:#2d6a4f; font-weight:bold;'>${inDisplay}</td>
+   <td>${outDisplay}</td>
+   <td><span class='badge ${badgeClass}'>${auto.status_label}</span></td>
    <td style='color:#775b24; font-weight:500;'>${auto.exit_reason_label}</td>
    <td><strong>${countedMinutes(r)||0} د</strong></td>
   </tr>`;
