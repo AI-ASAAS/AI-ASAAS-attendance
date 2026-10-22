@@ -17,7 +17,9 @@ import {
 // Avatar Presets: Man or Woman only
 const AVATAR_PRESETS = [
   { id: 'man', name: 'موظف (رجل)', bg: 'linear-gradient(135deg, #1d3557, #457b9d)', icon: '👨‍💼' },
-  { id: 'woman', name: 'موظفة (امرأة)', bg: 'linear-gradient(135deg, #ba9555, #8c6928)', icon: '👩‍💼' }
+  { id: 'woman', name: 'موظفة (امرأة)', bg: 'linear-gradient(135deg, #ba9555, #8c6928)', icon: '👩‍💼' },
+  { id: 'admin', name: 'مسؤول نظام', bg: 'linear-gradient(135deg, #2b2d42, #4a4e69)', icon: '🛡️' },
+  { id: 'neutral', name: 'رمز محايد', bg: 'linear-gradient(135deg, #102a43, #243b53)', icon: '👤' }
 ];
 
 function UserAvatar({ user, size = 'md', onClick }) {
@@ -161,7 +163,7 @@ const permissions = {
 
 const defaults = {
   branches: { name: '', latitude: '', longitude: '', entry_radius: 80, exit_radius: 120, max_accuracy: 30, exit_samples: 3, exit_delay_seconds: 120, active: true, reason: '' },
-  shifts: { name: '', start_time: '08:00', end_time: '16:00', work_days: [0, 1, 2, 3, 4], grace_minutes: 15, close_policy: 'actual_exit', deduct_away: false, reason: '' },
+  shifts: { name: '', start_time: '08:00', end_time: '16:00', work_days: [0, 1, 2, 3, 4, 6], grace_minutes: 15, close_policy: 'actual_exit', deduct_away: false, reason: '' },
   accounts: { name: '', identifier: '', email: '', phone: '', password: '', role: 'employee', branch_id: '', shift_id: '', permissions: [] },
   records: { first_in: '', last_out: '', state: 'closed', exit_reason: 'انتهاء ساعات الدوام الرسمي في الموعد', deduct_away: false, reason: '' },
   announcements: { title: '', content: '', priority: 'normal', send_email: false }
@@ -665,6 +667,9 @@ function ProfileModal({ user, onClose, onUpdated }) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [phone, setPhone] = useState(user?.phone || '');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -692,7 +697,7 @@ function ProfileModal({ user, onClose, onUpdated }) {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const maxDim = 384;
+        const maxDim = 256;
         let w = img.width, h = img.height;
         if (w > maxDim || h > maxDim) {
           if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
@@ -723,9 +728,9 @@ function ProfileModal({ user, onClose, onUpdated }) {
     setMsg('');
 
     if (newPassword) {
-      if (!/^\d{8}$/.test(newPassword)) {
+      if (newPassword.length < 6) {
         setBusy(false);
-        return setErr('كلمة المرور يجب أن تتكون من 8 أرقام تماماً (مثال: 12345678)');
+        return setErr('كلمة المرور يجب ألا تقل عن 6 خانات أو أحرف');
       }
       if (newPassword !== confirmPassword) {
         setBusy(false);
@@ -867,42 +872,72 @@ function ProfileModal({ user, onClose, onUpdated }) {
           <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: 16, marginTop: 16 }}>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Icon name="key" style={{ width: 16, height: 16, color: 'var(--accent)' }} />
-              إعداد وتغيير كلمة المرور (8 أرقام)
+              إعداد وتغيير كلمة المرور
             </div>
             <p className="asas-muted" style={{ fontSize: 11.5, marginBottom: 10 }}>
-              يجب أن تتكون كلمة المرور من 8 أرقام تماماً (مثال: 12345678). اتركها فارغة إذا لم ترغب بالتغيير.
+              يمكنك كتابة كلمة مرور قوية من 6 أحرف أو أرقام أو رموز على الأقل. اترك الحقول فارغة إذا لم ترغب بتغييرها.
             </p>
-            <Field
-              label="كلمة المرور الحالية (اختياري عند الإعداد الأولي / مطلوب لتغيير كلمة قائمة)"
-              type="password"
-              autoComplete="current-password"
-              placeholder="أدخل كلمة المرور الحالية إن وُجدت"
-              value={currentPassword}
-              onChange={e => setCurrentPassword(e.target.value)}
-            />
+            <div style={{ position: 'relative' }}>
+              <Field
+                label="كلمة المرور الحالية (مطلوبة لتأكيد التغيير إذا كان حسابك يحمل كلمة مرور سابقة)"
+                type={showCurrentPass ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="أدخل كلمة المرور الحالية"
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+              />
+              {currentPassword && (
+                <button
+                  type="button"
+                  style={{ position: 'absolute', left: 10, top: 32, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 4 }}
+                  onClick={() => setShowCurrentPass(!showCurrentPass)}
+                  title={showCurrentPass ? 'إخفاء' : 'إظهار'}
+                >
+                  <Icon name={showCurrentPass ? 'eyeOff' : 'eye'} width={16} height={16} />
+                </button>
+              )}
+            </div>
             <div className="asas-form-grid" style={{ marginTop: 10 }}>
-              <Field
-                label="كلمة المرور الجديدة (8 أرقام)"
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]{8}"
-                maxLength={8}
-                placeholder="مثال: 12345678"
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value.replace(/\D/g, '').slice(0, 8))}
-              />
-              <Field
-                label="تأكيد كلمة المرور (8 أرقام)"
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]{8}"
-                maxLength={8}
-                placeholder="أعد إدخال الـ 8 أرقام"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value.replace(/\D/g, '').slice(0, 8))}
-              />
+              <div style={{ position: 'relative' }}>
+                <Field
+                  label="كلمة المرور الجديدة (6 خانات على الأقل)"
+                  type={showNewPass ? 'text' : 'password'}
+                  placeholder="أدخل كلمة المرور الجديدة"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                />
+                {newPassword && (
+                  <button
+                    type="button"
+                    style={{ position: 'absolute', left: 10, top: 32, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 4 }}
+                    onClick={() => setShowNewPass(!showNewPass)}
+                    title={showNewPass ? 'إخفاء' : 'إظهار'}
+                  >
+                    <Icon name={showNewPass ? 'eyeOff' : 'eye'} width={16} height={16} />
+                  </button>
+                )}
+              </div>
+              <div style={{ position: 'relative' }}>
+                <Field
+                  label="تأكيد كلمة المرور الجديدة"
+                  type={showConfirmPass ? 'text' : 'password'}
+                  placeholder="أعد إدخال كلمة المرور للتأكيد"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                />
+                {confirmPassword && (
+                  <button
+                    type="button"
+                    style={{ position: 'absolute', left: 10, top: 32, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 4 }}
+                    onClick={() => setShowConfirmPass(!showConfirmPass)}
+                    title={showConfirmPass ? 'إخفاء' : 'إظهار'}
+                  >
+                    <Icon name={showConfirmPass ? 'eyeOff' : 'eye'} width={16} height={16} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </form>
@@ -991,6 +1026,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
   const [announcements, setAnnouncements] = useState([]);
   const [showAnnouncementsModal, setShowAnnouncementsModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [newCustomPerm, setNewCustomPerm] = useState('');
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -1178,6 +1214,33 @@ function AsasAppInner({ defaultAction = 'auto' }) {
     }
   }
 
+  async function deleteShift(s) {
+    if (!window.confirm(`هل أنت متأكد من حذف جدول الدوام (${s.name}) نهائياً من النظام؟`)) {
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const r = await api(`/admin/shifts/${s.id}`, 'DELETE');
+      setNotice(r?.message || `تم حذف جدول الدوام (${s.name}) بنجاح`);
+      await load();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const handleAddCustomPerm = () => {
+    const val = (newCustomPerm || '').trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '');
+    if (!val) return;
+    const current = Array.isArray(form.permissions) ? [...form.permissions] : [];
+    if (!current.includes(val)) {
+      set('permissions', [...current, val]);
+    }
+    setNewCustomPerm('');
+  };
+
   async function deleteAccount(acc) {
     if (!window.confirm(`هل أنت متأكد من رغبتك في حذف حساب الموظف (${acc.name} - ${acc.identifier}) نهائياً؟ سيتم مسح بيانات الحساب وحفظ الإجراء في سجل العمليات.`)) {
       return;
@@ -1259,12 +1322,15 @@ function AsasAppInner({ defaultAction = 'auto' }) {
       if (modal === 'branches') {
         for (const k of ['latitude', 'longitude', 'entry_radius', 'exit_radius', 'max_accuracy', 'exit_samples', 'exit_delay_seconds']) body[k] = Number(body[k]);
       }
-      if (modal === 'shifts') body.grace_minutes = Number(body.grace_minutes);
+      if (modal === 'shifts') {
+        body.grace_minutes = Number(body.grace_minutes || 0);
+        body.deduct_away = Boolean(body.deduct_away);
+        if (!Array.isArray(body.work_days) || !body.work_days.length) body.work_days = [0, 1, 2, 3, 4, 6];
+      }
       if (modal === 'accounts') {
         body.branch_id = body.branch_id ? Number(body.branch_id) : null;
         body.shift_id = body.shift_id ? Number(body.shift_id) : null;
         if (body.id) {
-          delete body.role;
           if (!body.password) delete body.password;
           delete body.bound_device_id;
           delete body.bound_device_name;
@@ -1752,7 +1818,16 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                             <span className="asas-badge outside">غير مقيد</span>
                           )}
                         </td>
-                        <td>{roles[a.role]}</td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <span className="asas-badge inside" style={{ alignSelf: 'flex-start' }}>{roles[a.role] || a.role}</span>
+                            {Array.isArray(a.permissions) && a.permissions.length > 0 && (
+                              <small style={{ color: 'var(--text-3)', fontSize: 10.5 }} title={a.permissions.join(', ')}>
+                                {a.permissions.length} صلاحيات محددة
+                              </small>
+                            )}
+                          </div>
+                        </td>
                         <td><span className={`asas-badge ${a.active ? 'inside' : 'outside'}`}>{a.active ? 'نشط' : 'معطّل'}</span></td>
                         <td>
                           <div style={{ display: 'flex', gap: 6 }}>
@@ -1934,11 +2009,54 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                       </span>
                     </div>
                   </div>
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--hairline)' }}>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-3)', display: 'block', marginBottom: 4 }}>أيام العمل المعتمدة:</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {[
+                          { d: 6, n: 'السبت' },
+                          { d: 0, n: 'الأحد' },
+                          { d: 1, n: 'الإثنين' },
+                          { d: 2, n: 'الثلاثاء' },
+                          { d: 3, n: 'الأربعاء' },
+                          { d: 4, n: 'الخميس' },
+                          { d: 5, n: 'الجمعة' }
+                        ].map(item => {
+                          const isWork = (s.work_days || []).includes(item.d);
+                          return (
+                            <span
+                              key={item.d}
+                              style={{
+                                fontSize: 10.5,
+                                padding: '2px 6px',
+                                borderRadius: 5,
+                                background: isWork ? 'var(--glass-tint-strong)' : 'var(--glass-inset)',
+                                color: isWork ? 'var(--accent)' : 'var(--text-3)',
+                                border: isWork ? '1px solid var(--accent)' : '1px solid transparent',
+                                fontWeight: isWork ? 700 : 400
+                              }}
+                            >
+                              {item.n}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
                   {can('shifts.write') && (
-                    <button className="asas-btn sm" style={{ marginTop: 14, width: '100%', justifyContent: 'center' }} onClick={() => edit('shifts', s)}>
-                      <Icon name="edit" />
-                      تعديل السياسة
-                    </button>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                      <button className="asas-btn sm" style={{ flex: 1, justifyContent: 'center' }} onClick={() => edit('shifts', s)}>
+                        <Icon name="edit" />
+                        تعديل السياسة
+                      </button>
+                      <button
+                        className="asas-btn sm danger"
+                        title="حذف هذا الدوام"
+                        style={{ padding: '0 10px' }}
+                        onClick={() => deleteShift(s)}
+                      >
+                        <Icon name="trash" />
+                        حذف
+                      </button>
+                    </div>
                   )}
                 </Glass>
               ))}
@@ -2415,18 +2533,81 @@ function AsasAppInner({ defaultAction = 'auto' }) {
 
               {modal === 'shifts' && (
                 <>
-                  <Field label="اسم جدول الدوام" required value={form.name} onChange={e => set('name', e.target.value)} />
+                  <Field label="اسم جدول الدوام" required value={form.name || ''} onChange={e => set('name', e.target.value)} />
                   <div className="asas-form-grid">
-                    <Field label="بداية الدوام" type="time" value={form.start_time.slice(0, 5)} required onChange={e => set('start_time', e.target.value)} />
-                    <Field label="نهاية الدوام" type="time" value={form.end_time.slice(0, 5)} required onChange={e => set('end_time', e.target.value)} />
+                    <Field label="بداية الدوام" type="time" value={(form.start_time || '08:00').slice(0, 5)} required onChange={e => set('start_time', e.target.value)} />
+                    <Field label="نهاية الدوام" type="time" value={(form.end_time || '16:00').slice(0, 5)} required onChange={e => set('end_time', e.target.value)} />
                   </div>
-                  <Field label="فترة السماح بالدقائق" type="number" min="0" max="120" value={form.grace_minutes} onChange={e => set('grace_minutes', e.target.value)} />
-                  <Field label="عند نهاية الدوام">
-                    <select className="asas-input" value={form.close_policy} onChange={e => set('close_policy', e.target.value)}>
-                      <option value="actual_exit">انتظار الخروج الفعلي</option>
-                      <option value="scheduled">إغلاق تلقائي بنهاية الدوام</option>
-                    </select>
-                  </Field>
+
+                  <div style={{ marginBottom: 14 }}>
+                    <label className="asas-label" style={{ marginBottom: 8 }}>أيام العمل المعتمدة أسبوعياً:</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {[
+                        { day: 6, label: 'السبت' },
+                        { day: 0, label: 'الأحد' },
+                        { day: 1, label: 'الإثنين' },
+                        { day: 2, label: 'الثلاثاء' },
+                        { day: 3, label: 'الأربعاء' },
+                        { day: 4, label: 'الخميس' },
+                        { day: 5, label: 'الجمعة' }
+                      ].map(d => {
+                        const activeDays = Array.isArray(form.work_days) ? form.work_days : [0, 1, 2, 3, 4, 6];
+                        const isSelected = activeDays.includes(d.day);
+                        return (
+                          <button
+                            type="button"
+                            key={d.day}
+                            className={`asas-btn sm ${isSelected ? 'primary' : ''}`}
+                            style={{
+                              borderRadius: 8,
+                              padding: '5px 12px',
+                              fontSize: 12,
+                              fontWeight: isSelected ? 700 : 500,
+                              border: isSelected ? '1px solid var(--accent)' : '1px solid var(--hairline)',
+                              background: isSelected ? 'var(--accent)' : 'var(--glass-inset)',
+                              color: isSelected ? '#fff' : 'var(--text)'
+                            }}
+                            onClick={() => {
+                              const nextDays = isSelected
+                                ? activeDays.filter(x => x !== d.day)
+                                : [...activeDays, d.day];
+                              if (!nextDays.length) return;
+                              set('work_days', nextDays);
+                            }}
+                          >
+                            {d.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <small style={{ color: 'var(--text-3)', fontSize: 11, display: 'block', marginTop: 4 }}>
+                      اضغط على اليوم لتفعيله أو إلغائه من الدوام الرسمي
+                    </small>
+                  </div>
+
+                  <div className="asas-form-grid">
+                    <Field label="فترة السماح بالدقائق للتأخير" type="number" min="0" max="120" value={form.grace_minutes ?? 15} onChange={e => set('grace_minutes', e.target.value)} />
+                    <Field label="عند نهاية الدوام">
+                      <select className="asas-input" value={form.close_policy || 'actual_exit'} onChange={e => set('close_policy', e.target.value)}>
+                        <option value="actual_exit">انتظار الخروج الفعلي للموظف</option>
+                        <option value="scheduled">إغلاق تلقائي بنهاية وقت الدوام</option>
+                      </select>
+                    </Field>
+                  </div>
+
+                  <label className="asas-check" style={{ marginTop: 10, padding: 10, background: 'var(--glass-inset)', borderRadius: 10, border: '1px solid var(--hairline)' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form.deduct_away)}
+                      onChange={e => set('deduct_away', e.target.checked)}
+                    />
+                    <div>
+                      <strong style={{ fontSize: 13 }}>خصم مدد المغادرة أثناء الدوام</strong>
+                      <p className="asas-muted" style={{ margin: 0, fontSize: 11.5 }}>
+                        خصم فترات الخروج المؤقت أثناء ساعات الدوام الرسمي من مجموع الحضور
+                      </p>
+                    </div>
+                  </label>
                 </>
               )}
 
@@ -2457,13 +2638,117 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                     onChange={e => set('password', e.target.value)}
                   />
 
-                  {user.role === 'super_admin' && !form.id && (
-                    <Field label="الدور والصلاحية">
-                      <select className="asas-input" value={form.role} onChange={e => set('role', e.target.value)}>
+                  {user.role === 'super_admin' && (
+                    <Field label="الدور الوظيفي في النظام">
+                      <select className="asas-input" value={form.role || 'employee'} onChange={e => set('role', e.target.value)}>
                         {Object.entries(roles).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                       </select>
                     </Field>
                   )}
+
+                  {/* Permissions Management Section */}
+                  <div style={{ marginTop: 14, marginBottom: 14, padding: 14, background: 'var(--glass-inset)', borderRadius: 12, border: '1px solid var(--hairline)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+                      <div>
+                        <strong style={{ fontSize: 13.5, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Icon name="shieldCheck" style={{ width: 16, height: 16, color: 'var(--accent)' }} />
+                          الصلاحيات الممنوحة للمستخدم
+                        </strong>
+                        <p className="asas-muted" style={{ fontSize: 11, margin: '2px 0 0' }}>
+                          حدد العمليات الإدارية المتاحة لهذا الحساب في النظام
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          className="asas-btn sm"
+                          style={{ fontSize: 11, padding: '3px 8px' }}
+                          onClick={() => set('permissions', Object.keys(permissions))}
+                        >
+                          تحديد الكل
+                        </button>
+                        <button
+                          type="button"
+                          className="asas-btn sm"
+                          style={{ fontSize: 11, padding: '3px 8px' }}
+                          onClick={() => set('permissions', [])}
+                        >
+                          إلغاء التحديد
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 8, marginTop: 8 }}>
+                      {Object.entries(permissions).map(([pKey, pLabel]) => {
+                        const isChecked = Array.isArray(form.permissions) && form.permissions.includes(pKey);
+                        return (
+                          <label key={pKey} className="asas-check" style={{ fontSize: 12, margin: 0, padding: '6px 8px', borderRadius: 8, background: isChecked ? 'var(--glass-tint-strong)' : 'transparent', border: isChecked ? '1px solid var(--accent)' : '1px solid transparent' }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={e => {
+                                const current = Array.isArray(form.permissions) ? [...form.permissions] : [];
+                                if (e.target.checked) {
+                                  set('permissions', [...new Set([...current, pKey])]);
+                                } else {
+                                  set('permissions', current.filter(x => x !== pKey));
+                                }
+                              }}
+                            />
+                            <span>{pLabel}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom / Dynamic permissions added by Admin */}
+                    {Array.isArray(form.permissions) && form.permissions.filter(p => !permissions[p]).length > 0 && (
+                      <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--hairline)' }}>
+                        <small style={{ color: 'var(--text-2)', fontSize: 11, display: 'block', marginBottom: 6 }}>صلاحيات مخصصة إضافية:</small>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {form.permissions.filter(p => !permissions[p]).map(cp => (
+                            <span key={cp} className="asas-badge inside" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                              <code>{cp}</code>
+                              <button
+                                type="button"
+                                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, lineHeight: 1 }}
+                                onClick={() => set('permissions', form.permissions.filter(x => x !== cp))}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Add Custom Permission Input */}
+                    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--hairline)', display: 'flex', gap: 8 }}>
+                      <input
+                        type="text"
+                        className="asas-input"
+                        style={{ fontSize: 12, height: 34, flex: 1 }}
+                        placeholder="أدخل رمز صلاحية جديدة (مثال: settings.manage أو finance.view)"
+                        value={newCustomPerm}
+                        onChange={e => setNewCustomPerm(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCustomPerm();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="asas-btn primary sm"
+                        style={{ height: 34, fontSize: 12, whiteSpace: 'nowrap' }}
+                        onClick={handleAddCustomPerm}
+                      >
+                        <Icon name="plus" width={12} height={12} />
+                        إضافة صلاحية
+                      </button>
+                    </div>
+                  </div>
 
                   <div className="asas-form-grid">
                     <Field label="الفرع">

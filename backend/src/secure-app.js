@@ -36,7 +36,8 @@ const respond=(res,data)=>res.json({success:true,data});
 app.disable('x-powered-by');
 app.use(helmet());
 app.use(cors({origin:(orig,cb)=>cb(null,isAllowedOrigin(orig)),credentials:true}));
-app.use(express.json({limit:'64kb'}));
+app.use(express.json({limit:'10mb'}));
+app.use(express.urlencoded({extended:true,limit:'10mb'}));
 const path=require('node:path');
 app.use(express.static(path.join(__dirname,'../public')));
 app.use(rateLimit({windowMs:60000,max:300,standardHeaders:true,legacyHeaders:false}));
@@ -309,6 +310,20 @@ app.put('/api/admin/shifts/:id',admin,allow('shifts.write'),wrap(async(req,res)=
  const values=shiftInput(req.body),reason=string(req.body.reason,500);
  respond(res,await db.transaction(async c=>{const r=await c.query('UPDATE shifts SET name=$1,start_time=$2,end_time=$3,work_days=$4,grace_minutes=$5,close_policy=$6,deduct_away=$7 WHERE id=$8 RETURNING *',[...values,id(req.params.id)]);if(!r.rows.length)error('NOT_FOUND','الجدول غير موجود',404);await audit(c,req.user,'shift.update',req.params.id,reason,{policy_snapshot:'Existing duty records unchanged'});return r.rows[0];}));
 }));
+app.delete('/api/admin/shifts/:id',admin,allow('shifts.write'),wrap(async(req,res)=>{
+ const shiftId=id(req.params.id);
+ const assigned=(await db.query('SELECT COUNT(*)::integer AS cnt FROM accounts WHERE shift_id=$1',[shiftId])).rows[0].cnt;
+ if(assigned>0)error('VALIDATION',`لا يمكن حذف هذا الدوام لأنه مرتبط بـ ${assigned} موظف حالياً. يرجى تعديل دوام الموظفين أولاً.`,409);
+ const totalShifts=(await db.query('SELECT COUNT(*)::integer AS cnt FROM shifts')).rows[0].cnt;
+ if(totalShifts<=1)error('VALIDATION','يجب أن يبقى جدول دوام واحد على الأقل في النظام.',400);
+ await db.transaction(async c=>{
+  const r=await c.query('DELETE FROM shifts WHERE id=$1 RETURNING name',[shiftId]);
+  if(!r.rows.length)error('NOT_FOUND','جدول الدوام غير موجود',404);
+  await audit(c,req.user,'shift.delete',shiftId,`حذف جدول الدوام (${r.rows[0].name})`);
+ });
+ respond(res,{deleted:true,message:'تم حذف جدول الدوام بنجاح'});
+}));
+
 app.get('/api/admin/accounts',admin,allow('employees.read'),wrap(async(req,res)=>{
  const broad=['super_admin','hr_admin'].includes(req.user.role);
  const rows=(await db.query(`
@@ -369,8 +384,8 @@ app.post('/api/admin/accounts',admin,allow('employees.write'),wrap(async(req,res
  if(role==='employee'&&(!branchId||!shiftId))error('VALIDATION','حدد الفرع وجدول الدوام');
  if(branchId)scope(req.user,branchId);
  const permissions=b.permissions||[];
- const known=['employees.read','employees.write','locations.write','qr.manage','shifts.write','reports.export','attendance.edit','leave.review','audit.read'];
- if(!Array.isArray(permissions)||permissions.some(p=>!known.includes(p))||(permissions.length&&req.user.role!=='super_admin'))error('FORBIDDEN','تعيين الصلاحيات لمدير النظام فقط',403);
+ if(permissions.some(p=>!/^[a-zA-Z0-9_.-]{2,60}$/.test(p)))error('VALIDATION','صيغة الصلاحية غير صالحة');
+ if(permissions.length && req.user.role!=='super_admin' && !permission(req.user,'employees.write'))error('FORBIDDEN','تعيين الصلاحيات لمدير النظام أو مسؤول الموظفين',403);
  const email=b.email?String(b.email).trim().toLowerCase():null;
  const phone=b.phone?String(b.phone).trim():null;
  let hash;try{hash=await security.hashPassword(b.password);}catch(e){error('VALIDATION',e.message);}
@@ -400,7 +415,11 @@ app.patch('/api/admin/accounts/:id',admin,allow('employees.write'),wrap(async(re
   const open=await c.query("SELECT id FROM duty_records WHERE employee_id=$1 AND state='inside'",[accountId]);
   if(open.rows.length&&(branchId!==account.branch_id||shiftId!==account.shift_id))error('OPEN_DUTY','أغلق الحضور قبل تغيير فرع الموظف أو دوامه',409);
   const permissions=b.permissions===undefined?account.permissions:b.permissions;
-  if(b.permissions!==undefined&&(req.user.role!=='super_admin'||!Array.isArray(permissions)))error('FORBIDDEN','تعديل الصلاحيات لمدير النظام فقط',403);
+  if(b.permissions!==undefined){
+    if(permissions.some(p=>!/^[a-zA-Z0-9_.-]{2,60}$/.test(p)))error('VALIDATION','صيغة الصلاحية غير صالحة');
+    if(req.user.role!=='super_admin'&&!permission(req.user,'employees.write'))error('FORBIDDEN','تعديل الصلاحيات لمدير النظام أو مسؤول الموظفين',403);
+   }
+   const role=(b.role && req.user.role==='super_admin' && ['employee','viewer','hr_admin','branch_manager','super_admin'].includes(b.role)) ? b.role : account.role;
   const name=b.name!==undefined?string(b.name):account.name;
   const email=b.email!==undefined?(b.email?String(b.email).trim().toLowerCase():null):account.email;
   const phone=b.phone!==undefined?(b.phone?String(b.phone).trim():null):account.phone;
@@ -409,7 +428,7 @@ app.patch('/api/admin/accounts/:id',admin,allow('employees.write'),wrap(async(re
    if(dup.length)error('VALIDATION','البريد الإلكتروني مسجل لموظف آخر بالفعل');
   }
   let hash=account.password_hash;if(b.password){try{hash=await security.hashPassword(b.password);}catch(e){error('VALIDATION',e.message);}}
-  await c.query('UPDATE accounts SET active=$1,branch_id=$2,shift_id=$3,permissions=$4,password_hash=$5,name=$6,email=$7,phone=$8 WHERE id=$9',[active,branchId,shiftId,permissions,hash,name,email,phone,accountId]);
+  await c.query('UPDATE accounts SET active=$1,branch_id=$2,shift_id=$3,permissions=$4,password_hash=$5,name=$6,email=$7,phone=$8,role=$9 WHERE id=$10',[active,branchId,shiftId,permissions,hash,name,email,phone,role,accountId]);
   if(!active||b.password)await c.query('DELETE FROM auth_sessions WHERE account_id=$1',[accountId]);
   await audit(c,req.user,'account.update',accountId,reason,{active,branch_id:branchId,shift_id:shiftId,permissions,password_changed:!!b.password,email,phone});return {updated:true};
  }));
@@ -459,15 +478,17 @@ app.put('/api/auth/profile',wrap(async(req,res)=>{
 
   let newHash=acc.password_hash;
   if(new_password){
-   if(acc.password_hash){
-    const valid=await security.verifyPassword(current_password||'',acc.password_hash);
+   if(acc.password_hash && current_password){
+    const valid=await security.verifyPassword(current_password,acc.password_hash);
     if(!valid)error('VALIDATION','كلمة المرور الحالية غير صحيحة',400);
+   } else if (acc.password_hash && !current_password && req.user.role !== 'super_admin') {
+    error('VALIDATION','يرجى إدخال كلمة المرور الحالية لتأكيد التغيير',400);
    }
-   if(typeof new_password!=='string'||new_password.length<8)error('VALIDATION','يجب أن تتكون كلمة المرور الجديدة من 8 أحرف على الأقل',400);
+   if(typeof new_password!=='string'||new_password.length<6)error('VALIDATION','يجب ألا تقل كلمة المرور عن 6 خانات',400);
    newHash=await security.hashPassword(new_password);
   }
 
-  const newAvatar = avatar !== undefined ? (typeof avatar === 'string' ? avatar.trim().slice(0, 500000) : null) : acc.avatar;
+  const newAvatar = avatar !== undefined ? (typeof avatar === 'string' ? avatar.trim().slice(0, 1000000) : null) : acc.avatar;
   const newPhone = phone !== undefined ? (phone ? String(phone).trim().slice(0, 50) : null) : acc.phone;
 
   const updated=(await c.query('UPDATE accounts SET password_hash=$1, avatar=$2, phone=$3 WHERE id=$4 RETURNING *',[newHash,newAvatar,newPhone,accountId])).rows[0];
