@@ -58,11 +58,15 @@ app.get('/health',wrap(async(req,res)=>{await db.query('SELECT 1');respond(res,{
 app.post('/api/auth/login',rateLimit({windowMs:900000,max:20,standardHeaders:true,legacyHeaders:false}),wrap(async(req,res)=>{
  const identifier=string(req.body.identifier,100), password=req.body.password;
  if(typeof password!=='string'||password.length>128)error('LOGIN','بيانات الدخول غير صحيحة',401);
- const result=await db.query('SELECT * FROM accounts WHERE (identifier=$1 OR LOWER(email)=LOWER($1)) AND active=TRUE',[identifier]);
+ const result=await db.query('SELECT * FROM accounts WHERE (identifier=$1 OR LOWER(email)=LOWER($1))',[identifier]);
  const account=result.rows[0];
  const dummy='scrypt:00000000000000000000000000000000:'+ '00'.repeat(64);
  const valid=await security.verifyPassword(password,account?.password_hash||dummy);
  if(!account||!valid)error('LOGIN','بيانات الدخول غير صحيحة',401);
+
+ if(!account.active){
+  error('ACCOUNT_PENDING_APPROVAL',`حسابك (${account.name} - ${account.identifier}) قيد المراجعة وبانتظار موافقة واعتماد إدارة النظام في لوحة التحكم قبل تفعيل تسجيل الدخول.`,403);
+ }
 
  const deviceId=req.body.device_id?String(req.body.device_id).trim():null;
  const deviceName=req.body.device_name?String(req.body.device_name).trim().slice(0,150):null;
@@ -104,6 +108,75 @@ async function generateNextEmployeeIdentifier(client) {
  return String(nextNum).padStart(3, '0');
 }
 
+app.post('/api/auth/register',rateLimit({windowMs:900000,max:15,standardHeaders:true,legacyHeaders:false}),wrap(async(req,res)=>{
+ const name=string(req.body.name,100);
+ const email=req.body.email?String(req.body.email).trim().toLowerCase():null;
+ const phone=req.body.phone?String(req.body.phone).trim().slice(0,50):null;
+ const password=req.body.password;
+ if(typeof password!=='string'||password.length<6||password.length>128){
+  error('VALIDATION','كلمة المرور يجب ألا تقل عن 6 خانات',400);
+ }
+ if(!email&&!phone){
+  error('VALIDATION','يرجى إدخال البريد الإلكتروني أو رقم الهاتف',400);
+ }
+ const deviceId=req.body.device_id?String(req.body.device_id).trim():null;
+ const deviceName=req.body.device_name?String(req.body.device_name).trim().slice(0,150):null;
+
+ const account = await db.transaction(async c => {
+  if(email){
+   const dup=(await c.query('SELECT id FROM accounts WHERE LOWER(email)=$1',[email])).rows;
+   if(dup.length)error('VALIDATION','البريد الإلكتروني مسجل بالفعل لموظف آخر',400);
+  }
+
+  let branchId = req.body.branch_id ? Number(req.body.branch_id) : null;
+  if(!branchId){
+   const defaultBranch=(await c.query('SELECT id FROM branches WHERE active=TRUE ORDER BY id ASC LIMIT 1')).rows[0];
+   branchId = defaultBranch?.id;
+  }
+  const defaultShift=(await c.query('SELECT id FROM shifts ORDER BY id ASC LIMIT 1')).rows[0];
+  if(!branchId||!defaultShift){
+   error('SETUP_REQUIRED','يرجى إعداد الفروع وجداول الدوام أولاً في لوحة التحكم',500);
+  }
+
+  if(deviceId){
+   const other = (await c.query('SELECT id, name FROM accounts WHERE bound_device_id=$1', [deviceId])).rows;
+   if(other.length){
+    error('DEVICE_BOUND_OTHER', `هذا الجوال مقترن بالموظف (${other[0].name}). لا يمكن استخدام نفس الجوال لأكثر من موظف منعاً للتحضير بالنيابة.`, 403);
+   }
+  }
+
+  const identifier = await generateNextEmployeeIdentifier(c);
+  const hash = await security.hashPassword(password);
+
+  const insertRes = await c.query(
+   `INSERT INTO accounts(identifier,name,password_hash,role,branch_id,shift_id,email,phone,bound_device_id,bound_device_name,device_bound_at,active)
+    VALUES($1,$2,$3,'employee',$4,$5,$6,$7,$8,$9,$10,FALSE)
+    RETURNING *`,
+   [
+    identifier,
+    name,
+    hash,
+    branchId,
+    defaultShift.id,
+    email,
+    phone,
+    deviceId,
+    deviceName||'هاتف ذكي',
+    deviceId ? new Date() : null
+   ]
+  );
+  return insertRes.rows[0];
+ });
+
+ notifications.notifyAccountCreated(account, deviceName).catch(err=>console.error('[Notification Error] Welcome email failed:',err.message));
+
+ respond(res,{
+  pending_approval: true,
+  account: safeAccount(account),
+  message: `🎉 تم إرسال طلب تسجيل حسابك بنجاح! رقمك الوظيفي المبدئي هو (${account.identifier}). طلبك قيد المراجعة وبانتظار موافقة واعتماد إدارة النظام في لوحة التحكم.`
+ });
+}));
+
 app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:true,legacyHeaders:false}),wrap(async(req,res)=>{
  const {credential,email:rawEmail,device_id,device_name,phone,name:rawName}=req.body;
  let targetEmail=null;
@@ -137,7 +210,7 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
 
  let isNew = false;
  const account = await db.transaction(async c => {
-  const result = await c.query('SELECT * FROM accounts WHERE LOWER(email)=$1 AND active=TRUE FOR UPDATE', [targetEmail]);
+  const result = await c.query('SELECT * FROM accounts WHERE LOWER(email)=$1 FOR UPDATE', [targetEmail]);
   let acc = result.rows[0];
 
   if(deviceId){
@@ -148,7 +221,7 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
   }
 
   if(!acc){
-   // Auto-register employee account with sequential permanent employee ID
+   // Auto-register employee account with sequential permanent employee ID in pending approval state (active = FALSE)
    const defaultBranch=(await c.query('SELECT id FROM branches WHERE active=TRUE ORDER BY id ASC LIMIT 1')).rows[0];
    const defaultShift=(await c.query('SELECT id FROM shifts ORDER BY id ASC LIMIT 1')).rows[0];
    if(!defaultBranch||!defaultShift){
@@ -161,7 +234,7 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
 
    const insertRes = await c.query(
     `INSERT INTO accounts(identifier,name,password_hash,role,branch_id,shift_id,email,phone,bound_device_id,bound_device_name,device_bound_at,active)
-     VALUES($1,$2,$3,'employee',$4,$5,$6,$7,$8,$9,$10,TRUE)
+     VALUES($1,$2,$3,'employee',$4,$5,$6,$7,$8,$9,$10,FALSE)
      RETURNING *`,
     [
      identifier,
@@ -179,6 +252,9 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
    acc = insertRes.rows[0];
    isNew = true;
   } else {
+   if(!acc.active){
+    error('ACCOUNT_PENDING_APPROVAL',`حسابك (${acc.name} - ${acc.identifier}) قيد المراجعة وبانتظار موافقة واعتماد إدارة النظام في لوحة التحكم قبل تفعيل تسجيل الدخول.`,403);
+   }
    if(acc.role==='employee'&&deviceId){
     if(acc.bound_device_id&&acc.bound_device_id!==deviceId){
      error('DEVICE_MISMATCH',`حسابك مقترن بجهاز آخر (${acc.bound_device_name||'جوالك السابق'}). يرجى التواصل مع إدارة النظام لفك الارتباط.`,403);
@@ -197,6 +273,11 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
 
  if(isNew){
   notifications.notifyAccountCreated(account,deviceName).catch(err=>console.error('[Notification Error] Welcome email failed:',err.message));
+  return respond(res,{
+   pending_approval: true,
+   account: safeAccount(account),
+   message: `🎉 تم إرسال طلب تسجيل حسابك بنجاح! رقمك الوظيفي المبدئي هو (${account.identifier}). طلبك قيد المراجعة وبانتظار موافقة واعتماد إدارة النظام في لوحة التحكم.`
+  });
  }
 
  const token=security.newToken();
@@ -205,10 +286,8 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
  respond(res,{
   account:safeAccount(account),
   token,
-  is_new:isNew,
-  message:isNew
-    ? `🎉 تم تسجيل حسابك بنجاح! رقمك الوظيفي الثابت هو: (${account.identifier})`
-    : `مرحباً بعودتك! رقمك الوظيفي: (${account.identifier})`
+  is_new:false,
+  message:`مرحباً بعودتك! رقمك الوظيفي: (${account.identifier})`
  });
 }));
 
@@ -216,11 +295,13 @@ app.get('/api/settings',wrap(async(req,res)=>{
  const settingsRows = (await db.query('SELECT key, value FROM system_settings')).rows;
  const settingsMap = {};
  for(const row of settingsRows) settingsMap[row.key] = row.value;
+ const branches = (await db.query('SELECT id, name FROM branches WHERE active=TRUE ORDER BY id ASC')).rows;
  respond(res,{
   company_name: settingsMap.company_name || 'شركة أساس الذكاء الاصطناعي (AI-ASAAS)',
   timezone: settingsMap.timezone || 'Asia/Aden',
   max_gps_accuracy: Number(settingsMap.max_gps_accuracy || 250),
   support_contact: settingsMap.support_contact || '+967 770000000',
+  branches,
  });
 }));
 
@@ -353,7 +434,7 @@ app.get('/api/admin/accounts',admin,allow('employees.read'),wrap(async(req,res)=
      LIMIT 1
    ) lr ON TRUE
    WHERE ($1::boolean OR a.branch_id=$2)
-   ORDER BY a.name LIMIT 1000
+   ORDER BY a.active ASC, a.id DESC LIMIT 1000
  `, [broad, req.user.branch_id])).rows;
 
  const accounts = rows.map(r => {
@@ -442,6 +523,27 @@ app.post('/api/admin/accounts/:id/reset-device',admin,allow('employees.write'),w
   await c.query('DELETE FROM auth_sessions WHERE account_id=$1',[accountId]);
   await audit(c,req.user,'account.reset_device',accountId,reason,{previous_device:acc.bound_device_name,previous_device_id:acc.bound_device_id});
   return {reset:true,message:`تم فك ارتباط الجهاز للموظف (${acc.name}) بنجاح. يمكنه الآن تسجيل الدخول من جهازه الجديد.`};
+ }));
+}));
+
+app.post('/api/admin/accounts/:id/approve',admin,allow('employees.write'),wrap(async(req,res)=>{
+ const accountId=id(req.params.id);
+ const b=req.body||{};
+ const reason=string(b.reason||'اعتماد وتفعيل حساب الموظف من لوحة التحكم',500);
+ respond(res,await db.transaction(async c=>{
+  const acc=(await c.query('SELECT * FROM accounts WHERE id=$1 FOR UPDATE',[accountId])).rows[0];
+  if(!acc)error('NOT_FOUND','الحساب غير موجود',404);
+  if(acc.branch_id)scope(req.user,acc.branch_id);
+
+  const branchId = b.branch_id ? id(b.branch_id) : acc.branch_id;
+  const shiftId = b.shift_id ? id(b.shift_id) : acc.shift_id;
+  const role = (b.role && req.user.role==='super_admin' && ['employee','viewer','hr_admin','branch_manager','super_admin'].includes(b.role)) ? b.role : acc.role;
+
+  await c.query('UPDATE accounts SET active=TRUE, branch_id=$1, shift_id=$2, role=$3 WHERE id=$4',[branchId,shiftId,role,accountId]);
+  await audit(c,req.user,'account.approve',accountId,reason,{previous_active:acc.active,branch_id:branchId,shift_id:shiftId,role});
+
+  const updated=(await c.query('SELECT a.id, a.identifier, a.name, a.email, a.phone, a.role, a.branch_id, a.shift_id, a.active, b.name as branch_name, s.name as shift_name FROM accounts a LEFT JOIN branches b ON b.id=a.branch_id LEFT JOIN shifts s ON s.id=a.shift_id WHERE a.id=$1',[accountId])).rows[0];
+  return {approved:true,account:updated,message:`تم اعتماد وتفعيل حساب الموظف (${updated.name}) بنجاح. يمكنه الآن تسجيل الدخول.`};
  }));
 }));
 

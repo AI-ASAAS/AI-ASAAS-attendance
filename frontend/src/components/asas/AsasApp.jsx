@@ -1022,6 +1022,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
   const [search, setSearch] = useState('');
+  const [accountFilter, setAccountFilter] = useState('all');
   const [liveTime, setLiveTime] = useState('');
   const [announcements, setAnnouncements] = useState([]);
   const [showAnnouncementsModal, setShowAnnouncementsModal] = useState(false);
@@ -1241,15 +1242,38 @@ function AsasAppInner({ defaultAction = 'auto' }) {
     setNewCustomPerm('');
   };
 
+  async function approveAccount(acc) {
+    if (!window.confirm(`هل أنت متأكد من قبول واعتماد حساب الموظف (${acc.name} - ${acc.identifier})؟ سيتم تفعيل حسابه فوراً ليتمكن من تسجيل الدخول والتحضير.`)) {
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const res = await api(`/admin/accounts/${acc.id}/approve`, 'POST', {
+        reason: 'اعتماد وقبول الحساب من لوحة التحكم'
+      });
+      setNotice(res?.message || `تم اعتماد وتفعيل حساب الموظف (${acc.name}) بنجاح`);
+      await load();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function deleteAccount(acc) {
-    if (!window.confirm(`هل أنت متأكد من رغبتك في حذف حساب الموظف (${acc.name} - ${acc.identifier}) نهائياً؟ سيتم مسح بيانات الحساب وحفظ الإجراء في سجل العمليات.`)) {
+    const isPending = !acc.active;
+    const confirmMsg = isPending
+      ? `هل أنت متأكد من رفض وحذف طلب تسجيل حساب الموظف (${acc.name} - ${acc.identifier})؟`
+      : `هل أنت متأكد من رغبتك في حذف حساب الموظف (${acc.name} - ${acc.identifier}) نهائياً؟ سيتم مسح بيانات الحساب وحفظ الإجراء في سجل العمليات.`;
+    if (!window.confirm(confirmMsg)) {
       return;
     }
     setBusy(true);
     setError('');
     try {
       const r = await api(`/admin/accounts/${acc.id}`, 'DELETE');
-      setNotice(r?.message || `تم حذف حساب الموظف (${acc.name}) بنجاح`);
+      setNotice(r?.message || (isPending ? `تم رفض وحذف طلب تسجيل (${acc.name}) بنجاح` : `تم حذف حساب الموظف (${acc.name}) بنجاح`));
       await load();
     } catch (e) {
       setError(e.message);
@@ -1497,15 +1521,23 @@ function AsasAppInner({ defaultAction = 'auto' }) {
         <Brand />
         <p className="asas-nav-label">مساحة الإدارة والقيادة</p>
         <nav className="asas-nav">
-          {tabs.filter(([key]) => key !== 'accounts' || can('employees.read')).filter(([key]) => key !== 'audit' || can('audit.read')).map(([key, label, iconName]) => (
-            <button className={tab === key ? 'active' : ''} key={key} onClick={() => { setTab(key); setOpen(false); setData(null); setNotice(''); setSearch(''); }}>
-              <Icon name={iconName} />
-              <span>{label}</span>
-              {key === 'announcements' && announcements.length > 0 && (
-                <span className="asas-badge urgent" style={{ marginRight: 'auto', fontSize: 10, padding: '1px 6px' }}>{announcements.length}</span>
-              )}
-            </button>
-          ))}
+          {tabs.filter(([key]) => key !== 'accounts' || can('employees.read')).filter(([key]) => key !== 'audit' || can('audit.read')).map(([key, label, iconName]) => {
+            const pendingAccountsCount = (key === 'accounts' && Array.isArray(data) && tab === 'accounts')
+              ? data.filter(a => !a.active).length
+              : 0;
+            return (
+              <button className={tab === key ? 'active' : ''} key={key} onClick={() => { setTab(key); setOpen(false); setData(null); setNotice(''); setSearch(''); setAccountFilter('all'); }}>
+                <Icon name={iconName} />
+                <span>{label}</span>
+                {key === 'announcements' && announcements.length > 0 && (
+                  <span className="asas-badge urgent" style={{ marginRight: 'auto', fontSize: 10, padding: '1px 6px' }}>{announcements.length}</span>
+                )}
+                {key === 'accounts' && pendingAccountsCount > 0 && (
+                  <span className="asas-badge pending" style={{ marginRight: 'auto', fontSize: 10, padding: '1px 6px', background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)' }}>{pendingAccountsCount}</span>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
         <div className="asas-sidebar-foot">
@@ -1736,7 +1768,46 @@ function AsasAppInner({ defaultAction = 'auto' }) {
           {/* ACCOUNTS / EMPLOYEES TAB */}
           {tab === 'accounts' && (
             <>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              {/* Sovereign Pending Approval Banner */}
+              {rows.some(a => !a.active) && (
+                <div style={{
+                  padding: '14px 18px',
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(217, 119, 6, 0.08))',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  borderRadius: 14,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                  marginBottom: 16
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                      ⏳
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: 14, color: '#f59e0b', display: 'block' }}>
+                        تنبيه الإدارة: يوجد {rows.filter(a => !a.active).length} طلب تسجيل حساب جديد بحاجة للمراجعة والموافقة
+                      </strong>
+                      <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                        الموظفون المسجلون حديثاً لا يمكنهم تسجيل الدخول أو إثبات الحضور حتى يتم اعتمادهم وتفعيل حساباتهم من هنا.
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      className="asas-btn sm"
+                      style={{ background: '#f59e0b', borderColor: '#d97706', color: '#111', fontWeight: 800 }}
+                      onClick={() => setAccountFilter('pending')}
+                    >
+                      عرض الطلبات المعلقة ({rows.filter(a => !a.active).length})
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 12 }}>
                 <div style={{ position: 'relative', flex: 1, maxWidth: 420 }}>
                   <input
                     className="asas-input"
@@ -1748,6 +1819,29 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                   <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-3)' }}>
                     <Icon name="search" />
                   </div>
+                </div>
+
+                {/* Filter buttons */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button
+                    className={`asas-btn sm ${accountFilter === 'all' ? 'primary' : ''}`}
+                    onClick={() => setAccountFilter('all')}
+                  >
+                    الكل ({rows.length})
+                  </button>
+                  <button
+                    className={`asas-btn sm ${accountFilter === 'active' ? 'primary' : ''}`}
+                    onClick={() => setAccountFilter('active')}
+                  >
+                    النشطون ({rows.filter(a => a.active).length})
+                  </button>
+                  <button
+                    className={`asas-btn sm ${accountFilter === 'pending' ? 'primary' : ''}`}
+                    style={rows.some(a => !a.active) ? { borderColor: '#f59e0b', color: accountFilter === 'pending' ? '#fff' : '#f59e0b' } : {}}
+                    onClick={() => setAccountFilter('pending')}
+                  >
+                    ⏳ بانتظار الموافقة ({rows.filter(a => !a.active).length})
+                  </button>
                 </div>
               </div>
 
@@ -1765,110 +1859,137 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.filter(a => `${a.name} ${a.identifier} ${a.email || ''} ${a.phone || ''}`.includes(search)).map(a => (
-                      <tr key={a.id}>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <UserAvatar user={a} size="sm" />
-                            <div>
-                              <strong>{a.name}</strong>
-                              <small style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent)' }}>{a.identifier}</small>
+                    {rows
+                      .filter(a => {
+                        const matchesSearch = `${a.name} ${a.identifier} ${a.email || ''} ${a.phone || ''}`.toLowerCase().includes(search.toLowerCase());
+                        if (!matchesSearch) return false;
+                        if (accountFilter === 'active') return a.active;
+                        if (accountFilter === 'pending') return !a.active;
+                        return true;
+                      })
+                      .map(a => (
+                        <tr key={a.id} style={!a.active ? { background: 'rgba(245, 158, 11, 0.04)' } : undefined}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <UserAvatar user={a} size="sm" />
+                              <div>
+                                <strong>{a.name}</strong>
+                                <small style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent)' }}>{a.identifier}</small>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td>
-                          {a.attendance_status === 'inside' ? (
-                            <span className="asas-badge inside">
-                              <Icon name="checkCircle" style={{ width: 12, height: 12 }} />
-                              حاضر الآن
-                            </span>
-                          ) : a.attendance_status === 'outside' ? (
-                            <span className="asas-badge outside">
-                              <Icon name="pause" style={{ width: 12, height: 12 }} />
-                              تم الانصراف
-                            </span>
-                          ) : a.attendance_status === 'leave' ? (
-                            <span className="asas-badge pending">
-                              <Icon name="receipt" style={{ width: 12, height: 12 }} />
-                              في إجازة
-                            </span>
-                          ) : (
-                            <span className="asas-badge" style={{ background: 'var(--glass-inset)', color: 'var(--text-3)' }}>
-                              <Icon name="alert" style={{ width: 12, height: 12 }} />
-                              لم يسجل اليوم
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          <div>
-                            <strong>{a.email || '—'}</strong>
-                            <small>{a.phone || '—'}</small>
-                          </div>
-                        </td>
-                        <td>
-                          {a.bound_device_id ? (
-                            <div>
+                          </td>
+                          <td>
+                            {a.attendance_status === 'inside' ? (
                               <span className="asas-badge inside">
-                                <Icon name="smartphone" style={{ width: 12, height: 12 }} />
-                                {a.bound_device_name || 'جوال مقيد'}
+                                <Icon name="checkCircle" style={{ width: 12, height: 12 }} />
+                                حاضر الآن
                               </span>
-                              <small dir="ltr">{a.bound_device_id.slice(0, 12)}…</small>
+                            ) : a.attendance_status === 'outside' ? (
+                              <span className="asas-badge outside">
+                                <Icon name="pause" style={{ width: 12, height: 12 }} />
+                                تم الانصراف
+                              </span>
+                            ) : a.attendance_status === 'leave' ? (
+                              <span className="asas-badge pending">
+                                <Icon name="receipt" style={{ width: 12, height: 12 }} />
+                                في إجازة
+                              </span>
+                            ) : (
+                              <span className="asas-badge" style={{ background: 'var(--glass-inset)', color: 'var(--text-3)' }}>
+                                <Icon name="alert" style={{ width: 12, height: 12 }} />
+                                لم يسجل اليوم
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            <div>
+                              <strong>{a.email || '—'}</strong>
+                              <small>{a.phone || '—'}</small>
                             </div>
-                          ) : (
-                            <span className="asas-badge outside">غير مقيد</span>
-                          )}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            <span className="asas-badge inside" style={{ alignSelf: 'flex-start' }}>{roles[a.role] || a.role}</span>
-                            {Array.isArray(a.permissions) && a.permissions.length > 0 && (
-                              <small style={{ color: 'var(--text-3)', fontSize: 10.5 }} title={a.permissions.join(', ')}>
-                                {a.permissions.length} صلاحيات محددة
-                              </small>
+                          </td>
+                          <td>
+                            {a.bound_device_id ? (
+                              <div>
+                                <span className="asas-badge inside">
+                                  <Icon name="smartphone" style={{ width: 12, height: 12 }} />
+                                  {a.bound_device_name || 'جوال مقيد'}
+                                </span>
+                                <small dir="ltr">{a.bound_device_id.slice(0, 12)}…</small>
+                              </div>
+                            ) : (
+                              <span className="asas-badge outside">غير مقيد</span>
                             )}
-                          </div>
-                        </td>
-                        <td><span className={`asas-badge ${a.active ? 'inside' : 'outside'}`}>{a.active ? 'نشط' : 'معطّل'}</span></td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            {can('employees.write') && (
-                              <button className="asas-btn sm" onClick={() => edit('accounts', a)}>
-                                <Icon name="edit" />
-                                إدارة
-                              </button>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                              <span className="asas-badge inside" style={{ alignSelf: 'flex-start' }}>{roles[a.role] || a.role}</span>
+                              {Array.isArray(a.permissions) && a.permissions.length > 0 && (
+                                <small style={{ color: 'var(--text-3)', fontSize: 10.5 }} title={a.permissions.join(', ')}>
+                                  {a.permissions.length} صلاحيات محددة
+                                </small>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            {a.active ? (
+                              <span className="asas-badge inside">نشط</span>
+                            ) : (
+                              <span className="asas-badge pending" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.4)', fontWeight: 700 }}>
+                                ⏳ بانتظار الموافقة
+                              </span>
                             )}
-                            {can('employees.write') && a.bound_device_id && (
-                              <button
-                                className="asas-btn sm danger"
-                                title="فك قيد ارتباط هذا الجوال"
-                                onClick={async () => {
-                                  if (window.confirm(`هل أنت متأكد من فك ارتباط الجهاز للموظف (${a.name})؟ سيتمكن من ربط جوال جديد عند أول تسجيل دخول.`)) {
-                                    try {
-                                      await api(`/admin/accounts/${a.id}/reset-device`, 'POST', { reason: 'فك قيد الجهاز بطلب من الإدارة' });
-                                      setNotice(`تم فك قيد الجهاز للموظف ${a.name} بنجاح`);
-                                      await load();
-                                    } catch (e) { setError(e.message); }
-                                  }
-                                }}
-                              >
-                                <Icon name="unlock" />
-                                فك
-                              </button>
-                            )}
-                            {can('employees.write') && a.id !== user.id && (
-                              <button
-                                className="asas-btn sm danger"
-                                title="حذف حساب الموظف نهائياً"
-                                onClick={() => deleteAccount(a)}
-                              >
-                                <Icon name="trash" />
-                                حذف
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                              {!a.active && can('employees.write') && (
+                                <button
+                                  className="asas-btn primary sm"
+                                  style={{ background: '#10b981', borderColor: '#059669', color: '#fff', fontWeight: 700 }}
+                                  title="قبول طلب التسجيل وتفعيل الحساب فوراً"
+                                  onClick={() => approveAccount(a)}
+                                >
+                                  <Icon name="checkCircle" />
+                                  قبول وتفعيل
+                                </button>
+                              )}
+                              {can('employees.write') && (
+                                <button className="asas-btn sm" onClick={() => edit('accounts', a)}>
+                                  <Icon name="edit" />
+                                  إدارة
+                                </button>
+                              )}
+                              {can('employees.write') && a.bound_device_id && (
+                                <button
+                                  className="asas-btn sm danger"
+                                  title="فك قيد ارتباط هذا الجوال"
+                                  onClick={async () => {
+                                    if (window.confirm(`هل أنت متأكد من فك ارتباط الجهاز للموظف (${a.name})؟ سيتمكن من ربط جوال جديد عند أول تسجيل دخول.`)) {
+                                      try {
+                                        await api(`/admin/accounts/${a.id}/reset-device`, 'POST', { reason: 'فك قيد الجهاز بطلب من الإدارة' });
+                                        setNotice(`تم فك قيد الجهاز للموظف ${a.name} بنجاح`);
+                                        await load();
+                                      } catch (e) { setError(e.message); }
+                                    }
+                                  }}
+                                >
+                                  <Icon name="unlock" />
+                                  فك
+                                </button>
+                              )}
+                              {can('employees.write') && a.id !== user.id && (
+                                <button
+                                  className="asas-btn sm danger"
+                                  title={!a.active ? 'رفض وحذف طلب التسجيل' : 'حذف حساب الموظف نهائياً'}
+                                  onClick={() => deleteAccount(a)}
+                                >
+                                  <Icon name="trash" />
+                                  {!a.active ? 'رفض' : 'حذف'}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
                 {!rows.length && !busy && <Empty />}
@@ -2790,6 +2911,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
 
 // LOGIN COMPONENT
 function Login({ onLogin, initialError, onRetry, theme, onToggleTheme }) {
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  const [pendingInfo, setPendingInfo] = useState(null);
   const [identifier, setIdentifier] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('asas_saved_identifier') || '';
@@ -2807,6 +2930,24 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError);
 
+  // Registration states
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regBranchId, setRegBranchId] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [availableBranches, setAvailableBranches] = useState([]);
+
+  useEffect(() => {
+    api('/settings').then(s => {
+      if (Array.isArray(s?.branches) && s.branches.length) {
+        setAvailableBranches(s.branches);
+        setRegBranchId(String(s.branches[0].id));
+      }
+    }).catch(() => {});
+  }, []);
+
   const googleClientId = '331442639841-s48n1ir37vnn9nckg6ogn1hv8fl9fiq3.apps.googleusercontent.com';
 
   const handleGoogleCredentialResponse = useCallback(async (res) => {
@@ -2822,6 +2963,16 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme }) {
         device_id,
         device_name
       });
+      if (d?.pending_approval) {
+        setPendingInfo({
+          title: 'تم إرسال طلب تسجيل حسابك بنجاح!',
+          identifier: d.account?.identifier,
+          name: d.account?.name,
+          email: d.account?.email,
+          message: d.message || 'طلبك قيد المراجعة والموافقة من قِبل إدارة النظام في لوحة التحكم.'
+        });
+        return;
+      }
       if (typeof window !== 'undefined') {
         if (d?.token) localStorage.setItem('asas_token', d.token);
         if (d?.account) localStorage.setItem('asas_account', JSON.stringify(d.account));
@@ -2913,6 +3064,44 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme }) {
     }
   }
 
+  async function submitRegister(e) {
+    e.preventDefault();
+    if (regPassword !== regConfirmPassword) {
+      setError('كلمتا المرور غير متطابقتين');
+      return;
+    }
+    if (regPassword.length < 6) {
+      setError('كلمة المرور يجب ألا تقل عن 6 خانات');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const device_id = getDeviceId();
+      const device_name = getDeviceName();
+      const d = await api('/auth/register', 'POST', {
+        name: regName,
+        email: regEmail || undefined,
+        phone: regPhone || undefined,
+        branch_id: regBranchId ? Number(regBranchId) : undefined,
+        password: regPassword,
+        device_id,
+        device_name
+      });
+      setPendingInfo({
+        title: 'تم استلام طلب تسجيل حسابك بنجاح!',
+        identifier: d.account?.identifier,
+        name: d.account?.name,
+        email: d.account?.email,
+        message: d.message || 'طلبك قيد المراجعة وبانتظار موافقة واعتماد إدارة النظام في لوحة التحكم.'
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="asas-login">
       {onToggleTheme && (
@@ -2944,65 +3133,237 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme }) {
             <Brand />
           </div>
           <p className="asas-eyebrow">بوابة الدخول الموحدة</p>
-          <h2>تسجيل الدخول إلى أساس</h2>
-          <p className="asas-muted">أدخل بياناتك المعتمدة للوصول إلى لوحة التحكم أو مساحة الموظف.</p>
+          <h2>{authMode === 'login' ? 'تسجيل الدخول إلى أساس' : 'طلب تسجيل حساب موظف'}</h2>
+          <p className="asas-muted">
+            {authMode === 'login'
+              ? 'أدخل بياناتك المعتمدة للوصول إلى لوحة التحكم أو مساحة الموظف.'
+              : 'سجل بياناتك المعتمدة لتقديم طلب إنشاء حساب جديد لاعتماده من قِبل الإدارة.'}
+          </p>
 
-          <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 18 }}>
-            {error && (
-              <div className="asas-notice error" role="alert" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div>{error}</div>
-                {onRetry && (
-                  <button type="button" onClick={async () => { setBusy(true); await onRetry(); setBusy(false); }} disabled={busy} className="asas-btn sm" style={{ alignSelf: 'flex-start' }}>
-                    <Icon name="refresh" />
-                    {busy ? 'جارٍ الفحص…' : 'إعادة فحص الاتصال'}
-                  </button>
+          {/* Mode Switcher Tabs */}
+          {!pendingInfo && (
+            <div style={{ display: 'flex', background: 'var(--glass-inset)', borderRadius: 10, padding: 4, gap: 4, marginTop: 14 }}>
+              <button
+                type="button"
+                className={`asas-btn sm ${authMode === 'login' ? 'primary' : ''}`}
+                style={{ flex: 1, border: 'none', height: 36, fontWeight: 700 }}
+                onClick={() => { setAuthMode('login'); setError(''); }}
+              >
+                <Icon name="logIn" />
+                تسجيل الدخول
+              </button>
+              <button
+                type="button"
+                className={`asas-btn sm ${authMode === 'register' ? 'primary' : ''}`}
+                style={{ flex: 1, border: 'none', height: 36, fontWeight: 700 }}
+                onClick={() => { setAuthMode('register'); setError(''); }}
+              >
+                <Icon name="plus" />
+                طلب حساب جديد
+              </button>
+            </div>
+          )}
+
+          {pendingInfo ? (
+            <div style={{ textAlign: 'center', padding: '16px 8px', marginTop: 14 }}>
+              <div style={{
+                width: 60,
+                height: 60,
+                borderRadius: '50%',
+                background: 'rgba(245, 158, 11, 0.15)',
+                color: '#f59e0b',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 14,
+                border: '2px solid rgba(245, 158, 11, 0.4)'
+              }}>
+                <span style={{ fontSize: 28 }}>⏳</span>
+              </div>
+              <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 8px', color: 'var(--text)' }}>
+                {pendingInfo.title}
+              </h3>
+              <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, margin: '0 0 16px' }}>
+                {pendingInfo.message}
+              </p>
+
+              <div style={{
+                background: 'var(--glass-inset)',
+                borderRadius: 12,
+                padding: 14,
+                border: '1px solid var(--hairline)',
+                textAlign: 'right',
+                marginBottom: 16
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span className="asas-muted" style={{ fontSize: 12 }}>اسم الموظف:</span>
+                  <strong style={{ fontSize: 13 }}>{pendingInfo.name}</strong>
+                </div>
+                {pendingInfo.identifier && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span className="asas-muted" style={{ fontSize: 12 }}>الرقم الوظيفي المبدئي:</span>
+                    <strong style={{ fontFamily: 'monospace', color: 'var(--accent)', fontSize: 14 }}>{pendingInfo.identifier}</strong>
+                  </div>
+                )}
+                {pendingInfo.email && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span className="asas-muted" style={{ fontSize: 12 }}>البريد الإلكتروني:</span>
+                    <span style={{ fontSize: 12.5 }} dir="ltr">{pendingInfo.email}</span>
+                  </div>
                 )}
               </div>
-            )}
 
-            <Field
-              label="البريد الإلكتروني أو الرقم الوظيفي"
-              value={identifier}
-              onChange={e => setIdentifier(e.target.value)}
-              autoComplete="username"
-              required
-              placeholder="مثال: 001 أو name@company.com"
-            />
+              <div style={{ background: 'rgba(16, 185, 129, 0.08)', borderRadius: 10, padding: 10, border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: 11.5, color: 'var(--text-2)', marginBottom: 18, lineHeight: 1.5, textAlign: 'right' }}>
+                🔒 <strong>تنبيه الأمان والاعتماد:</strong> سيتم تفعيل حسابك فور موافقة إدارة النظام في لوحة التحكم. يمكنك بعدها تسجيل الدخول بالرقم الوظيفي أو البريد.
+              </div>
 
-            <Field
-              label="كلمة المرور"
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-              placeholder="••••••••••••"
-            />
+              <button
+                className="asas-btn primary"
+                style={{ width: '100%', height: 44 }}
+                onClick={() => {
+                  setPendingInfo(null);
+                  setAuthMode('login');
+                  if (pendingInfo.identifier) setIdentifier(pendingInfo.identifier);
+                }}
+              >
+                العودة لتسجيل الدخول
+              </button>
+            </div>
+          ) : authMode === 'login' ? (
+            <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 18 }}>
+              {error && (
+                <div className={`asas-notice ${error.includes('بانتظار موافقة') || error.includes('قيد المراجعة') ? 'warning' : 'error'}`} role="alert" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {error.includes('بانتظار موافقة') || error.includes('قيد المراجعة') ? (
+                      <span style={{ fontSize: 18 }}>⏳</span>
+                    ) : null}
+                    <div>{error}</div>
+                  </div>
+                  {onRetry && (
+                    <button type="button" onClick={async () => { setBusy(true); await onRetry(); setBusy(false); }} disabled={busy} className="asas-btn sm" style={{ alignSelf: 'flex-start' }}>
+                      <Icon name="refresh" />
+                      {busy ? 'جارٍ الفحص…' : 'إعادة فحص الاتصال'}
+                    </button>
+                  )}
+                </div>
+              )}
 
-            <label className="asas-remember-row">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={e => setRememberMe(e.target.checked)}
+              <Field
+                label="البريد الإلكتروني أو الرقم الوظيفي"
+                value={identifier}
+                onChange={e => setIdentifier(e.target.value)}
+                autoComplete="username"
+                required
+                placeholder="مثال: 001 أو name@company.com"
               />
-              <span>تذكر بيانات الدخول على هذا الجهاز</span>
-            </label>
 
-            <button className="asas-btn primary" type="submit" disabled={busy} style={{ width: '100%', height: 46 }}>
-              <Icon name="logIn" />
-              {busy ? 'جارٍ التحقق…' : 'تسجيل الدخول'}
-            </button>
+              <Field
+                label="كلمة المرور"
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                placeholder="••••••••••••"
+              />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '10px 0' }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
-              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>أو الدخول السريع عبر Google</span>
-              <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
-            </div>
+              <label className="asas-remember-row">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                />
+                <span>تذكر بيانات الدخول على هذا الجهاز</span>
+              </label>
 
-            <div style={{ display: 'flex', justifyContent: 'center', width: '100%', minHeight: 44 }}>
-              <div id="google-btn-container" style={{ display: 'flex', justifyContent: 'center', width: '100%' }} />
-            </div>
-          </form>
+              <button className="asas-btn primary" type="submit" disabled={busy} style={{ width: '100%', height: 46 }}>
+                <Icon name="logIn" />
+                {busy ? 'جارٍ التحقق…' : 'تسجيل الدخول'}
+              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '10px 0' }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>أو الدخول السريع عبر Google</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center', width: '100%', minHeight: 44 }}>
+                <div id="google-btn-container" style={{ display: 'flex', justifyContent: 'center', width: '100%' }} />
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={submitRegister} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 18 }}>
+              {error && (
+                <div className="asas-notice error" role="alert">
+                  {error}
+                </div>
+              )}
+
+              <Field
+                label="الاسم الكامل الرباعي"
+                value={regName}
+                onChange={e => setRegName(e.target.value)}
+                required
+                placeholder="مثال: محمد أحمد علي صالح"
+              />
+
+              <Field
+                label="البريد الإلكتروني"
+                type="email"
+                value={regEmail}
+                onChange={e => setRegEmail(e.target.value)}
+                required
+                placeholder="name@company.com"
+              />
+
+              <Field
+                label="رقم الهاتف أو الجوال (اختياري)"
+                type="tel"
+                value={regPhone}
+                onChange={e => setRegPhone(e.target.value)}
+                placeholder="+967 77xxxxxxx"
+              />
+
+              {availableBranches.length > 0 && (
+                <Field label="الفرع أو مقر العمل المفضل">
+                  <select
+                    className="asas-input"
+                    value={regBranchId}
+                    onChange={e => setRegBranchId(e.target.value)}
+                  >
+                    {availableBranches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </Field>
+              )}
+
+              <Field
+                label="كلمة المرور (6 خانات على الأقل)"
+                type="password"
+                value={regPassword}
+                onChange={e => setRegPassword(e.target.value)}
+                required
+                minLength={6}
+                placeholder="••••••••••••"
+              />
+
+              <Field
+                label="تأكيد كلمة المرور"
+                type="password"
+                value={regConfirmPassword}
+                onChange={e => setRegConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+                placeholder="••••••••••••"
+              />
+
+              <button className="asas-btn primary" type="submit" disabled={busy} style={{ width: '100%', height: 46 }}>
+                <Icon name="plus" />
+                {busy ? 'جارٍ إرسال الطلب…' : 'إرسال طلب تسجيل الحساب للإدارة'}
+              </button>
+            </form>
+          )}
 
           <div style={{ marginTop: 18, padding: 12, background: 'var(--glass-inset)', borderRadius: 10, fontSize: 11.5, color: 'var(--text-2)', display: 'flex', gap: 8, alignItems: 'flex-start', border: '1px solid var(--hairline)' }}>
             <Icon name="smartphone" style={{ width: 16, height: 16, flexShrink: 0, marginTop: 2, color: 'var(--accent)' }} />
