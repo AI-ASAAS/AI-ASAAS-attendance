@@ -3083,6 +3083,21 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
   const [error, setError] = useState(initialError);
   const [gsiReady, setGsiReady] = useState(false);
 
+  const handleDirectInstall = useCallback(async () => {
+    if (installPrompt) {
+      try {
+        await installPrompt.prompt();
+        const choice = await installPrompt.userChoice;
+        if (choice?.outcome === 'accepted') return;
+      } catch (err) {
+        console.warn('Direct install prompt error:', err);
+      }
+    }
+    if (onOpenInstall) {
+      onOpenInstall();
+    }
+  }, [installPrompt, onOpenInstall]);
+
   // Registration states
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
@@ -3269,9 +3284,10 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
   return (
     <div className="asas-login">
-      <div style={{ position: 'fixed', top: 18, left: 18, zIndex: 30, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="asas-login-top-bar">
         {onToggleTheme && (
           <button
+            type="button"
             className="asas-theme-btn asas-login-theme-btn"
             onClick={onToggleTheme}
             aria-label="تبديل مظهر النظام"
@@ -3280,31 +3296,15 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
           </button>
         )}
-        {onOpenInstall && (
+        {(onOpenInstall || installPrompt) && (
           <button
             type="button"
-            className="asas-btn sm"
-            onClick={onOpenInstall}
-            title="تثبيت وتحميل تطبيق أساس على الجوال"
-            style={{
-              height: 38,
-              borderRadius: 'var(--radius-pill)',
-              background: 'var(--glass-tint-strong)',
-              backdropFilter: 'blur(12px) saturate(140%)',
-              WebkitBackdropFilter: 'blur(12px) saturate(140%)',
-              border: '1px solid rgba(186, 149, 85, 0.45)',
-              boxShadow: '0 4px 16px -4px rgba(186, 149, 85, 0.3), inset 0 1px 0 var(--glass-rim)',
-              color: 'var(--text)',
-              fontWeight: 700,
-              fontSize: 12.5,
-              padding: '0 14px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              cursor: 'pointer'
-            }}
+            className="asas-direct-install-pill"
+            onClick={handleDirectInstall}
+            title="تحميل وتثبيت تطبيق أساس مباشرة على جهازك"
           >
-            <Icon name="download" style={{ width: 15, height: 15, color: 'var(--accent)' }} />
+            <span className="asas-install-pulse-dot" />
+            <Icon name="download" style={{ width: 15, height: 15, color: 'var(--brand-gold)' }} />
             <span>تحميل التطبيق</span>
           </button>
         )}
@@ -3315,27 +3315,17 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
           <p className="asas-eyebrow">منظومة الحضور الذكية</p>
           <h1><Swash>حضور مؤكد</Swash><br /><span>وفريق متصل دائماً.</span></h1>
           <p>مساحة عمل تنفيذية لإدارة الحضور والانصراف بدقة وموثوقية عالية، متصلة بسجلات الأجهزة وقواعد البيانات السيادية.</p>
-          {onOpenInstall && (
+          {(onOpenInstall || installPrompt) && (
             <div style={{ marginTop: 22 }}>
               <button
                 type="button"
-                className="asas-btn sm"
-                onClick={onOpenInstall}
-                style={{
-                  borderRadius: 'var(--radius-pill)',
-                  background: 'rgba(255, 255, 255, 0.12)',
-                  borderColor: 'rgba(255, 255, 255, 0.25)',
-                  color: '#ffffff',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  backdropFilter: 'blur(10px)',
-                  padding: '8px 18px',
-                  fontWeight: 600
-                }}
+                className="asas-hero-direct-install-btn"
+                onClick={handleDirectInstall}
+                title="تثبيت التطبيق على جهازك مباشرة"
               >
-                <Icon name="download" />
-                <span>تحميل وتثبيت التطبيق على الجوال</span>
+                <Icon name="download" style={{ width: 17, height: 17 }} />
+                <span>تحميل التطبيق مباشرة</span>
+                <span className="asas-install-pulse-dot" />
               </button>
             </div>
           )}
@@ -3628,35 +3618,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
               <strong>نظام تقييد الجوال المعتمد:</strong> يتم ربط الحساب بجوال الموظف الشخصي تلقائياً عند أول تسجيل دخول لضمان صحة التسجيل ومنع التحضير بالنيابة.
             </div>
           </div>
-
-          {/* Sovereign PWA Install Banner */}
-          {onOpenInstall && !pendingInfo && (
-            <div
-              className="asas-login-install-banner"
-              onClick={onOpenInstall}
-              role="button"
-              tabIndex={0}
-              onKeyDown={e => e.key === 'Enter' && onOpenInstall()}
-              title="تثبيت تطبيق أساس على هاتفك (أندرويد وآيفون)"
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className="asas-install-icon-cube">
-                  <Icon name="download" style={{ width: 18, height: 18, color: '#ffffff' }} />
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                    تحميل تطبيق أساس للحضور
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                    تثبيت مباشر وسريع على أندرويد و iOS
-                  </div>
-                </div>
-              </div>
-              <span className="asas-badge" style={{ background: 'rgba(186, 149, 85, 0.18)', color: 'var(--accent)', borderColor: 'rgba(186, 149, 85, 0.4)', fontSize: 11, padding: '4px 10px', fontWeight: 700 }}>
-                تثبيت مجاني
-              </span>
-            </div>
-          )}
         </div>
       </section>
     </div>
