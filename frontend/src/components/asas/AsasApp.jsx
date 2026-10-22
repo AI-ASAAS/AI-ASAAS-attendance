@@ -3073,6 +3073,7 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme }) {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError);
+  const [gsiReady, setGsiReady] = useState(false);
 
   // Registration states
   const [regName, setRegName] = useState('');
@@ -3144,15 +3145,17 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme }) {
         if (el) {
           el.innerHTML = '';
           const parentWidth = el.parentElement?.offsetWidth || el.offsetWidth || (window.innerWidth ? window.innerWidth - 64 : 280);
-          const computedWidth = Math.min(320, Math.max(200, Math.floor(parentWidth)));
+          const computedWidth = Math.min(320, Math.max(220, Math.floor(parentWidth)));
           window.google.accounts.id.renderButton(el, {
             theme: theme === 'dark' ? 'filled_black' : 'outline',
             size: 'large',
             text: 'continue_with',
-            shape: 'rectangular',
+            shape: 'pill',
             width: computedWidth,
+            logo_alignment: 'center',
             locale: 'ar'
           });
+          setGsiReady(true);
         }
       } catch (err) {
         console.warn('GSI render error:', err);
@@ -3425,14 +3428,53 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme }) {
                 {busy ? 'جارٍ التحقق…' : 'تسجيل الدخول'}
               </button>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '10px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '14px 0 6px' }}>
                 <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
-                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>أو الدخول السريع عبر Google</span>
+                <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                  <svg viewBox="0 0 24 24" width="13" height="13" style={{ verticalAlign: 'middle' }}>
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  أو الدخول المعتمد بحساب Google
+                </span>
                 <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'center', width: '100%', minHeight: 44 }}>
-                <div id="google-btn-container" style={{ display: 'flex', justifyContent: 'center', width: '100%' }} />
+              <div className="asas-google-login-section">
+                <div className="asas-google-header">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)' }}>
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="m9 12 2 2 4-4"/>
+                  </svg>
+                  <span>مصادقة فورية موثوقة عبر Google Workspace</span>
+                </div>
+
+                <div className="asas-google-btn-wrapper">
+                  <div id="google-btn-container" />
+                  {!gsiReady && (
+                    <button
+                      type="button"
+                      className="asas-google-fallback-btn"
+                      onClick={() => {
+                        if (window.google?.accounts?.id) {
+                          window.google.accounts.id.prompt();
+                        }
+                      }}
+                      disabled={busy}
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18" style={{ flexShrink: 0 }}>
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      </svg>
+                      <span>المتابعة باستخدام Google</span>
+                      <span className="asas-google-pill-badge">بصمة سريعة</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
           ) : (
@@ -4190,32 +4232,49 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       {/* SUBPAGE 1: Attendance & Duty Status */}
       {empPage === 'duty' && (
         <Card title="حالة وسجل حضور اليوم" icon="calendar">
-          <div style={{ padding: 10 }}>
-            <div style={{ background: isInside ? 'var(--paid-bg)' : 'var(--glass-inset)', border: `1px solid ${isInside ? 'rgba(35, 116, 74, 0.3)' : 'var(--hairline)'}`, padding: '14px 18px', borderRadius: 14, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ padding: 12 }}>
+            <div className={`asas-hero-duty-banner ${isInside ? 'inside' : 'outside'}`}>
               <div>
-                <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block' }}>الحالة اللحظية:</span>
-                <strong style={{ fontSize: 16, color: isInside ? 'var(--paid)' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                  <Icon name={isInside ? 'checkCircle' : 'logOut'} style={{ width: 18, height: 18 }} />
-                  {isInside ? 'داخل مقر العمل (حضور مفتوح)' : (todayRecord?.last_out ? 'تم تسجيل الانصراف وإنهاء الدوام' : 'جاهز لتسجيل الحضور')}
+                <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', fontWeight: 600 }}>حالة الدوام اللحظية:</span>
+                <strong style={{ fontSize: 16.5, color: isInside ? 'var(--paid)' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <span className="asas-pulse-status-dot" style={{ color: isInside ? 'var(--paid)' : 'var(--accent)' }} />
+                  <Icon name={isInside ? 'checkCircle' : 'logOut'} style={{ width: 19, height: 19 }} />
+                  {isInside ? 'داخل مقر العمل (على رأس العمل - دوام مفتوح)' : (todayRecord?.last_out ? 'تم تسجيل الانصراف وإنهاء الدوام' : 'جاهز لتسجيل الحضور في المقر')}
                 </strong>
               </div>
-              <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`}>
+              <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`} style={{ fontSize: 12, padding: '4px 10px' }}>
+                <Icon name={isInside ? 'logOut' : 'logIn'} style={{ width: 13, height: 13 }} />
                 الإجراء التلقائي: {isInside ? 'تسجيل الانصراف' : 'تسجيل الحضور'}
               </span>
             </div>
 
-            <div className="asas-employee-stats">
-              <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 12, textAlign: 'center', border: '1px solid var(--hairline)' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>أول دخول (حضور)</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginTop: 4 }}>{todayRecord?.first_in ? time(todayRecord.first_in) : '—'}</div>
+            <div className="asas-employee-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 16 }}>
+              <div className="asas-stat-card">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
+                  <Icon name="logIn" style={{ width: 14, height: 14, color: 'var(--paid)' }} />
+                  <span>أول دخول (حضور)</span>
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: todayRecord?.first_in ? 'var(--paid)' : 'var(--text)' }}>
+                  {todayRecord?.first_in ? time(todayRecord.first_in) : '—'}
+                </div>
               </div>
-              <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 12, textAlign: 'center', border: '1px solid var(--hairline)' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>آخر خروج (انصراف)</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginTop: 4 }}>{todayRecord?.last_out ? time(todayRecord.last_out) : '—'}</div>
+              <div className="asas-stat-card">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
+                  <Icon name="logOut" style={{ width: 14, height: 14, color: isInside ? 'var(--accent)' : 'var(--text)' }} />
+                  <span>آخر خروج (انصراف)</span>
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
+                  {todayRecord?.last_out ? time(todayRecord.last_out) : (isInside ? 'قيد الدوام' : '—')}
+                </div>
               </div>
-              <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 12, textAlign: 'center', border: '1px solid var(--hairline)' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>سبب الخروج</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginTop: 4 }}>{todayRecord?.exit_reason_label || (isInside ? 'قيد الدوام' : '—')}</div>
+              <div className="asas-stat-card">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
+                  <Icon name="clock" style={{ width: 14, height: 14, color: 'var(--accent)' }} />
+                  <span>سبب الخروج / الحالة</span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginTop: 2 }}>
+                  {todayRecord?.exit_reason_label || (isInside ? 'على رأس العمل' : 'جاهز للدخول')}
+                </div>
               </div>
             </div>
 
@@ -4339,9 +4398,10 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             })()}
 
             {/* Action Buttons: Prominent Check-in & Check-out */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
               <button
-                className={`asas-btn ${!isInside ? 'primary' : ''}`}
+                type="button"
+                className={!isInside ? 'asas-action-btn-checkin' : 'asas-btn'}
                 disabled={busy}
                 onClick={() => act('enter')}
                 style={{
@@ -4352,15 +4412,17 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 8,
-                  boxShadow: !isInside ? '0 0 16px rgba(46, 125, 50, 0.35)' : 'none'
+                  opacity: isInside ? 0.45 : 1,
+                  cursor: isInside ? 'not-allowed' : 'pointer'
                 }}
               >
-                <Icon name="logIn" />
+                <Icon name="logIn" style={{ width: 18, height: 18 }} />
                 <span>تسجيل الحضور</span>
               </button>
 
               <button
-                className={`asas-btn ${isInside ? 'danger' : ''}`}
+                type="button"
+                className={isInside ? 'asas-action-btn-checkout' : 'asas-btn'}
                 disabled={busy}
                 onClick={() => act('exit')}
                 style={{
@@ -4371,19 +4433,34 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 8,
-                  borderColor: !isInside ? 'var(--hairline)' : undefined,
-                  boxShadow: isInside ? '0 0 16px rgba(211, 47, 47, 0.35)' : 'none'
+                  opacity: !isInside ? 0.45 : 1,
+                  cursor: !isInside ? 'not-allowed' : 'pointer'
                 }}
               >
-                <Icon name="logOut" />
+                <Icon name="logOut" style={{ width: 18, height: 18 }} />
                 <span>تسجيل الانصراف</span>
               </button>
             </div>
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button className="asas-btn" onClick={startCamera} style={{ flex: 1, minWidth: 160, height: 44, justifyContent: 'center' }}>
-                <Icon name="camera" />
-                مسح كود QR بكاميرا الجوال
+              <button 
+                type="button"
+                className="asas-btn" 
+                onClick={startCamera} 
+                style={{ 
+                  flex: 1, 
+                  minWidth: 160, 
+                  height: 46, 
+                  justifyContent: 'center',
+                  borderRadius: 'var(--radius-pill)',
+                  border: '1px solid rgba(186, 149, 85, 0.35)',
+                  background: 'var(--glass-tint-strong)',
+                  fontWeight: 600,
+                  fontSize: 14
+                }}
+              >
+                <Icon name="camera" style={{ width: 18, height: 18, color: 'var(--accent)' }} />
+                <span>مسح كود QR بكاميرا الجوال</span>
               </button>
             </div>
           </div>
