@@ -1511,7 +1511,7 @@ select.asas-input option {
 
   /* Login Box Mobile Centering */
   .asas-login {
-    padding: 20px 14px !important;
+    padding: 68px 14px 24px !important;
     justify-content: center !important;
     align-items: center !important;
   }
@@ -1531,12 +1531,6 @@ select.asas-input option {
   .asas-login-box h2 {
     font-size: 20px !important;
     margin: 4px 0 6px !important;
-  }
-  .asas-login-theme-btn {
-    top: 12px !important;
-    left: 12px !important;
-    width: 36px !important;
-    height: 36px !important;
   }
 }
 
@@ -2240,48 +2234,86 @@ select.asas-input option {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 12px 30px -6px rgba(176, 52, 44, 0.65);
 }
 
-/* ───────── Login Direct Install App Controls (ASAAS Brand Skills) ───────── */
+/* ───────── Login Fixed Top Bar Controls (ASAAS Brand Skills) ───────── */
 .asas-login-top-bar {
-  position: fixed;
-  top: 18px;
-  left: 18px;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  position: fixed !important;
+  top: 16px !important;
+  left: 18px !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 5px 8px !important;
+  border-radius: var(--radius-pill) !important;
+  background: var(--glass-tint-strong) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+  backdrop-filter: blur(16px) saturate(160%) !important;
+  border: 1px solid var(--glass-rim) !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.25), inset 0 1px 0 var(--glass-rim) !important;
+  pointer-events: auto !important;
+  transform: translateZ(0) !important;
+}
+
+:root[data-theme='dark'] .asas-login-top-bar {
+  background: rgba(26, 22, 21, 0.88) !important;
+  border-color: rgba(255, 244, 222, 0.16) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.asas-login-top-bar .asas-theme-btn {
+  width: 36px !important;
+  height: 36px !important;
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(186, 149, 85, 0.35) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--accent) !important;
+  display: grid !important;
+  place-items: center !important;
+  cursor: pointer !important;
+  transition: all 0.25s var(--ease-spring) !important;
+}
+
+.asas-login-top-bar .asas-theme-btn:hover {
+  background: rgba(186, 149, 85, 0.22) !important;
+  border-color: var(--brand-gold) !important;
+  transform: rotate(18deg) scale(1.06) !important;
 }
 
 .asas-direct-install-pill {
-  height: 40px;
-  padding: 0 16px;
-  border-radius: var(--radius-pill);
-  background: linear-gradient(135deg, rgba(186, 149, 85, 0.18) 0%, rgba(214, 196, 168, 0.08) 100%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid rgba(186, 149, 85, 0.45);
-  box-shadow: 0 4px 18px -4px rgba(186, 149, 85, 0.3), inset 0 1px 0 var(--glass-rim);
-  color: var(--text);
-  font-family: var(--font);
-  font-weight: 700;
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: all 0.25s var(--ease-spring);
-  text-decoration: none;
+  height: 36px !important;
+  padding: 0 14px !important;
+  border-radius: var(--radius-pill) !important;
+  background: linear-gradient(135deg, rgba(186, 149, 85, 0.22) 0%, rgba(214, 196, 168, 0.1) 100%) !important;
+  border: 1px solid rgba(186, 149, 85, 0.45) !important;
+  color: var(--text) !important;
+  font-family: var(--font) !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.25s var(--ease-spring) !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  box-shadow: 0 2px 10px -2px rgba(186, 149, 85, 0.25) !important;
 }
 
 .asas-direct-install-pill:hover {
-  background: linear-gradient(135deg, rgba(186, 149, 85, 0.3) 0%, rgba(214, 196, 168, 0.16) 100%);
-  border-color: var(--brand-gold);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px -4px rgba(186, 149, 85, 0.45), inset 0 1px 0 var(--glass-rim);
-  color: var(--accent);
+  background: linear-gradient(135deg, rgba(186, 149, 85, 0.35) 0%, rgba(214, 196, 168, 0.2) 100%) !important;
+  border-color: var(--brand-gold) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 18px -2px rgba(186, 149, 85, 0.4) !important;
+  color: var(--accent) !important;
 }
 
 .asas-direct-install-pill:active {
-  transform: scale(0.97);
+  transform: scale(0.97) !important;
 }
 
 .asas-install-pulse-dot {
@@ -2334,17 +2366,19 @@ select.asas-input option {
 
 @media (max-width: 640px) {
   .asas-login-top-bar {
-    top: 12px !important;
-    left: 12px !important;
-    gap: 8px !important;
+    top: max(10px, env(safe-area-inset-top, 10px)) !important;
+    left: max(10px, env(safe-area-inset-left, 10px)) !important;
+    padding: 4px 6px !important;
+    gap: 6px !important;
+  }
+  .asas-login-top-bar .asas-theme-btn {
+    width: 32px !important;
+    height: 32px !important;
   }
   .asas-direct-install-pill {
-    height: 36px !important;
-    padding: 0 12px !important;
-    font-size: 12px !important;
+    height: 32px !important;
+    padding: 0 10px !important;
+    font-size: 11.5px !important;
+    gap: 6px !important;
   }
 }
-
-
-
-

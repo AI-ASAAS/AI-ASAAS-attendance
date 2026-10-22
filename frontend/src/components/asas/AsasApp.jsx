@@ -3283,15 +3283,15 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
   }
 
   return (
-    <div className="asas-login">
+    <>
       <div className="asas-login-top-bar">
         {onToggleTheme && (
           <button
             type="button"
-            className="asas-theme-btn asas-login-theme-btn"
+            className="asas-theme-btn"
             onClick={onToggleTheme}
             aria-label="تبديل مظهر النظام"
-            style={{ position: 'static' }}
+            title={theme === 'dark' ? 'التبديل إلى المظهر الفاتح' : 'التبديل إلى المظهر الداكن'}
           >
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
           </button>
@@ -3309,7 +3309,9 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
           </button>
         )}
       </div>
-      <section className="asas-login-hero">
+
+      <div className="asas-login">
+        <section className="asas-login-hero">
         <Brand />
         <div>
           <p className="asas-eyebrow">منظومة الحضور الذكية</p>
@@ -3621,6 +3623,7 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
         </div>
       </section>
     </div>
+  </>
   );
 }
 
