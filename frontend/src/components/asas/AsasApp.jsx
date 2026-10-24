@@ -1601,16 +1601,16 @@ function AsasAppInner({ defaultAction = 'auto' }) {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('asas_token') : null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      let url = `/api/admin/reports.doc?from=${from}&to=${to}`;
-      let filename = `تقرير-حضور-أساس-${from}-${to}.doc`;
+      let url = `/api/admin/reports.docx?from=${from}&to=${to}`;
+      let filename = `تقرير-حضور-أساس-${from}-${to}.docx`;
 
       if (recordsTabMode === 'individual' && selectedEmployeeId) {
         url += `&employee_id=${selectedEmployeeId}`;
         const empName = individualData?.employee?.name || selectedEmployeeId;
-        filename = `تقرير-حضور-${empName}-${from}-${to}.doc`;
+        filename = `تقرير-حضور-${empName}-${from}-${to}.docx`;
       } else if (recordsTabMode === 'collective') {
         url += `&type=summary`;
-        filename = `التقرير-الجماعي-أساس-${from}-${to}.doc`;
+        filename = `التقرير-الجماعي-أساس-${from}-${to}.docx`;
       }
 
       const r = await fetch(url, { headers, credentials: 'include' });
@@ -2170,9 +2170,9 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                           <Icon name="fileSpreadsheet" />
                           Excel / CSV
                         </button>
-                        <button className="asas-btn sm" disabled={busy} onClick={exportWord} title="تصدير كملف Word معتمد">
+                        <button className="asas-btn sm" disabled={busy} onClick={exportWord} title="تصدير كملف Word معتمد وفق القالب الرسمي">
                           <Icon name="fileText" />
-                          Word (DOC)
+                          Word (DOCX)
                         </button>
                         <button className="asas-btn sm" disabled={busy} onClick={exportTxt} title="تصدير كنص منسق">
                           <Icon name="file" />

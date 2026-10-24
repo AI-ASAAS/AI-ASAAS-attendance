@@ -9,6 +9,7 @@ const policy=require('./services/attendance-policy');
 const {closeScheduled}=require('./services/duty-maintenance');
 const notifications=require('./services/notification.service');
 const reportService=require('./services/report.service');
+const docxExport=require('./services/docx-export.service');
 const app=express();
 app.set('trust proxy', 1);
 const wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
@@ -1422,257 +1423,39 @@ app.get('/api/admin/reports.txt',admin,allow('reports.export'),wrap(async(req,re
  res.attachment(`asas-attendance-${from}-${to}.txt`).send('\uFEFF'+content);
 }));
 
-app.get('/api/admin/reports.doc',admin,allow('reports.export'),wrap(async(req,res)=>{
+app.get(['/api/admin/reports.doc','/api/admin/reports.docx'],admin,allow('reports.export'),wrap(async(req,res)=>{
  const [from,to]=dateRange(req);
- const nowStr=new Date().toLocaleString('ar-YE',{timeZone:'Asia/Aden'});
 
  if(req.query.employee_id){
   const empId=id(req.query.employee_id);
   const dossier=await reportService.getEmployeeDossier(req.user,empId,from,to);
   const emp=dossier.employee;
-  const sum=dossier.summary;
-  const html=`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-<head><meta charset='utf-8'><title>سجل حضور الموظف - ${emp.name}</title>
-<style>
-body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; margin: 24px; color: #231f20; }
-.header { text-align: center; border-bottom: 2px solid #b59045; padding-bottom: 12px; margin-bottom: 20px; }
-.header h1 { margin: 0 0 6px; color: #231f20; font-size: 22px; }
-.header p { margin: 2px 0; color: #775b24; font-size: 13px; font-weight: bold; }
-.info-card { background: #faf9f5; border: 1px solid #e0dacb; border-radius: 8px; padding: 14px; margin-bottom: 16px; font-size: 13px; }
-.info-card table { width: 100%; border: none; }
-.info-card td { padding: 4px 8px; border: none; }
-.stats-grid { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-.stats-grid td { background: #fdfcf9; border: 1px solid #d4af37; padding: 10px; text-align: center; }
-.stats-val { font-size: 18px; font-weight: bold; color: #775b24; }
-.stats-lbl { font-size: 11px; color: #555; }
-table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-table.data-table th { background-color: #231f20; color: #ffffff; padding: 8px; border: 1px solid #1a1718; text-align: right; }
-table.data-table td { padding: 8px; border: 1px solid #e0dacb; text-align: right; }
-tr:nth-child(even) { background-color: #faf9f5; }
-.badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
-.badge-present { background-color: #eaf4ee; color: #2d6a4f; }
-.badge-absent { background-color: #fee2e2; color: #b91c1c; }
-.badge-late { background-color: #fef3c7; color: #b45309; }
-.badge-leave { background-color: #dbeafe; color: #1d4ed8; }
-.badge-weekend { background-color: #f3f4f6; color: #4b5563; }
-.footer { margin-top: 24px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0; padding-top: 10px; }
-</style>
-</head>
-<body>
-<div class='header'>
- <h1>نظام أساس للحضور والانصراف</h1>
- <p>سجل الحضور والانصراف الفردي للموظف · توقيت صنعاء (اليمن)</p>
-</div>
-<div class='info-card'>
- <table>
-  <tr><td><strong>اسم الموظف:</strong> ${emp.name}</td><td><strong>الرقم الوظيفي:</strong> ${emp.identifier}</td></tr>
-  <tr><td><strong>الفرع:</strong> ${emp.branch_name}</td><td><strong>الوردية:</strong> ${emp.shift_name}</td></tr>
-  <tr><td><strong>الفترة المحددة:</strong> من ${from} إلى ${to}</td><td><strong>تاريخ الإصدار:</strong> ${nowStr}</td></tr>
- </table>
-</div>
-<table class='stats-grid'>
- <tr>
-  <td><div class='stats-val'>${sum.present_days}</div><div class='stats-lbl'>أيام الحضور</div></td>
-  <td><div class='stats-val'>${sum.absent_days}</div><div class='stats-lbl'>أيام الغياب</div></td>
-  <td><div class='stats-val'>${sum.late_days_count} (${sum.total_late_minutes} د)</div><div class='stats-lbl'>التأخير</div></td>
-  <td><div class='stats-val'>${sum.total_work_hours} س</div><div class='stats-lbl'>ساعات العمل الفعلية</div></td>
-  <td><div class='stats-val'>${sum.leave_days}</div><div class='stats-lbl'>إجازات معتمدة</div></td>
-  <td><div class='stats-val'>${sum.attendance_rate}%</div><div class='stats-lbl'>نسبة الالتزام</div></td>
- </tr>
-</table>
-<table class='data-table'>
- <thead>
-  <tr>
-   <th>التاريخ</th>
-   <th>اليوم</th>
-   <th>وقت الدخول</th>
-   <th>وقت الخروج</th>
-   <th>الحالة</th>
-   <th>التأخير</th>
-   <th>ساعات العمل</th>
-   <th>ملاحظات</th>
-  </tr>
- </thead>
- <tbody>
-  ${dossier.timeline.map(t=>{
-   const bClass = t.state==='absent'?'badge-absent':(t.state==='late'?'badge-late':(t.state==='leave'?'badge-leave':(t.state==='weekend'?'badge-weekend':'badge-present')));
-   return `<tr>
-    <td><strong>${t.date}</strong></td>
-    <td>${t.day_name}</td>
-    <td style='color:#2d6a4f; font-weight:bold;'>${t.first_in ? new Date(t.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (t.state==='absent'?'لم يسجل':'—')}</td>
-    <td>${t.last_out ? new Date(t.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (t.state==='inside'?'حاضر الآن':'—')}</td>
-    <td><span class='badge ${bClass}'>${t.status_label}</span></td>
-    <td>${t.late_minutes > 0 ? (t.late_minutes + ' دقيقة') : '—'}</td>
-    <td><strong>${t.work_hours || '0.0'} س</strong></td>
-    <td>${t.needs_review ? '<span style="color:#b91c1c; font-weight:bold;">يحتاج مراجعة</span>' : (t.exit_reason_label || '—')}</td>
-   </tr>`;
-  }).join('')}
- </tbody>
-</table>
-<div class='footer'>تم استخراج هذا التقرير آلياً وموثق بواسطة نظام أساس للحضور والانصراف · توقيت صنعاء</div>
-</body></html>`;
-  await audit(db,req.user,'reports.export','employee_dossier','تصدير Word لسجل موظف',{employee_id:emp.id,count:dossier.timeline.length});
-  res.setHeader('Content-Type','application/msword; charset=utf-8');
-  return res.attachment(`asas-employee-${emp.identifier}-${from}-${to}.doc`).send('\uFEFF'+html);
+  const buf=docxExport.generateEmployeeDossierDocx(dossier,from,to);
+  await audit(db,req.user,'reports.export','employee_dossier','تصدير Word (قالب رسمي) لسجل موظف',{employee_id:emp.id,count:dossier.timeline.length});
+  res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  return res.attachment(`asas-employee-${emp.identifier}-${from}-${to}.docx`).send(buf);
  }
 
  if(req.query.type==='summary'||req.query.view==='summary'){
   const report=await reportService.getCollectiveReport(req.user,from,to,req.query.branch_id,req.query.search);
-  const html=`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-<head><meta charset='utf-8'><title>التقرير الجماعي الشامل للحضور والانصراف - نظام أساس</title>
-<style>
-body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; margin: 24px; color: #231f20; }
-.header { text-align: center; border-bottom: 2px solid #b59045; padding-bottom: 12px; margin-bottom: 20px; }
-.header h1 { margin: 0 0 6px; color: #231f20; font-size: 24px; }
-.header p { margin: 2px 0; color: #775b24; font-size: 13px; font-weight: bold; }
-.meta { margin-bottom: 16px; font-size: 13px; color: #474143; }
-.stats-grid { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-.stats-grid td { background: #fdfcf9; border: 1px solid #d4af37; padding: 10px; text-align: center; }
-.stats-val { font-size: 18px; font-weight: bold; color: #775b24; }
-.stats-lbl { font-size: 11px; color: #555; }
-table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-table.data-table th { background-color: #231f20; color: #ffffff; padding: 8px; border: 1px solid #1a1718; text-align: right; }
-table.data-table td { padding: 8px; border: 1px solid #e0dacb; text-align: right; }
-tr:nth-child(even) { background-color: #faf9f5; }
-.footer { margin-top: 24px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0; padding-top: 10px; }
-</style>
-</head>
-<body>
-<div class='header'>
- <h1>نظام أساس للحضور والانصراف</h1>
- <p>التقرير الجماعي الشامل للحضور والانصراف · توقيت صنعاء (اليمن)</p>
-</div>
-<div class='meta'>
- <div><strong>الفترة المحددة:</strong> من ${from} إلى ${to}</div>
- <div><strong>تاريخ الإصدار:</strong> ${nowStr} (بتوقيت صنعاء)</div>
- <div><strong>إجمالي الموظفين:</strong> ${report.overall.total_employees} موظف</div>
-</div>
-<table class='stats-grid'>
- <tr>
-  <td><div class='stats-val'>${report.overall.total_present_days}</div><div class='stats-lbl'>إجمالي أيام الحضور</div></td>
-  <td><div class='stats-val'>${report.overall.total_absent_days}</div><div class='stats-lbl'>إجمالي أيام الغياب</div></td>
-  <td><div class='stats-val'>${report.overall.total_late_days} (${report.overall.total_late_minutes} د)</div><div class='stats-lbl'>إجمالي التأخير</div></td>
-  <td><div class='stats-val'>${report.overall.total_work_hours} س</div><div class='stats-lbl'>إجمالي ساعات العمل</div></td>
-  <td><div class='stats-val'>${report.overall.total_leave_days}</div><div class='stats-lbl'>إجمالي الإجازات</div></td>
-  <td><div class='stats-val'>${report.overall.average_attendance_rate}%</div><div class='stats-lbl'>متوسط الالتزام</div></td>
- </tr>
-</table>
-<table class='data-table'>
- <thead>
-  <tr>
-   <th>الرقم الوظيفي</th>
-   <th>اسم الموظف</th>
-   <th>الفرع</th>
-   <th>الوردية</th>
-   <th>حضور</th>
-   <th>غياب</th>
-   <th>تأخير</th>
-   <th>ساعات العمل</th>
-   <th>إجازات</th>
-   <th>نسبة الالتزام</th>
-  </tr>
- </thead>
- <tbody>
-  ${report.employees.map(e=>`<tr>
-   <td><strong>${e.identifier}</strong></td>
-   <td>${e.name}</td>
-   <td>${e.branch_name}</td>
-   <td>${e.shift_name}</td>
-   <td style='color:#2d6a4f; font-weight:bold;'>${e.present_days}</td>
-   <td style='color:#b91c1c; font-weight:bold;'>${e.absent_days}</td>
-   <td>${e.late_days_count} (${e.total_late_minutes} د)</td>
-   <td><strong>${e.total_work_hours} س</strong></td>
-   <td>${e.leave_days}</td>
-   <td><strong>${e.attendance_rate}%</strong></td>
-  </tr>`).join('')}
- </tbody>
-</table>
-<div class='footer'>تم استخراج هذا التقرير آلياً وموثق بواسطة نظام أساس للحضور والانصراف · توقيت صنعاء</div>
-</body></html>`;
-  await audit(db,req.user,'reports.export','collective_summary','تصدير Word للتقرير الجماعي',{count:report.employees.length});
-  res.setHeader('Content-Type','application/msword; charset=utf-8');
-  return res.attachment(`asas-collective-${from}-${to}.doc`).send('\uFEFF'+html);
+  const buf=docxExport.generateCollectiveSummaryDocx(report,from,to);
+  await audit(db,req.user,'reports.export','collective_summary','تصدير Word (قالب رسمي) للتقرير الجماعي',{count:report.employees.length});
+  res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  return res.attachment(`asas-collective-${from}-${to}.docx`).send(buf);
  }
 
  const rows=await recordsFor(req.user,from,to);
- const nowStrOld=new Date().toLocaleString('ar-YE',{timeZone:'Asia/Aden'});
- const html=`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-<head>
-<meta charset='utf-8'>
-<title>تقرير الحضور والانصراف - نظام أساس</title>
-<style>
-body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; margin: 24px; color: #231f20; }
-.header { text-align: center; border-bottom: 2px solid #b59045; padding-bottom: 12px; margin-bottom: 20px; }
-.header h1 { margin: 0 0 6px; color: #231f20; font-size: 24px; }
-.header p { margin: 2px 0; color: #775b24; font-size: 13px; font-weight: bold; }
-.meta { margin-bottom: 16px; font-size: 13px; color: #474143; }
-.meta strong { color: #231f20; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-th { background-color: #231f20; color: #ffffff; padding: 10px 8px; border: 1px solid #1a1718; text-align: right; }
-td { padding: 8px; border: 1px solid #e0dacb; text-align: right; }
-tr:nth-child(even) { background-color: #faf9f5; }
-.badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
-.badge-in { background-color: #eaf4ee; color: #2d6a4f; }
-.badge-out { background-color: #f5f3f0; color: #474143; }
-.badge-absent { background-color: #fee2e2; color: #b91c1c; }
-.footer { margin-top: 24px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0; padding-top: 10px; }
-</style>
-</head>
-<body>
-<div class='header'>
- <h1>نظام أساس للحضور والانصراف</h1>
- <p>ASAS Attendance Management System</p>
- <p>تقرير الحضور والانصراف الرسمي · توقيت صنعاء (اليمن)</p>
-</div>
-<div class='meta'>
- <div><strong>الفترة المحددة:</strong> من ${from} إلى ${to}</div>
- <div><strong>تاريخ الإصدار:</strong> ${nowStrOld} (بتوقيت صنعاء)</div>
- <div><strong>إجمالي السجلات:</strong> ${rows.length} سجل</div>
-</div>
-<table>
- <thead>
-  <tr>
-   <th>الرقم الوظيفي</th>
-   <th>اسم الموظف</th>
-   <th>الفرع</th>
-   <th>تاريخ الدوام</th>
-   <th>وقت الدخول</th>
-   <th>وقت الخروج</th>
-   <th>الحالة التلقائية</th>
-   <th>سبب الخروج التلقائي</th>
-   <th>الدقائق المحتسبة</th>
-  </tr>
- </thead>
- <tbody>
-  ${rows.map(r=>{
-   const auto=resolveRecordStatus(r);
-   const inDisplay = r.first_in ? new Date(r.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : '<span style="color:#ef4444; font-weight:bold;">لم يسجل حضور (غائب)</span>';
-   const outDisplay = r.last_out ? new Date(r.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (r.state === 'inside' ? '<span class="badge badge-in">حاضر الآن</span>' : '—');
-   const badgeClass = r.state === 'inside' ? 'badge-in' : (r.state === 'absent' ? 'badge-absent' : 'badge-out');
-   return `
-  <tr>
-   <td><strong>${r.identifier}</strong></td>
-   <td>${r.name}</td>
-   <td>${r.branch_name}</td>
-   <td>${r.shift_start ? new Date(r.shift_start).toLocaleDateString('ar-YE',{timeZone:'Asia/Aden'}) : '—'}</td>
-   <td style='color:#2d6a4f; font-weight:bold;'>${inDisplay}</td>
-   <td>${outDisplay}</td>
-   <td><span class='badge ${badgeClass}'>${auto.status_label}</span></td>
-   <td style='color:#775b24; font-weight:500;'>${auto.exit_reason_label}</td>
-   <td><strong>${countedMinutes(r)||0} د</strong></td>
-  </tr>`;
-  }).join('')}
- </tbody>
-</table>
-<div class='footer'>
- تم استخراج هذا التقرير آلياً وموثق بواسطة نظام أساس للحضور والانصراف · توقيت صنعاء، الجمهورية اليمنية
-</div>
-</body>
-</html>`;
- await audit(db,req.user,'reports.export','attendance','تصدير Word',{count:rows.length});
- res.setHeader('Content-Type','application/msword; charset=utf-8');
- res.attachment(`asas-attendance-${from}-${to}.doc`).send('\uFEFF'+html);
+ const mappedRows=rows.map(r=>({
+  ...r,
+  counted_minutes:countedMinutes(r),
+  ...resolveRecordStatus(r)
+ }));
+ const buf=docxExport.generateDutyRecordsDocx(mappedRows,from,to);
+ await audit(db,req.user,'reports.export','attendance','تصدير Word (قالب رسمي)',{count:rows.length});
+ res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+ return res.attachment(`asas-attendance-${from}-${to}.docx`).send(buf);
 }));
+
 app.get('/api/admin/audit',admin,allow('audit.read'),wrap(async(req,res)=>{
  if(req.user.role!=='super_admin')error('FORBIDDEN','سجل النظام لمدير النظام فقط',403);
  respond(res,(await db.query('SELECT l.*,a.name AS actor FROM audit_log l LEFT JOIN accounts a ON a.id=l.actor_id ORDER BY id DESC LIMIT 200')).rows);
