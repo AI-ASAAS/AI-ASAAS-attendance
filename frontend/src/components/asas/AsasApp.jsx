@@ -14,16 +14,15 @@ import {
   formatNumber
 } from '../../asaas-ui';
 
-// Avatar Presets: Man or Woman only
+// Avatar Presets: Man, Woman, or Admin
 const AVATAR_PRESETS = [
   { id: 'man', name: 'موظف (رجل)', bg: 'linear-gradient(135deg, #1d3557, #457b9d)', icon: '👨‍💼' },
   { id: 'woman', name: 'موظفة (امرأة)', bg: 'linear-gradient(135deg, #ba9555, #8c6928)', icon: '👩‍💼' },
-  { id: 'admin', name: 'مسؤول نظام', bg: 'linear-gradient(135deg, #2b2d42, #4a4e69)', icon: '🛡️' },
-  { id: 'neutral', name: 'رمز محايد', bg: 'linear-gradient(135deg, #102a43, #243b53)', icon: '👤' }
+  { id: 'admin', name: 'مسؤول نظام', bg: 'linear-gradient(135deg, #2b2d42, #4a4e69)', icon: '🛡️' }
 ];
 
 function UserAvatar({ user, size = 'md', onClick }) {
-  const avatarKey = user?.avatar || 'man';
+  const avatarKey = user?.avatar === 'neutral' ? 'man' : (user?.avatar || 'man');
   const preset = AVATAR_PRESETS.find(p => p.id === avatarKey);
   const isImage = avatarKey && (avatarKey.startsWith('http') || avatarKey.startsWith('/') || avatarKey.startsWith('data:image/'));
   const letter = (user?.name || user?.identifier || 'م')[0] || 'م';
@@ -714,7 +713,7 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
 // Profile & Security Modal
 function ProfileModal({ user, onClose, onUpdated }) {
   const isImageAvatar = user?.avatar && (user.avatar.startsWith('data:image/') || user.avatar.startsWith('http') || user.avatar.startsWith('/'));
-  const [avatar, setAvatar] = useState(isImageAvatar ? '' : (user?.avatar || 'man'));
+  const [avatar, setAvatar] = useState(isImageAvatar ? '' : (user?.avatar === 'neutral' ? 'man' : (user?.avatar || 'man')));
   const [customImage, setCustomImage] = useState(isImageAvatar ? user.avatar : '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
