@@ -8,6 +8,7 @@ const security=require('./services/session-security');
 const policy=require('./services/attendance-policy');
 const {closeScheduled}=require('./services/duty-maintenance');
 const notifications=require('./services/notification.service');
+const reportService=require('./services/report.service');
 const app=express();
 app.set('trust proxy', 1);
 const wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
@@ -1093,8 +1094,31 @@ async function recordsFor(user,from,to){
 }
 function dateRange(req){const today=policy.localDay();const from=req.query.from||today,to=req.query.to||today;for(const d of [from,to])if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!Number.isFinite(Date.parse(d)))error('DATE','تاريخ غير صالح');if(from>to||Date.parse(to)-Date.parse(from)>366*86400000)error('DATE','الفترة لا تتجاوز سنة');return [from,to];}
 function countedMinutes(r){if(!r||r.state==='inside'||r.state==='absent'||!r.last_out)return null;return Math.max(0,Math.floor((new Date(r.last_out)-new Date(r.first_in))/60000)-(r.deduct_away?Math.floor(r.away_seconds/60):0));}
+
+app.get('/api/admin/reports/summary',admin,wrap(async(req,res)=>{
+ const [from,to]=dateRange(req);
+ const data=await reportService.getCollectiveReport(req.user,from,to,req.query.branch_id,req.query.search);
+ respond(res,data);
+}));
+
+app.get('/api/admin/reports/employee/:id',admin,wrap(async(req,res)=>{
+ const [from,to]=dateRange(req);
+ const empId=id(req.params.id);
+ const data=await reportService.getEmployeeDossier(req.user,empId,from,to);
+ respond(res,data);
+}));
+
 app.get('/api/admin/records',admin,wrap(async(req,res)=>{
- const rows=await recordsFor(req.user,...dateRange(req));
+ const [from,to]=dateRange(req);
+ if(req.query.employee_id){
+  const dossier=await reportService.getEmployeeDossier(req.user,id(req.query.employee_id),from,to);
+  return respond(res,dossier);
+ }
+ if(req.query.view==='summary'){
+  const summary=await reportService.getCollectiveReport(req.user,from,to,req.query.branch_id,req.query.search);
+  return respond(res,summary);
+ }
+ const rows=await recordsFor(req.user,from,to);
  respond(res,rows.map(r=>({
   ...r,
   counted_minutes:countedMinutes(r),
@@ -1213,8 +1237,70 @@ app.get('/api/admin/dashboard',admin,wrap(async(req,res)=>{
 }));
 app.get('/api/admin/reports.csv',admin,allow('reports.export'),wrap(async(req,res)=>{
  const [from,to]=dateRange(req);
- const rows=await recordsFor(req.user,from,to);
  const cell=v=>'"'+String(v??'').replace(/^[=+@\-\t\r]/,"'$&").replaceAll('"','""')+'"';
+
+ if(req.query.employee_id){
+  const empId=id(req.query.employee_id);
+  const dossier=await reportService.getEmployeeDossier(req.user,empId,from,to);
+  const emp=dossier.employee;
+  const sum=dossier.summary;
+  const header=['التاريخ','اليوم','الدوام','وقت الدخول','وقت الخروج','الحالة','دقائق التأخير','ساعات العمل الفعلية','ملاحظات'];
+  const lines=dossier.timeline.map(t=>[
+   t.date,
+   t.day_name,
+   t.is_workday ? (emp.shift_name || 'دوام رسمي') : 'عطلة أسبوعية',
+   t.first_in ? new Date(t.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (t.state === 'absent' ? 'لم يسجل' : '—'),
+   t.last_out ? new Date(t.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (t.state === 'inside' ? 'حاضر الآن' : '—'),
+   t.status_label,
+   t.late_minutes || 0,
+   t.work_hours || '0.0',
+   t.needs_review ? 'يحتاج مراجعة (سجل غير مكتمل)' : (t.exit_reason_label || '')
+  ]);
+
+  const meta=[
+   ['سجل الحضور والانصراف الفردي للموظف - نظام أساس'],
+   [`الموظف: ${emp.name}`, `الرقم الوظيفي: ${emp.identifier}`, `الفرع: ${emp.branch_name}`, `الوردية: ${emp.shift_name}`],
+   [`الفترة من: ${from}`, `إلى: ${to}`, `إجمالي الأيام: ${sum.total_days}`, `أيام الدوام المستحقة: ${sum.work_days}`],
+   [`أيام الحضور: ${sum.present_days}`, `أيام الغياب: ${sum.absent_days}`, `مرات التأخير: ${sum.late_days_count} (${sum.total_late_minutes} دقيقة)`],
+   [`ساعات العمل الفعلية: ${sum.total_work_hours} ساعة`, `الإجازات: ${sum.leave_days}`, `العطلات الأسبوعية: ${sum.weekend_days}`, `نسبة الالتزام: ${sum.attendance_rate}%`],
+   []
+  ];
+
+  await audit(db,req.user,'reports.export','employee_dossier','تصدير CSV لسجل موظف',{employee_id:emp.id,count:lines.length});
+  return res.type('text/csv').attachment(`asas-employee-${emp.identifier}-${from}-${to}.csv`).send('\uFEFF'+[...meta.map(r=>r.map(cell).join(',')),header.map(cell).join(','),...lines.map(row=>row.map(cell).join(','))].join('\r\n'));
+ }
+
+ if(req.query.type==='summary'||req.query.view==='summary'){
+  const report=await reportService.getCollectiveReport(req.user,from,to,req.query.branch_id,req.query.search);
+  const header=['الرقم الوظيفي','اسم الموظف','الفرع','الوردية','أيام الحضور','أيام الغياب','مرات التأخير','دقائق التأخير','ساعات العمل الفعلية','أيام الإجازة','عطلات أسبوعية','سجلات ناقصة','نسبة الالتزام'];
+  const lines=report.employees.map(e=>[
+   e.identifier,
+   e.name,
+   e.branch_name,
+   e.shift_name,
+   e.present_days,
+   e.absent_days,
+   e.late_days_count,
+   e.total_late_minutes,
+   e.total_work_hours,
+   e.leave_days,
+   e.weekend_days,
+   e.incomplete_records_count,
+   `${e.attendance_rate}%`
+  ]);
+
+  const meta=[
+   ['التقرير الجماعي الشامل للحضور والانصراف - نظام أساس'],
+   [`الفترة من: ${from}`, `إلى: ${to}`, `إجمالي الموظفين: ${report.overall.total_employees}`, `متوسط الالتزام: ${report.overall.average_attendance_rate}%`],
+   [`إجمالي أيام الحضور: ${report.overall.total_present_days}`, `إجمالي أيام الغياب: ${report.overall.total_absent_days}`, `إجمالي ساعات العمل: ${report.overall.total_work_hours} ساعة`, `إجمالي دقائق التأخير: ${report.overall.total_late_minutes} دقيقة`],
+   []
+  ];
+
+  await audit(db,req.user,'reports.export','collective_summary','تصدير CSV للتقرير الجماعي',{count:lines.length});
+  return res.type('text/csv').attachment(`asas-collective-${from}-${to}.csv`).send('\uFEFF'+[...meta.map(r=>r.map(cell).join(',')),header.map(cell).join(','),...lines.map(row=>row.map(cell).join(','))].join('\r\n'));
+ }
+
+ const rows=await recordsFor(req.user,from,to);
  const header=['الرقم الوظيفي','الموظف','الفرع','تاريخ الدوام','أول دخول (صنعاء)','آخر خروج (صنعاء)','الحالة التلقائية','سبب الخروج التلقائي','الدقائق المحتسبة','خصم فترات المغادرة'];
  const lines=rows.map(r=>{
   const auto=resolveRecordStatus(r);
@@ -1237,14 +1323,83 @@ app.get('/api/admin/reports.csv',admin,allow('reports.export'),wrap(async(req,re
 
 app.get('/api/admin/reports.txt',admin,allow('reports.export'),wrap(async(req,res)=>{
  const [from,to]=dateRange(req);
- const rows=await recordsFor(req.user,from,to);
  const nowStr=new Date().toLocaleString('ar-YE',{timeZone:'Asia/Aden'});
+
+ if(req.query.employee_id){
+  const empId=id(req.query.employee_id);
+  const dossier=await reportService.getEmployeeDossier(req.user,empId,from,to);
+  const emp=dossier.employee;
+  const sum=dossier.summary;
+  let content=`========================================================================================================================\r\n`;
+  content+=`                                سجل الحضور والانصراف الفردي - نظام أساس\r\n`;
+  content+=`                                     توقيت صنعاء، الجمهورية اليمنية\r\n`;
+  content+=`========================================================================================================================\r\n`;
+  content+=`الموظف         : ${emp.name} (${emp.identifier})\r\n`;
+  content+=`الفرع والوردية : ${emp.branch_name} | ${emp.shift_name}\r\n`;
+  content+=`الفترة المحددة : من ${from} إلى ${to} (${sum.total_days} يوم | ${sum.work_days} يوم دوام مستحق)\r\n`;
+  content+=`ملخص الإحصاءات : حضور: ${sum.present_days} يوم | غياب: ${sum.absent_days} يوم | تأخير: ${sum.late_days_count} مرات (${sum.total_late_minutes} دقيقة)\r\n`;
+  content+=`                 ساعات العمل: ${sum.total_work_hours} ساعة | إجازات: ${sum.leave_days} يوم | عطلات: ${sum.weekend_days} يوم | نسبة الالتزام: ${sum.attendance_rate}%\r\n`;
+  content+=`------------------------------------------------------------------------------------------------------------------------\r\n`;
+  content+=`التاريخ         اليوم       الدخول       الخروج       الحالة                دقائق التأخير  ساعات العمل  ملاحظات\r\n`;
+  content+=`------------------------------------------------------------------------------------------------------------------------\r\n`;
+  for(const t of dossier.timeline){
+   const dateStr=t.date.padEnd(14);
+   const dayStr=t.day_name.padEnd(11);
+   const inTime=(t.first_in ? new Date(t.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (t.state === 'absent' ? 'لم يسجل' : '—')).padEnd(12);
+   const outTime=(t.last_out ? new Date(t.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (t.state === 'inside' ? 'حاضر الآن' : '—')).padEnd(12);
+   const status=t.status_label.padEnd(21).slice(0,21);
+   const late=String(t.late_minutes||0).padEnd(14);
+   const hours=(String(t.work_hours||'0.0') + ' س').padEnd(12);
+   const notes=t.needs_review ? 'يحتاج مراجعة (سجل ناقص)' : (t.exit_reason_label || '');
+   content+=`${dateStr} ${dayStr} ${inTime} ${outTime} ${status} ${late} ${hours} ${notes}\r\n`;
+  }
+  content+=`========================================================================================================================\r\n`;
+  await audit(db,req.user,'reports.export','employee_dossier','تصدير TXT لسجل موظف',{employee_id:emp.id,count:dossier.timeline.length});
+  res.setHeader('Content-Type','text/plain; charset=utf-8');
+  return res.attachment(`asas-employee-${emp.identifier}-${from}-${to}.txt`).send('\uFEFF'+content);
+ }
+
+ if(req.query.type==='summary'||req.query.view==='summary'){
+  const report=await reportService.getCollectiveReport(req.user,from,to,req.query.branch_id,req.query.search);
+  let content=`========================================================================================================================\r\n`;
+  content+=`                               التقرير الجماعي الشامل للحضور والانصراف - نظام أساس\r\n`;
+  content+=`                                        توقيت صنعاء، الجمهورية اليمنية\r\n`;
+  content+=`                                       الفترة: من ${from} إلى ${to}\r\n`;
+  content+=`========================================================================================================================\r\n`;
+  content+=`تاريخ ووقت الإصدار  : ${nowStr} (بتوقيت صنعاء)\r\n`;
+  content+=`إجمالي الموظفين     : ${report.overall.total_employees} موظف\r\n`;
+  content+=`إجمالي أيام الحضور   : ${report.overall.total_present_days} يوم | الغياب: ${report.overall.total_absent_days} يوم | ساعات العمل: ${report.overall.total_work_hours} ساعة\r\n`;
+  content+=`إجمالي مرات التأخير : ${report.overall.total_late_days} (${report.overall.total_late_minutes} دقيقة) | متوسط نسبة الالتزام: ${report.overall.average_attendance_rate}%\r\n`;
+  content+=`------------------------------------------------------------------------------------------------------------------------\r\n`;
+  content+=`الرقم   الموظف               الفرع          حضور   غياب   تأخير   دقائق   ساعات العمل   إجازات   الالتزام\r\n`;
+  content+=`------------------------------------------------------------------------------------------------------------------------\r\n`;
+  for(const e of report.employees){
+   const id=String(e.identifier||'').padEnd(7).slice(0,7);
+   const name=(e.name||'').padEnd(20).slice(0,20);
+   const branch=(e.branch_name||'').padEnd(14).slice(0,14);
+   const p=String(e.present_days).padEnd(6);
+   const a=String(e.absent_days).padEnd(6);
+   const l=String(e.late_days_count).padEnd(7);
+   const lm=String(e.total_late_minutes).padEnd(7);
+   const wh=(e.total_work_hours + ' س').padEnd(13);
+   const lv=String(e.leave_days).padEnd(8);
+   const rate=`${e.attendance_rate}%`;
+   content+=`${id} ${name} ${branch} ${p} ${a} ${l} ${lm} ${wh} ${lv} ${rate}\r\n`;
+  }
+  content+=`========================================================================================================================\r\n`;
+  await audit(db,req.user,'reports.export','collective_summary','تصدير TXT للتقرير الجماعي',{count:report.employees.length});
+  res.setHeader('Content-Type','text/plain; charset=utf-8');
+  return res.attachment(`asas-collective-${from}-${to}.txt`).send('\uFEFF'+content);
+ }
+
+ const rows=await recordsFor(req.user,from,to);
+ const nowStrOld=new Date().toLocaleString('ar-YE',{timeZone:'Asia/Aden'});
  let content=`========================================================================================================================\r\n`;
  content+=`                                      تقرير الحضور والانصراف - نظام أساس\r\n`;
  content+=`                                        توقيت صنعاء، الجمهورية اليمنية\r\n`;
  content+=`                                       الفترة: من ${from} إلى ${to}\r\n`;
  content+=`========================================================================================================================\r\n`;
- content+=`تاريخ ووقت الإصدار : ${nowStr} (بتوقيت صنعاء)\r\n`;
+ content+=`تاريخ ووقت الإصدار : ${nowStrOld} (بتوقيت صنعاء)\r\n`;
  content+=`إجمالي السجلات     : ${rows.length}\r\n`;
  content+=`------------------------------------------------------------------------------------------------------------------------\r\n`;
  content+=`الموظف               الرقم الوظيفي   الفرع          الدخول       الخروج       الحالة                سبب الخروج                     الدقائق\r\n`;
@@ -1269,21 +1424,182 @@ app.get('/api/admin/reports.txt',admin,allow('reports.export'),wrap(async(req,re
 
 app.get('/api/admin/reports.doc',admin,allow('reports.export'),wrap(async(req,res)=>{
  const [from,to]=dateRange(req);
- const rows=await recordsFor(req.user,from,to);
  const nowStr=new Date().toLocaleString('ar-YE',{timeZone:'Asia/Aden'});
+
+ if(req.query.employee_id){
+  const empId=id(req.query.employee_id);
+  const dossier=await reportService.getEmployeeDossier(req.user,empId,from,to);
+  const emp=dossier.employee;
+  const sum=dossier.summary;
+  const html=`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset='utf-8'><title>سجل حضور الموظف - ${emp.name}</title>
+<style>
+body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; margin: 24px; color: #231f20; }
+.header { text-align: center; border-bottom: 2px solid #b59045; padding-bottom: 12px; margin-bottom: 20px; }
+.header h1 { margin: 0 0 6px; color: #231f20; font-size: 22px; }
+.header p { margin: 2px 0; color: #775b24; font-size: 13px; font-weight: bold; }
+.info-card { background: #faf9f5; border: 1px solid #e0dacb; border-radius: 8px; padding: 14px; margin-bottom: 16px; font-size: 13px; }
+.info-card table { width: 100%; border: none; }
+.info-card td { padding: 4px 8px; border: none; }
+.stats-grid { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+.stats-grid td { background: #fdfcf9; border: 1px solid #d4af37; padding: 10px; text-align: center; }
+.stats-val { font-size: 18px; font-weight: bold; color: #775b24; }
+.stats-lbl { font-size: 11px; color: #555; }
+table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.data-table th { background-color: #231f20; color: #ffffff; padding: 8px; border: 1px solid #1a1718; text-align: right; }
+table.data-table td { padding: 8px; border: 1px solid #e0dacb; text-align: right; }
+tr:nth-child(even) { background-color: #faf9f5; }
+.badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+.badge-present { background-color: #eaf4ee; color: #2d6a4f; }
+.badge-absent { background-color: #fee2e2; color: #b91c1c; }
+.badge-late { background-color: #fef3c7; color: #b45309; }
+.badge-leave { background-color: #dbeafe; color: #1d4ed8; }
+.badge-weekend { background-color: #f3f4f6; color: #4b5563; }
+.footer { margin-top: 24px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0; padding-top: 10px; }
+</style>
+</head>
+<body>
+<div class='header'>
+ <h1>نظام أساس للحضور والانصراف</h1>
+ <p>سجل الحضور والانصراف الفردي للموظف · توقيت صنعاء (اليمن)</p>
+</div>
+<div class='info-card'>
+ <table>
+  <tr><td><strong>اسم الموظف:</strong> ${emp.name}</td><td><strong>الرقم الوظيفي:</strong> ${emp.identifier}</td></tr>
+  <tr><td><strong>الفرع:</strong> ${emp.branch_name}</td><td><strong>الوردية:</strong> ${emp.shift_name}</td></tr>
+  <tr><td><strong>الفترة المحددة:</strong> من ${from} إلى ${to}</td><td><strong>تاريخ الإصدار:</strong> ${nowStr}</td></tr>
+ </table>
+</div>
+<table class='stats-grid'>
+ <tr>
+  <td><div class='stats-val'>${sum.present_days}</div><div class='stats-lbl'>أيام الحضور</div></td>
+  <td><div class='stats-val'>${sum.absent_days}</div><div class='stats-lbl'>أيام الغياب</div></td>
+  <td><div class='stats-val'>${sum.late_days_count} (${sum.total_late_minutes} د)</div><div class='stats-lbl'>التأخير</div></td>
+  <td><div class='stats-val'>${sum.total_work_hours} س</div><div class='stats-lbl'>ساعات العمل الفعلية</div></td>
+  <td><div class='stats-val'>${sum.leave_days}</div><div class='stats-lbl'>إجازات معتمدة</div></td>
+  <td><div class='stats-val'>${sum.attendance_rate}%</div><div class='stats-lbl'>نسبة الالتزام</div></td>
+ </tr>
+</table>
+<table class='data-table'>
+ <thead>
+  <tr>
+   <th>التاريخ</th>
+   <th>اليوم</th>
+   <th>وقت الدخول</th>
+   <th>وقت الخروج</th>
+   <th>الحالة</th>
+   <th>التأخير</th>
+   <th>ساعات العمل</th>
+   <th>ملاحظات</th>
+  </tr>
+ </thead>
+ <tbody>
+  ${dossier.timeline.map(t=>{
+   const bClass = t.state==='absent'?'badge-absent':(t.state==='late'?'badge-late':(t.state==='leave'?'badge-leave':(t.state==='weekend'?'badge-weekend':'badge-present')));
+   return `<tr>
+    <td><strong>${t.date}</strong></td>
+    <td>${t.day_name}</td>
+    <td style='color:#2d6a4f; font-weight:bold;'>${t.first_in ? new Date(t.first_in).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (t.state==='absent'?'لم يسجل':'—')}</td>
+    <td>${t.last_out ? new Date(t.last_out).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'}) : (t.state==='inside'?'حاضر الآن':'—')}</td>
+    <td><span class='badge ${bClass}'>${t.status_label}</span></td>
+    <td>${t.late_minutes > 0 ? (t.late_minutes + ' دقيقة') : '—'}</td>
+    <td><strong>${t.work_hours || '0.0'} س</strong></td>
+    <td>${t.needs_review ? '<span style="color:#b91c1c; font-weight:bold;">يحتاج مراجعة</span>' : (t.exit_reason_label || '—')}</td>
+   </tr>`;
+  }).join('')}
+ </tbody>
+</table>
+<div class='footer'>تم استخراج هذا التقرير آلياً وموثق بواسطة نظام أساس للحضور والانصراف · توقيت صنعاء</div>
+</body></html>`;
+  await audit(db,req.user,'reports.export','employee_dossier','تصدير Word لسجل موظف',{employee_id:emp.id,count:dossier.timeline.length});
+  res.setHeader('Content-Type','application/msword; charset=utf-8');
+  return res.attachment(`asas-employee-${emp.identifier}-${from}-${to}.doc`).send('\uFEFF'+html);
+ }
+
+ if(req.query.type==='summary'||req.query.view==='summary'){
+  const report=await reportService.getCollectiveReport(req.user,from,to,req.query.branch_id,req.query.search);
+  const html=`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset='utf-8'><title>التقرير الجماعي الشامل للحضور والانصراف - نظام أساس</title>
+<style>
+body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; margin: 24px; color: #231f20; }
+.header { text-align: center; border-bottom: 2px solid #b59045; padding-bottom: 12px; margin-bottom: 20px; }
+.header h1 { margin: 0 0 6px; color: #231f20; font-size: 24px; }
+.header p { margin: 2px 0; color: #775b24; font-size: 13px; font-weight: bold; }
+.meta { margin-bottom: 16px; font-size: 13px; color: #474143; }
+.stats-grid { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+.stats-grid td { background: #fdfcf9; border: 1px solid #d4af37; padding: 10px; text-align: center; }
+.stats-val { font-size: 18px; font-weight: bold; color: #775b24; }
+.stats-lbl { font-size: 11px; color: #555; }
+table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.data-table th { background-color: #231f20; color: #ffffff; padding: 8px; border: 1px solid #1a1718; text-align: right; }
+table.data-table td { padding: 8px; border: 1px solid #e0dacb; text-align: right; }
+tr:nth-child(even) { background-color: #faf9f5; }
+.footer { margin-top: 24px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0; padding-top: 10px; }
+</style>
+</head>
+<body>
+<div class='header'>
+ <h1>نظام أساس للحضور والانصراف</h1>
+ <p>التقرير الجماعي الشامل للحضور والانصراف · توقيت صنعاء (اليمن)</p>
+</div>
+<div class='meta'>
+ <div><strong>الفترة المحددة:</strong> من ${from} إلى ${to}</div>
+ <div><strong>تاريخ الإصدار:</strong> ${nowStr} (بتوقيت صنعاء)</div>
+ <div><strong>إجمالي الموظفين:</strong> ${report.overall.total_employees} موظف</div>
+</div>
+<table class='stats-grid'>
+ <tr>
+  <td><div class='stats-val'>${report.overall.total_present_days}</div><div class='stats-lbl'>إجمالي أيام الحضور</div></td>
+  <td><div class='stats-val'>${report.overall.total_absent_days}</div><div class='stats-lbl'>إجمالي أيام الغياب</div></td>
+  <td><div class='stats-val'>${report.overall.total_late_days} (${report.overall.total_late_minutes} د)</div><div class='stats-lbl'>إجمالي التأخير</div></td>
+  <td><div class='stats-val'>${report.overall.total_work_hours} س</div><div class='stats-lbl'>إجمالي ساعات العمل</div></td>
+  <td><div class='stats-val'>${report.overall.total_leave_days}</div><div class='stats-lbl'>إجمالي الإجازات</div></td>
+  <td><div class='stats-val'>${report.overall.average_attendance_rate}%</div><div class='stats-lbl'>متوسط الالتزام</div></td>
+ </tr>
+</table>
+<table class='data-table'>
+ <thead>
+  <tr>
+   <th>الرقم الوظيفي</th>
+   <th>اسم الموظف</th>
+   <th>الفرع</th>
+   <th>الوردية</th>
+   <th>حضور</th>
+   <th>غياب</th>
+   <th>تأخير</th>
+   <th>ساعات العمل</th>
+   <th>إجازات</th>
+   <th>نسبة الالتزام</th>
+  </tr>
+ </thead>
+ <tbody>
+  ${report.employees.map(e=>`<tr>
+   <td><strong>${e.identifier}</strong></td>
+   <td>${e.name}</td>
+   <td>${e.branch_name}</td>
+   <td>${e.shift_name}</td>
+   <td style='color:#2d6a4f; font-weight:bold;'>${e.present_days}</td>
+   <td style='color:#b91c1c; font-weight:bold;'>${e.absent_days}</td>
+   <td>${e.late_days_count} (${e.total_late_minutes} د)</td>
+   <td><strong>${e.total_work_hours} س</strong></td>
+   <td>${e.leave_days}</td>
+   <td><strong>${e.attendance_rate}%</strong></td>
+  </tr>`).join('')}
+ </tbody>
+</table>
+<div class='footer'>تم استخراج هذا التقرير آلياً وموثق بواسطة نظام أساس للحضور والانصراف · توقيت صنعاء</div>
+</body></html>`;
+  await audit(db,req.user,'reports.export','collective_summary','تصدير Word للتقرير الجماعي',{count:report.employees.length});
+  res.setHeader('Content-Type','application/msword; charset=utf-8');
+  return res.attachment(`asas-collective-${from}-${to}.doc`).send('\uFEFF'+html);
+ }
+
+ const rows=await recordsFor(req.user,from,to);
+ const nowStrOld=new Date().toLocaleString('ar-YE',{timeZone:'Asia/Aden'});
  const html=`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
 <head>
 <meta charset='utf-8'>
 <title>تقرير الحضور والانصراف - نظام أساس</title>
-<!--[if gte mso 9]>
-<xml>
-<w:WordDocument>
-<w:View>Print</w:View>
-<w:Zoom>100</w:Zoom>
-<w:DoNotOptimizeForBrowser/>
-</w:WordDocument>
-</xml>
-<![endif]-->
 <style>
 body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; margin: 24px; color: #231f20; }
 .header { text-align: center; border-bottom: 2px solid #b59045; padding-bottom: 12px; margin-bottom: 20px; }
@@ -1310,7 +1626,7 @@ tr:nth-child(even) { background-color: #faf9f5; }
 </div>
 <div class='meta'>
  <div><strong>الفترة المحددة:</strong> من ${from} إلى ${to}</div>
- <div><strong>تاريخ الإصدار:</strong> ${nowStr} (بتوقيت صنعاء)</div>
+ <div><strong>تاريخ الإصدار:</strong> ${nowStrOld} (بتوقيت صنعاء)</div>
  <div><strong>إجمالي السجلات:</strong> ${rows.length} سجل</div>
 </div>
 <table>

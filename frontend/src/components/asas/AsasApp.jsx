@@ -1076,6 +1076,23 @@ function AsasAppInner({ defaultAction = 'auto' }) {
   const [search, setSearch] = useState('');
   const [accountFilter, setAccountFilter] = useState('all');
   const [recordFilter, setRecordFilter] = useState('all');
+  const [recordsTabMode, setRecordsTabMode] = useState('collective');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [collectiveData, setCollectiveData] = useState(null);
+  const [individualData, setIndividualData] = useState(null);
+  const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    try {
+      const d = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden' }).format(new Date());
+      return Number(d.split('-')[1]);
+    } catch (_) { return new Date().getMonth() + 1; }
+  });
+  const [selectedYear, setSelectedYear] = useState(() => {
+    try {
+      const d = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden' }).format(new Date());
+      return Number(d.split('-')[0]);
+    } catch (_) { return new Date().getFullYear(); }
+  });
   const [liveTime, setLiveTime] = useState('');
   const [announcements, setAnnouncements] = useState([]);
   const [showAnnouncementsModal, setShowAnnouncementsModal] = useState(false);
@@ -1168,22 +1185,50 @@ function AsasAppInner({ defaultAction = 'auto' }) {
     loadAnnouncements();
   }, [loadAnnouncements]);
 
+  const loadEmployeeDossier = useCallback(async (empId, f = from, t = to) => {
+    if (!empId) return;
+    try {
+      const res = await api(`/admin/reports/employee/${empId}?from=${f}&to=${t}`);
+      setIndividualData(res);
+    } catch (err) {
+      console.error('Failed to load employee dossier:', err);
+    }
+  }, [from, to]);
+
   const load = useCallback(async (showBusy = false) => {
     if (!user || user.role === 'employee') return;
     if (showBusy) setBusy(true);
     setError('');
     try {
-      const path = tab === 'qr' ? '/admin/branches'
-        : tab === 'leave' ? '/leave'
-        : tab === 'records' ? `/admin/records?from=${from}&to=${to}`
-        : tab === 'settings' ? '/admin/settings'
-        : tab === 'announcements' ? '/announcements'
-        : `/admin/${tab}`;
-      const result = await api(path);
-      setData(result);
-      if (tab === 'branches' || tab === 'qr') setBranches(result);
-      if (tab === 'settings' && result) setSystemSettings(result);
-      if (tab === 'announcements' && Array.isArray(result)) setAnnouncements(result);
+      if (tab === 'records') {
+        const [rawResult, summaryResult] = await Promise.all([
+          api(`/admin/records?from=${from}&to=${to}`),
+          api(`/admin/reports/summary?from=${from}&to=${to}`).catch(() => null)
+        ]);
+        setData(rawResult);
+        if (summaryResult) {
+          setCollectiveData(summaryResult);
+          if (summaryResult.employees && summaryResult.employees.length > 0) {
+            setSelectedEmployeeId(prev => {
+              if (prev && summaryResult.employees.some(e => String(e.id) === String(prev))) {
+                return prev;
+              }
+              return String(summaryResult.employees[0].id);
+            });
+          }
+        }
+      } else {
+        const path = tab === 'qr' ? '/admin/branches'
+          : tab === 'leave' ? '/leave'
+          : tab === 'settings' ? '/admin/settings'
+          : tab === 'announcements' ? '/announcements'
+          : `/admin/${tab}`;
+        const result = await api(path);
+        setData(result);
+        if (tab === 'branches' || tab === 'qr') setBranches(result);
+        if (tab === 'settings' && result) setSystemSettings(result);
+        if (tab === 'announcements' && Array.isArray(result)) setAnnouncements(result);
+      }
     } catch (e) {
       if (showBusy) {
         setData(null);
@@ -1194,6 +1239,64 @@ function AsasAppInner({ defaultAction = 'auto' }) {
       if (showBusy) setBusy(false);
     }
   }, [user, tab, from, to]);
+
+  useEffect(() => {
+    if (tab === 'records' && selectedEmployeeId) {
+      loadEmployeeDossier(selectedEmployeeId, from, to);
+    }
+  }, [tab, selectedEmployeeId, from, to, loadEmployeeDossier]);
+
+  const applyPreset = useCallback((presetKey) => {
+    const now = new Date();
+    let adenDateStr = '';
+    try {
+      adenDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+    } catch (_) {
+      adenDateStr = now.toISOString().slice(0, 10);
+    }
+    const [year, month, day] = adenDateStr.split('-').map(Number);
+
+    if (presetKey === 'today') {
+      setFrom(adenDateStr);
+      setTo(adenDateStr);
+    } else if (presetKey === 'yesterday') {
+      const yDate = new Date(Date.UTC(year, month - 1, day - 1));
+      const yStr = yDate.toISOString().slice(0, 10);
+      setFrom(yStr);
+      setTo(yStr);
+    } else if (presetKey === 'this_week') {
+      const curDate = new Date(Date.UTC(year, month - 1, day));
+      const dow = curDate.getUTCDay();
+      const daysSinceSat = (dow + 1) % 7;
+      const satDate = new Date(Date.UTC(year, month - 1, day - daysSinceSat));
+      const satStr = satDate.toISOString().slice(0, 10);
+      setFrom(satStr);
+      setTo(adenDateStr);
+    } else if (presetKey === 'this_month') {
+      const mStr = String(month).padStart(2, '0');
+      setFrom(`${year}-${mStr}-01`);
+      setTo(adenDateStr);
+    } else if (presetKey === 'last_month') {
+      const prevMonth = month === 1 ? 12 : month - 1;
+      const prevYear = month === 1 ? year - 1 : year;
+      const lastDay = new Date(Date.UTC(prevYear, prevMonth, 0)).getUTCDate();
+      const pmStr = String(prevMonth).padStart(2, '0');
+      const ldStr = String(lastDay).padStart(2, '0');
+      setFrom(`${prevYear}-${pmStr}-01`);
+      setTo(`${prevYear}-${pmStr}-${ldStr}`);
+    }
+  }, []);
+
+  const applyMonthRange = useCallback((y, m) => {
+    const yr = Number(y);
+    const mo = Number(m);
+    const mStr = String(mo).padStart(2, '0');
+    const lastDay = new Date(Date.UTC(yr, mo, 0)).getUTCDate();
+    const ldStr = String(lastDay).padStart(2, '0');
+    setFrom(`${yr}-${mStr}-01`);
+    setTo(`${yr}-${mStr}-${ldStr}`);
+    setShowMonthYearPicker(false);
+  }, []);
 
   useEffect(() => {
     load(true);
@@ -1469,42 +1572,84 @@ function AsasAppInner({ defaultAction = 'auto' }) {
   async function exportCsv() {
     setBusy(true);
     try {
-      const r = await fetch(`/api/admin/reports.csv?from=${from}&to=${to}`, { credentials: 'same-origin' });
+      const token = typeof window !== 'undefined' ? localStorage.getItem('asas_token') : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      let url = `/api/admin/reports.csv?from=${from}&to=${to}`;
+      let filename = `asas-${from}-${to}.csv`;
+
+      if (recordsTabMode === 'individual' && selectedEmployeeId) {
+        url += `&employee_id=${selectedEmployeeId}`;
+        const empIdent = individualData?.employee?.identifier || selectedEmployeeId;
+        filename = `asas-employee-${empIdent}-${from}-${to}.csv`;
+      } else if (recordsTabMode === 'collective') {
+        url += `&type=summary`;
+        filename = `asas-collective-${from}-${to}.csv`;
+      }
+
+      const r = await fetch(url, { headers, credentials: 'include' });
       if (!r.ok) throw new Error('تعذر تصدير التقرير');
-      const url = URL.createObjectURL(await r.blob());
+      const urlBlob = URL.createObjectURL(await r.blob());
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `asas-${from}-${to}.csv`;
+      a.href = urlBlob;
+      a.download = filename;
       a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setTimeout(() => URL.revokeObjectURL(urlBlob), 1000);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
   async function exportWord() {
     setBusy(true);
     try {
-      const r = await fetch(`/api/admin/reports.doc?from=${from}&to=${to}`, { credentials: 'same-origin' });
+      const token = typeof window !== 'undefined' ? localStorage.getItem('asas_token') : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      let url = `/api/admin/reports.doc?from=${from}&to=${to}`;
+      let filename = `تقرير-حضور-أساس-${from}-${to}.doc`;
+
+      if (recordsTabMode === 'individual' && selectedEmployeeId) {
+        url += `&employee_id=${selectedEmployeeId}`;
+        const empName = individualData?.employee?.name || selectedEmployeeId;
+        filename = `تقرير-حضور-${empName}-${from}-${to}.doc`;
+      } else if (recordsTabMode === 'collective') {
+        url += `&type=summary`;
+        filename = `التقرير-الجماعي-أساس-${from}-${to}.doc`;
+      }
+
+      const r = await fetch(url, { headers, credentials: 'include' });
       if (!r.ok) throw new Error('تعذر تصدير تقرير Word');
-      const url = URL.createObjectURL(await r.blob());
+      const urlBlob = URL.createObjectURL(await r.blob());
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `تقرير-حضور-أساس-${from}-${to}.doc`;
+      a.href = urlBlob;
+      a.download = filename;
       a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setTimeout(() => URL.revokeObjectURL(urlBlob), 1000);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
   async function exportTxt() {
     setBusy(true);
     try {
-      const r = await fetch(`/api/admin/reports.txt?from=${from}&to=${to}`, { credentials: 'same-origin' });
+      const token = typeof window !== 'undefined' ? localStorage.getItem('asas_token') : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      let url = `/api/admin/reports.txt?from=${from}&to=${to}`;
+      let filename = `تقرير-حضور-أساس-${from}-${to}.txt`;
+
+      if (recordsTabMode === 'individual' && selectedEmployeeId) {
+        url += `&employee_id=${selectedEmployeeId}`;
+        const empIdent = individualData?.employee?.identifier || selectedEmployeeId;
+        filename = `تقرير-موظف-${empIdent}-${from}-${to}.txt`;
+      } else if (recordsTabMode === 'collective') {
+        url += `&type=summary`;
+        filename = `التقرير-الجماعي-أساس-${from}-${to}.txt`;
+      }
+
+      const r = await fetch(url, { headers, credentials: 'include' });
       if (!r.ok) throw new Error('تعذر تصدير التقرير النصي');
-      const url = URL.createObjectURL(await r.blob());
+      const urlBlob = URL.createObjectURL(await r.blob());
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `تقرير-حضور-أساس-${from}-${to}.txt`;
+      a.href = urlBlob;
+      a.download = filename;
       a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setTimeout(() => URL.revokeObjectURL(urlBlob), 1000);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
@@ -1843,75 +1988,704 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               return true;
             });
 
+            const filteredEmployees = (collectiveData?.employees || []).filter(e => {
+              if (!search.trim()) return true;
+              const q = search.trim().toLowerCase();
+              return (e.name || '').toLowerCase().includes(q) ||
+                     (e.identifier || '').toLowerCase().includes(q) ||
+                     (e.branch_name || '').toLowerCase().includes(q);
+            });
+
             return (
               <>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
-                    <Field label="من تاريخ" type="date" value={from} onChange={e => setFrom(e.target.value)} />
-                    <Field label="إلى تاريخ" type="date" value={to} onChange={e => setTo(e.target.value)} />
-                    <div style={{ width: 220 }}>
-                      <Field label="بحث بالاسم أو الرقم">
-                        <div style={{ position: 'relative' }}>
-                          <input
-                            className="asas-input"
-                            type="search"
-                            placeholder="بحث في الموظفين..."
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            style={{ paddingRight: 32 }}
-                          />
-                          <Icon name="search" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: 'var(--text-3)', pointerEvents: 'none' }} />
-                        </div>
-                      </Field>
-                    </div>
+                {/* Mode Switcher Tabs */}
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+                  <button
+                    className={`asas-btn ${recordsTabMode === 'collective' ? 'primary' : ''}`}
+                    onClick={() => setRecordsTabMode('collective')}
+                    style={{ fontWeight: 700 }}
+                  >
+                    <Icon name="users" />
+                    👥 التقرير الجماعي لجميع الموظفين
+                  </button>
+                  <button
+                    className={`asas-btn ${recordsTabMode === 'individual' ? 'primary' : ''}`}
+                    onClick={() => setRecordsTabMode('individual')}
+                    style={{ fontWeight: 700 }}
+                  >
+                    <Icon name="user" />
+                    👤 سجل الموظف الفردي
+                  </button>
+                  <button
+                    className={`asas-btn ${recordsTabMode === 'live' ? 'primary' : ''}`}
+                    onClick={() => setRecordsTabMode('live')}
+                    style={{ fontWeight: 500 }}
+                  >
+                    <Icon name="list" />
+                    📋 سجل الحركات اليومية المباشرة
+                  </button>
+                </div>
+
+                {/* Period Controls & Quick Presets */}
+                <div style={{
+                  padding: '12px 16px',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid var(--border-glass)',
+                  borderRadius: 12,
+                  marginBottom: 16
+                }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+                    <span style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 600 }}>فترات سريعة:</span>
+                    {[
+                      ['today', 'اليوم'],
+                      ['yesterday', 'أمس'],
+                      ['this_week', 'هذا الأسبوع'],
+                      ['this_month', 'هذا الشهر'],
+                      ['last_month', 'الشهر السابق']
+                    ].map(([key, label]) => (
+                      <button
+                        key={key}
+                        className="asas-btn sm"
+                        onClick={() => applyPreset(key)}
+                        style={{ fontSize: 12, padding: '4px 10px' }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                    <button
+                      className={`asas-btn sm ${showMonthYearPicker ? 'primary' : ''}`}
+                      onClick={() => setShowMonthYearPicker(!showMonthYearPicker)}
+                      style={{ fontSize: 12, padding: '4px 10px' }}
+                    >
+                      <Icon name="calendar" style={{ width: 12, height: 12 }} />
+                      📅 تحديد شهر وسنة
+                    </button>
                   </div>
 
-                  {can('reports.export') && (
-                    <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button className="asas-btn sm" disabled={busy} onClick={exportCsv}>
-                        <Icon name="fileSpreadsheet" />
-                        Excel / CSV
+                  {/* Month & Year Picker Dropdown */}
+                  {showMonthYearPicker && (
+                    <div style={{
+                      margin: '10px 0 16px',
+                      padding: '14px 16px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid var(--brand-gold, #b59045)',
+                      borderRadius: 10,
+                      display: 'flex',
+                      gap: 12,
+                      flexWrap: 'wrap',
+                      alignItems: 'flex-end'
+                    }}>
+                      <Field label="السنة">
+                        <select
+                          className="asas-input"
+                          style={{ minWidth: 110 }}
+                          value={selectedYear}
+                          onChange={e => setSelectedYear(Number(e.target.value))}
+                        >
+                          {[2024, 2025, 2026, 2027].map(y => (
+                            <option key={y} value={y}>{y}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="الشهر">
+                        <select
+                          className="asas-input"
+                          style={{ minWidth: 150 }}
+                          value={selectedMonth}
+                          onChange={e => setSelectedMonth(Number(e.target.value))}
+                        >
+                          {[
+                            [1, 'يناير (1)'], [2, 'فبراير (2)'], [3, 'مارس (3)'], [4, 'أبريل (4)'],
+                            [5, 'مايو (5)'], [6, 'يونيو (6)'], [7, 'يوليو (7)'], [8, 'أغسطس (8)'],
+                            [9, 'سبتمبر (9)'], [10, 'أكتوبر (10)'], [11, 'نوفمبر (11)'], [12, 'ديسمبر (12)']
+                          ].map(([m, name]) => (
+                            <option key={m} value={m}>{name}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <button
+                        className="asas-btn sm primary"
+                        onClick={() => applyMonthRange(selectedYear, selectedMonth)}
+                      >
+                        <Icon name="check" />
+                        تطبيق الشهر
                       </button>
-                      <button className="asas-btn sm" disabled={busy} onClick={exportWord}>
-                        <Icon name="fileText" />
-                        Word (DOC)
-                      </button>
-                      <button className="asas-btn sm" disabled={busy} onClick={exportTxt}>
-                        <Icon name="file" />
-                        تقرير TXT
+                      <button
+                        className="asas-btn sm"
+                        onClick={() => setShowMonthYearPicker(false)}
+                      >
+                        إلغاء
                       </button>
                     </div>
                   )}
+
+                  {/* Date Range Inputs & Filters */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+                      <Field label="من تاريخ" type="date" value={from} onChange={e => setFrom(e.target.value)} />
+                      <Field label="إلى تاريخ" type="date" value={to} onChange={e => setTo(e.target.value)} />
+
+                      {recordsTabMode === 'individual' && (
+                        <div style={{ minWidth: 260 }}>
+                          <Field label="اختر الموظف لعرض سجله الفردي">
+                            <select
+                              className="asas-input"
+                              value={selectedEmployeeId}
+                              onChange={e => setSelectedEmployeeId(e.target.value)}
+                            >
+                              {(collectiveData?.employees || []).map(emp => (
+                                <option key={emp.id} value={emp.id}>
+                                  {emp.name} ({emp.identifier}) - {emp.branch_name || 'الفرع الرئيسي'}
+                                </option>
+                              ))}
+                              {(!collectiveData?.employees || !collectiveData.employees.length) && (
+                                <option value="">لا يوجد موظفون</option>
+                              )}
+                            </select>
+                          </Field>
+                        </div>
+                      )}
+
+                      {recordsTabMode !== 'individual' && (
+                        <div style={{ width: 220 }}>
+                          <Field label="بحث بالاسم أو الرقم">
+                            <div style={{ position: 'relative' }}>
+                              <input
+                                className="asas-input"
+                                type="search"
+                                placeholder="بحث في الموظفين..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                style={{ paddingRight: 32 }}
+                              />
+                              <Icon name="search" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: 'var(--text-3)', pointerEvents: 'none' }} />
+                            </div>
+                          </Field>
+                        </div>
+                      )}
+                    </div>
+
+                    {can('reports.export') && (
+                      <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button className="asas-btn sm" disabled={busy} onClick={exportCsv} title="تصدير إلى جدول Excel">
+                          <Icon name="fileSpreadsheet" />
+                          Excel / CSV
+                        </button>
+                        <button className="asas-btn sm" disabled={busy} onClick={exportWord} title="تصدير كملف Word معتمد">
+                          <Icon name="fileText" />
+                          Word (DOC)
+                        </button>
+                        <button className="asas-btn sm" disabled={busy} onClick={exportTxt} title="تصدير كنص منسق">
+                          <Icon name="file" />
+                          تقرير TXT
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Filter Tabs */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
-                  {[
-                    ['all', `الكل (${allRecords.length})`, 'users'],
-                    ['inside', `حاضرون الآن (${insideCount})`, 'checkCircle'],
-                    ['outside', `انصرفوا (${outsideCount})`, 'logOut'],
-                    ['absent', `لم يسجلوا اليوم / غائبون (${absentCount})`, 'alert'],
-                    ['leave', `في إجازة (${leaveCount})`, 'calendar']
-                  ].map(([fKey, fLabel, fIcon]) => (
-                    <button
-                      key={fKey}
-                      className={`asas-btn sm ${recordFilter === fKey ? 'primary' : ''}`}
-                      onClick={() => setRecordFilter(fKey)}
-                      style={{
-                        whiteSpace: 'nowrap',
-                        fontWeight: recordFilter === fKey ? 700 : 500,
-                        backgroundColor: recordFilter === fKey ? undefined : 'rgba(255, 255, 255, 0.04)'
-                      }}
+                {/* VIEW 1: COLLECTIVE REPORT */}
+                {recordsTabMode === 'collective' && (
+                  <>
+                    {/* Collective Summary Stats Grid */}
+                    <div className="asas-stats-grid" style={{ marginBottom: 16 }}>
+                      <Glass className="asas-stat-card">
+                        <div className="asas-stat-card-top">
+                          <span>إجمالي الموظفين</span>
+                          <div className="asas-stat-icon-wrap"><Icon name="users" /></div>
+                        </div>
+                        <div className="asas-stat-value">{formatNumber(collectiveData?.overall?.total_employees || 0)}</div>
+                        <div className="asas-stat-caption">الموظفون المشمولون بالتقرير</div>
+                      </Glass>
+
+                      <Glass className="asas-stat-card">
+                        <div className="asas-stat-card-top">
+                          <span>إجمالي أيام الحضور</span>
+                          <div className="asas-stat-icon-wrap"><Icon name="checkCircle" /></div>
+                        </div>
+                        <div className="asas-stat-value" style={{ color: 'var(--paid)' }}>
+                          {formatNumber(collectiveData?.overall?.total_present_days || 0)}
+                        </div>
+                        <div className="asas-stat-caption">مجموع أيام الحضور لكافة الموظفين</div>
+                      </Glass>
+
+                      <Glass className="asas-stat-card">
+                        <div className="asas-stat-card-top">
+                          <span>إجمالي أيام الغياب</span>
+                          <div className="asas-stat-icon-wrap"><Icon name="alert" /></div>
+                        </div>
+                        <div className="asas-stat-value" style={{ color: (collectiveData?.overall?.total_absent_days || 0) > 0 ? 'var(--unpaid)' : 'var(--text)' }}>
+                          {formatNumber(collectiveData?.overall?.total_absent_days || 0)}
+                        </div>
+                        <div className="asas-stat-caption">أيام الغياب غير المبررة بالدوام</div>
+                      </Glass>
+
+                      <Glass className="asas-stat-card">
+                        <div className="asas-stat-card-top">
+                          <span>حالات التأخير المرصودة</span>
+                          <div className="asas-stat-icon-wrap"><Icon name="clock" /></div>
+                        </div>
+                        <div className="asas-stat-value" style={{ color: (collectiveData?.overall?.total_late_days || 0) > 0 ? 'var(--partial)' : 'var(--text)' }}>
+                          {formatNumber(collectiveData?.overall?.total_late_days || 0)}
+                        </div>
+                        <div className="asas-stat-caption">
+                          إجمالي {formatNumber(collectiveData?.overall?.total_late_minutes || 0)} دقيقة تأخير
+                        </div>
+                      </Glass>
+
+                      <Glass className="asas-stat-card">
+                        <div className="asas-stat-card-top">
+                          <span>ساعات العمل الفعلية</span>
+                          <div className="asas-stat-icon-wrap"><Icon name="trend" /></div>
+                        </div>
+                        <div className="asas-stat-value">{collectiveData?.overall?.total_work_hours || '0.0'} س</div>
+                        <div className="asas-stat-caption">إجمالي ساعات العمل المنجزة</div>
+                      </Glass>
+
+                      <Glass className="asas-stat-card">
+                        <div className="asas-stat-card-top">
+                          <span>متوسط الالتزام بالدوام</span>
+                          <div className="asas-stat-icon-wrap"><Icon name="award" /></div>
+                        </div>
+                        <div className="asas-stat-value" style={{ color: 'var(--accent)' }}>
+                          {collectiveData?.overall?.average_attendance_rate || 0}%
+                        </div>
+                        <div className="asas-stat-caption">نسبة الالتزام الإجمالية للفترة</div>
+                      </Glass>
+                    </div>
+
+                    {/* Collective Table */}
+                    <Card
+                      title={`التقرير الجماعي الشامل للحضور والانصراف (${filteredEmployees.length} موظف)`}
+                      icon="users"
                     >
-                      <Icon name={fIcon} style={{ width: 14, height: 14 }} />
-                      {fLabel}
-                    </button>
-                  ))}
-                </div>
+                      <div className="asas-table-wrap">
+                        <table className="asas-table">
+                          <thead>
+                            <tr>
+                              {['الرقم الوظيفي', 'اسم الموظف', 'الفرع', 'الوردية', 'أيام الحضور', 'أيام الغياب', 'التأخير', 'ساعات العمل', 'الإجازات', 'نسبة الالتزام', 'إجراء'].map(h => (
+                                <th key={h}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredEmployees.map(emp => (
+                              <tr key={emp.id}>
+                                <td>
+                                  <strong style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>
+                                    {emp.identifier}
+                                  </strong>
+                                </td>
+                                <td>
+                                  <strong>{emp.name}</strong>
+                                </td>
+                                <td>{emp.branch_name || 'الفرع الرئيسي'}</td>
+                                <td>{emp.shift_name || 'دوام رسمي'}</td>
+                                <td>
+                                  <span style={{ color: 'var(--paid)', fontWeight: 700 }}>
+                                    {emp.present_days} يوم
+                                  </span>
+                                </td>
+                                <td>
+                                  <span style={{ color: emp.absent_days > 0 ? 'var(--unpaid)' : 'var(--text-3)', fontWeight: emp.absent_days > 0 ? 700 : 400 }}>
+                                    {emp.absent_days} يوم
+                                  </span>
+                                </td>
+                                <td>
+                                  {emp.late_days_count > 0 ? (
+                                    <span style={{ color: 'var(--partial)', fontWeight: 600 }}>
+                                      {emp.late_days_count} مرات ({emp.total_late_minutes} د)
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--paid)', fontSize: 12 }}>في الموعد</span>
+                                  )}
+                                </td>
+                                <td>
+                                  <strong>{emp.total_work_hours} س</strong>
+                                </td>
+                                <td>
+                                  {emp.leave_days > 0 ? (
+                                    <span style={{ color: '#3b82f6', fontWeight: 600 }}>{emp.leave_days} يوم</span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-3)' }}>0</span>
+                                  )}
+                                </td>
+                                <td>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{
+                                      padding: '2px 8px',
+                                      borderRadius: 6,
+                                      fontSize: 12,
+                                      fontWeight: 700,
+                                      background: emp.attendance_rate >= 80 ? 'rgba(16, 185, 129, 0.12)' : (emp.attendance_rate >= 50 ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)'),
+                                      color: emp.attendance_rate >= 80 ? 'var(--paid)' : (emp.attendance_rate >= 50 ? 'var(--partial)' : 'var(--unpaid)')
+                                    }}>
+                                      {emp.attendance_rate}%
+                                    </span>
+                                  </div>
+                                </td>
+                                <td>
+                                  <button
+                                    className="asas-btn sm primary"
+                                    onClick={() => {
+                                      setSelectedEmployeeId(String(emp.id));
+                                      setRecordsTabMode('individual');
+                                    }}
+                                    title="عرض السجل التاريخي والتحليلي الكامل للموظف"
+                                  >
+                                    <Icon name="user" />
+                                    عرض السجل الفردي
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                            {!filteredEmployees.length && (
+                              <tr>
+                                <td colSpan={11} style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-3)' }}>
+                                  لا توجد بيانات موظفين مطابقة للبحث أو الفترة المحددة.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </Card>
+                  </>
+                )}
 
-                <Card title={`سجل الحركات والتفاصيل (${filteredRecords.length} من إجمالي ${allRecords.length} موظف)`} icon="calendar">
-                  <Records rows={filteredRecords} onEdit={r => edit('records', r)} canEdit={can('attendance.edit')} />
-                </Card>
+                {/* VIEW 2: INDIVIDUAL EMPLOYEE DOSSIER */}
+                {recordsTabMode === 'individual' && (
+                  <>
+                    {individualData?.employee ? (
+                      <>
+                        {/* Employee Identity Banner */}
+                        <div style={{
+                          padding: '16px 20px',
+                          background: 'linear-gradient(135deg, rgba(181, 144, 69, 0.12), rgba(35, 31, 32, 0.6))',
+                          border: '1px solid var(--border-glass)',
+                          borderRadius: 14,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: 16,
+                          marginBottom: 16
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                            <UserAvatar user={individualData.employee} size="lg" />
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
+                                  {individualData.employee.name}
+                                </h3>
+                                <span style={{
+                                  padding: '2px 8px',
+                                  borderRadius: 6,
+                                  background: 'rgba(181, 144, 69, 0.2)',
+                                  color: 'var(--brand-gold, #b59045)',
+                                  fontFamily: 'monospace',
+                                  fontWeight: 700,
+                                  fontSize: 13
+                                }}>
+                                  #{individualData.employee.identifier}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6, fontSize: 13, color: 'var(--text-2)' }}>
+                                <span>📍 الفرع: <strong>{individualData.employee.branch_name || 'الفرع الرئيسي'}</strong></span>
+                                <span>⏰ الوردية: <strong>{individualData.employee.shift_name || 'دوام رسمي'}</strong></span>
+                                {individualData.employee.shift_start_time && (
+                                  <span>مواعيد الدوام: <strong>{String(individualData.employee.shift_start_time).slice(0, 5)} إلى {String(individualData.employee.shift_end_time).slice(0, 5)}</strong> (سماح {individualData.employee.grace_minutes || 10} د)</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ textAlign: 'center', padding: '8px 16px', background: 'rgba(0, 0, 0, 0.25)', borderRadius: 10, border: '1px solid var(--border-glass)' }}>
+                              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-3)' }}>نسبة الالتزام</span>
+                              <strong style={{ fontSize: 20, color: 'var(--accent)' }}>
+                                {individualData.summary.attendance_rate}%
+                              </strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Incomplete Records Warning Banner */}
+                        {individualData.summary.incomplete_records_count > 0 && (
+                          <div style={{
+                            padding: '12px 18px',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.35)',
+                            borderRadius: 12,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            marginBottom: 16
+                          }}>
+                            <Icon name="alert" style={{ width: 22, height: 22, color: 'var(--unpaid)', flexShrink: 0 }} />
+                            <div>
+                              <strong style={{ color: 'var(--unpaid)', fontSize: 14, display: 'block' }}>
+                                تنبيه إداري: يوجد {individualData.summary.incomplete_records_count} سجلات بحاجة لمراجعة وتصحيح
+                              </strong>
+                              <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                                تم رصد سجلات ينقصها تسجيل الانصراف أو تسجيل الحضور في أيام سابقة. لم يتم احتساب ساعات عمل افتراضية حرصاً على سلامة البيانات.
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Individual Summary Cards */}
+                        <div className="asas-stats-grid" style={{ marginBottom: 16 }}>
+                          <Glass className="asas-stat-card">
+                            <div className="asas-stat-card-top">
+                              <span>أيام الدوام المستحقة</span>
+                              <div className="asas-stat-icon-wrap"><Icon name="calendar" /></div>
+                            </div>
+                            <div className="asas-stat-value">{individualData.summary.work_days} يوم</div>
+                            <div className="asas-stat-caption">من إجمالي {individualData.summary.total_days} يوم بالفترة</div>
+                          </Glass>
+
+                          <Glass className="asas-stat-card">
+                            <div className="asas-stat-card-top">
+                              <span>أيام الحضور الفعلي</span>
+                              <div className="asas-stat-icon-wrap"><Icon name="checkCircle" /></div>
+                            </div>
+                            <div className="asas-stat-value" style={{ color: 'var(--paid)' }}>
+                              {individualData.summary.present_days} يوم
+                            </div>
+                            <div className="asas-stat-caption">حضور موثق في جدول الدوام</div>
+                          </Glass>
+
+                          <Glass className="asas-stat-card">
+                            <div className="asas-stat-card-top">
+                              <span>أيام الغياب غير المسجل</span>
+                              <div className="asas-stat-icon-wrap"><Icon name="alert" /></div>
+                            </div>
+                            <div className="asas-stat-value" style={{ color: individualData.summary.absent_days > 0 ? 'var(--unpaid)' : 'var(--text)' }}>
+                              {individualData.summary.absent_days} يوم
+                            </div>
+                            <div className="asas-stat-caption">أيام عمل فعلية لم يُسجل فيها</div>
+                          </Glass>
+
+                          <Glass className="asas-stat-card">
+                            <div className="asas-stat-card-top">
+                              <span>مرات ودقائق التأخير</span>
+                              <div className="asas-stat-icon-wrap"><Icon name="clock" /></div>
+                            </div>
+                            <div className="asas-stat-value" style={{ color: individualData.summary.late_days_count > 0 ? 'var(--partial)' : 'var(--text)' }}>
+                              {individualData.summary.late_days_count} مرات
+                            </div>
+                            <div className="asas-stat-caption">إجمالي {individualData.summary.total_late_minutes} دقيقة تأخير</div>
+                          </Glass>
+
+                          <Glass className="asas-stat-card">
+                            <div className="asas-stat-card-top">
+                              <span>ساعات العمل الفعلية</span>
+                              <div className="asas-stat-icon-wrap"><Icon name="trend" /></div>
+                            </div>
+                            <div className="asas-stat-value">{individualData.summary.total_work_hours} س</div>
+                            <div className="asas-stat-caption">محسوبة من أوقات الحضور والانصراف</div>
+                          </Glass>
+
+                          <Glass className="asas-stat-card">
+                            <div className="asas-stat-card-top">
+                              <span>الإجازات والعطلات</span>
+                              <div className="asas-stat-icon-wrap"><Icon name="calendar" /></div>
+                            </div>
+                            <div className="asas-stat-value">
+                              {individualData.summary.leave_days + individualData.summary.weekend_days} يوم
+                            </div>
+                            <div className="asas-stat-caption">
+                              {individualData.summary.leave_days} إجازة معتمدة · {individualData.summary.weekend_days} عطلة
+                            </div>
+                          </Glass>
+                        </div>
+
+                        {/* Individual Day-by-Day Historical Timeline Table */}
+                        <Card
+                          title={`السجل التاريخي المفصل للموظف: ${individualData.employee.name} (الفترة: ${from} إلى ${to})`}
+                          icon="calendar"
+                        >
+                          <div className="asas-table-wrap">
+                            <table className="asas-table">
+                              <thead>
+                                <tr>
+                                  {['التاريخ', 'اليوم', 'الدوام', 'وقت الدخول', 'وقت الخروج', 'الحالة', 'التأخير', 'ساعات العمل', 'ملاحظات وتنبيهات', ...(can('attendance.edit') ? ['إجراء'] : [])].map(h => (
+                                    <th key={h}>{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {individualData.timeline.map((day, dIdx) => {
+                                  const isAbs = day.state === 'absent';
+                                  const isLate = day.state === 'late' || (day.late_minutes > 0);
+                                  const isLev = day.state === 'leave';
+                                  const isWkd = day.state === 'weekend';
+                                  const isIn = day.state === 'inside';
+                                  const isInc = day.state === 'incomplete' || day.needs_review;
+                                  const isPend = day.state === 'pending';
+
+                                  let badgeStyle = { background: 'rgba(16, 185, 129, 0.12)', color: 'var(--paid)' };
+                                  if (isAbs) badgeStyle = { background: 'rgba(239, 68, 68, 0.12)', color: 'var(--unpaid)', border: '1px solid rgba(239, 68, 68, 0.3)' };
+                                  else if (isInc) badgeStyle = { background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444' };
+                                  else if (isLate) badgeStyle = { background: 'rgba(245, 158, 11, 0.15)', color: 'var(--partial)' };
+                                  else if (isLev) badgeStyle = { background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' };
+                                  else if (isWkd) badgeStyle = { background: 'rgba(156, 163, 175, 0.12)', color: 'var(--text-3)' };
+                                  else if (isPend) badgeStyle = { background: 'rgba(139, 92, 246, 0.15)', color: '#a78bfa' };
+
+                                  return (
+                                    <tr key={day.date + '-' + dIdx} style={isInc ? { background: 'rgba(239, 68, 68, 0.04)' } : undefined}>
+                                      <td>
+                                        <strong style={{ fontFamily: 'monospace' }}>{day.date}</strong>
+                                      </td>
+                                      <td>
+                                        <strong style={{ color: isWkd ? 'var(--text-3)' : 'var(--text)' }}>
+                                          {day.day_name}
+                                        </strong>
+                                      </td>
+                                      <td>
+                                        <span style={{ fontSize: 12, color: day.is_workday ? 'var(--text)' : 'var(--text-3)' }}>
+                                          {day.is_workday ? (individualData.employee.shift_name || 'دوام رسمي') : 'عطلة أسبوعية'}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        {day.first_in ? (
+                                          <span style={{ color: 'var(--paid)', fontWeight: 700 }}>
+                                            {day.first_in_time}
+                                          </span>
+                                        ) : (
+                                          <span style={{ color: isAbs ? 'var(--unpaid)' : 'var(--text-3)', fontWeight: isAbs ? 600 : 400 }}>
+                                            {isAbs ? 'لم يحضر' : (isWkd ? '—' : (isLev ? 'إجازة' : '—'))}
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td>
+                                        {day.last_out ? (
+                                          <span style={{ color: 'var(--text)', fontWeight: 600 }}>
+                                            {day.last_out_time}
+                                          </span>
+                                        ) : (
+                                          <span style={{ color: isIn ? 'var(--partial)' : 'var(--text-3)', fontWeight: isIn ? 700 : 400 }}>
+                                            {isIn ? 'حاضر الآن' : '—'}
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td>
+                                        <span className="asas-badge" style={badgeStyle}>
+                                          <Icon name={isAbs || isInc ? 'alert' : (isLate ? 'clock' : (isLev ? 'calendar' : (isWkd ? 'clock' : 'checkCircle')))} style={{ width: 13, height: 13 }} />
+                                          {day.status_label}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        {day.late_minutes > 0 ? (
+                                          <span style={{ color: 'var(--partial)', fontWeight: 700 }}>
+                                            {day.late_minutes} دقيقة
+                                          </span>
+                                        ) : (
+                                          <span style={{ color: 'var(--text-3)' }}>—</span>
+                                        )}
+                                      </td>
+                                      <td>
+                                        <strong style={{ color: Number(day.work_hours) > 0 ? 'var(--text)' : 'var(--text-3)' }}>
+                                          {day.work_hours || '0.0'} س
+                                        </strong>
+                                      </td>
+                                      <td>
+                                        {day.needs_review ? (
+                                          <span style={{ color: 'var(--unpaid)', fontWeight: 700, fontSize: 12 }}>
+                                            ⚠️ سجل ناقص بحاجة لمراجعة
+                                          </span>
+                                        ) : (
+                                          <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                                            {day.exit_reason_label || (isWkd ? 'يوم راحة أسبوعية' : (isLev ? 'إجازة رسمية' : '—'))}
+                                          </span>
+                                        )}
+                                      </td>
+                                      {can('attendance.edit') && (
+                                        <td>
+                                          {day.record_id ? (
+                                            <button
+                                              className="asas-btn sm"
+                                              onClick={() => edit('records', {
+                                                id: day.record_id,
+                                                employee_id: individualData.employee.id,
+                                                first_in: day.first_in,
+                                                last_out: day.last_out,
+                                                state: isIn ? 'inside' : 'closed',
+                                                exit_reason: day.exit_reason || ''
+                                              })}
+                                              title="تصحيح سجل هذا اليوم"
+                                            >
+                                              <Icon name="edit" />
+                                              تصحيح
+                                            </button>
+                                          ) : isAbs ? (
+                                            <button
+                                              className="asas-btn sm primary"
+                                              onClick={() => edit('records', {
+                                                employee_id: individualData.employee.id,
+                                                first_in: `${day.date}T08:00:00`,
+                                                last_out: `${day.date}T16:00:00`,
+                                                state: 'closed',
+                                                reason: 'تسجيل حضور يدوي متأخر'
+                                              })}
+                                              title="تحضير يدوي لهذا اليوم"
+                                            >
+                                              <Icon name="checkCircle" />
+                                              تحضير يدوي
+                                            </button>
+                                          ) : null}
+                                        </td>
+                                      )}
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </Card>
+                      </>
+                    ) : (
+                      <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-3)' }}>
+                        <Icon name="user" style={{ width: 48, height: 48, margin: '0 auto 12px', opacity: 0.4 }} />
+                        <p style={{ fontSize: 16 }}>يرجى اختيار موظف من القائمة أعلاه لعرض سجله الفردي الكامل ومؤشراته التحليلية.</p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* VIEW 3: LIVE DUTY MOVEMENTS (LEGACY VIEW) */}
+                {recordsTabMode === 'live' && (
+                  <>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
+                      {[
+                        ['all', `الكل (${allRecords.length})`, 'users'],
+                        ['inside', `حاضرون الآن (${insideCount})`, 'checkCircle'],
+                        ['outside', `انصرفوا (${outsideCount})`, 'logOut'],
+                        ['absent', `لم يسجلوا اليوم / غائبون (${absentCount})`, 'alert'],
+                        ['leave', `في إجازة (${leaveCount})`, 'calendar']
+                      ].map(([fKey, fLabel, fIcon]) => (
+                        <button
+                          key={fKey}
+                          className={`asas-btn sm ${recordFilter === fKey ? 'primary' : ''}`}
+                          onClick={() => setRecordFilter(fKey)}
+                          style={{
+                            whiteSpace: 'nowrap',
+                            fontWeight: recordFilter === fKey ? 700 : 500,
+                            backgroundColor: recordFilter === fKey ? undefined : 'rgba(255, 255, 255, 0.04)'
+                          }}
+                        >
+                          <Icon name={fIcon} style={{ width: 14, height: 14 }} />
+                          {fLabel}
+                        </button>
+                      ))}
+                    </div>
+
+                    <Card title={`سجل الحركات والتفاصيل المباشرة (${filteredRecords.length} من إجمالي ${allRecords.length} حركة)`} icon="calendar">
+                      <Records rows={filteredRecords} onEdit={r => edit('records', r)} canEdit={can('attendance.edit')} />
+                    </Card>
+                  </>
+                )}
               </>
             );
           })()}
