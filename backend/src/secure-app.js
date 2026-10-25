@@ -412,7 +412,7 @@ app.get('/api/admin/accounts',admin,allow('employees.read'),wrap(async(req,res)=
  const rows=(await db.query(`
    SELECT 
      a.id, a.identifier, a.name, a.email, a.phone, a.bound_device_id, a.bound_device_name, a.device_bound_at,
-     a.role, a.branch_id, a.shift_id, a.department_id, a.permissions, a.active,
+     a.role, a.branch_id, a.shift_id, a.department_id, a.permissions, a.active, a.is_remote,
      b.name AS branch_name,
      s.name AS shift_name,
      dr.state AS today_state,
@@ -447,10 +447,10 @@ app.get('/api/admin/accounts',admin,allow('employees.read'),wrap(async(req,res)=
      attendance_label = 'في إجازة رسمية';
    } else if (r.today_state === 'inside') {
      attendance_status = 'inside';
-     attendance_label = 'حاضر الآن';
+     attendance_label = r.is_remote ? 'حاضر الآن (عن بعد)' : 'حاضر الآن';
    } else if (r.today_state === 'outside' || r.today_state === 'closed') {
      attendance_status = 'outside';
-     attendance_label = 'تم الانصراف';
+     attendance_label = r.is_remote ? 'تم الانصراف (عن بعد)' : 'تم الانصراف';
    }
    return {
      ...r,
@@ -481,7 +481,8 @@ app.post('/api/admin/accounts',admin,allow('employees.write'),wrap(async(req,res
   if(!identifier){
    identifier = await generateNextEmployeeIdentifier(c);
   }
-  const r=await c.query('INSERT INTO accounts(identifier,name,password_hash,role,branch_id,shift_id,permissions,email,phone) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,identifier,name,email,phone,bound_device_id,bound_device_name,device_bound_at,role,branch_id,shift_id,permissions,active',[identifier,string(b.name),hash,role,branchId,shiftId,permissions,email,phone]);
+  const isRemote = Boolean(b.is_remote);
+  const r=await c.query('INSERT INTO accounts(identifier,name,password_hash,role,branch_id,shift_id,permissions,email,phone,is_remote) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id,identifier,name,email,phone,bound_device_id,bound_device_name,device_bound_at,role,branch_id,shift_id,permissions,active,is_remote',[identifier,string(b.name),hash,role,branchId,shiftId,permissions,email,phone,isRemote]);
   await audit(c,req.user,'account.create',r.rows[0].id,'إضافة حساب');return r.rows[0];
  }));
 }));
@@ -511,7 +512,8 @@ app.patch('/api/admin/accounts/:id',admin,allow('employees.write'),wrap(async(re
    if(dup.length)error('VALIDATION','البريد الإلكتروني مسجل لموظف آخر بالفعل');
   }
   let hash=account.password_hash;if(b.password){try{hash=await security.hashPassword(b.password);}catch(e){error('VALIDATION',e.message);}}
-  await c.query('UPDATE accounts SET active=$1,branch_id=$2,shift_id=$3,permissions=$4,password_hash=$5,name=$6,email=$7,phone=$8,role=$9 WHERE id=$10',[active,branchId,shiftId,permissions,hash,name,email,phone,role,accountId]);
+  const isRemote = b.is_remote === undefined ? account.is_remote : Boolean(b.is_remote);
+  await c.query('UPDATE accounts SET active=$1,branch_id=$2,shift_id=$3,permissions=$4,password_hash=$5,name=$6,email=$7,phone=$8,role=$9,is_remote=$10 WHERE id=$11',[active,branchId,shiftId,permissions,hash,name,email,phone,role,isRemote,accountId]);
   if(!active||b.password)await c.query('DELETE FROM auth_sessions WHERE account_id=$1',[accountId]);
   await audit(c,req.user,'account.update',accountId,reason,{active,branch_id:branchId,shift_id:shiftId,permissions,password_changed:!!b.password,email,phone});return {updated:true};
  }));
@@ -541,10 +543,11 @@ app.post('/api/admin/accounts/:id/approve',admin,allow('employees.write'),wrap(a
   const shiftId = b.shift_id ? id(b.shift_id) : acc.shift_id;
   const role = (b.role && req.user.role==='super_admin' && ['employee','viewer','hr_admin','branch_manager','super_admin'].includes(b.role)) ? b.role : acc.role;
 
-  await c.query('UPDATE accounts SET active=TRUE, branch_id=$1, shift_id=$2, role=$3 WHERE id=$4',[branchId,shiftId,role,accountId]);
-  await audit(c,req.user,'account.approve',accountId,reason,{previous_active:acc.active,branch_id:branchId,shift_id:shiftId,role});
+  const isRemote = b.is_remote !== undefined ? Boolean(b.is_remote) : Boolean(acc.is_remote);
+  await c.query('UPDATE accounts SET active=TRUE, branch_id=$1, shift_id=$2, role=$3, is_remote=$4 WHERE id=$5',[branchId,shiftId,role,isRemote,accountId]);
+  await audit(c,req.user,'account.approve',accountId,reason,{previous_active:acc.active,branch_id:branchId,shift_id:shiftId,role,is_remote:isRemote});
 
-  const updated=(await c.query('SELECT a.id, a.identifier, a.name, a.email, a.phone, a.role, a.branch_id, a.shift_id, a.active, b.name as branch_name, s.name as shift_name FROM accounts a LEFT JOIN branches b ON b.id=a.branch_id LEFT JOIN shifts s ON s.id=a.shift_id WHERE a.id=$1',[accountId])).rows[0];
+  const updated=(await c.query('SELECT a.id, a.identifier, a.name, a.email, a.phone, a.role, a.branch_id, a.shift_id, a.active, a.is_remote, b.name as branch_name, s.name as shift_name FROM accounts a LEFT JOIN branches b ON b.id=a.branch_id LEFT JOIN shifts s ON s.id=a.shift_id WHERE a.id=$1',[accountId])).rows[0];
   return {approved:true,account:updated,message:`تم اعتماد وتفعيل حساب الموظف (${updated.name}) بنجاح. يمكنه الآن تسجيل الدخول.`};
  }));
 }));
@@ -712,8 +715,10 @@ function resolveRecordStatus(r){
 
  if(isInside){
   const status_key = late > 0 ? 'late_inside' : 'ontime_inside';
-  const status_label = late > 0 ? `حاضر متأخر (${late} دقيقة)` : 'حاضر في الموعد';
-  const exit_reason_label = 'قيد الدوام (على رأس العمل)';
+  const status_label = r.is_remote
+    ? (late > 0 ? `حاضر عن بعد متأخر (${late} دقيقة)` : 'حاضر عن بعد في الموعد')
+    : (late > 0 ? `حاضر متأخر (${late} دقيقة)` : 'حاضر في الموعد');
+  const exit_reason_label = r.is_remote ? 'قيد الدوام (على رأس العمل - عن بعد)' : 'قيد الدوام (على رأس العمل)';
   return { status_key, status_label, exit_reason_label };
  }
 
@@ -744,7 +749,9 @@ function resolveRecordStatus(r){
 
  let exit_reason_label = 'انتهاء ساعات الدوام الرسمي في الموعد';
  const rawReason = String(r.exit_reason || '');
- if(rawReason.includes('مغادرة') || rawReason === 'geofence'){
+ if(rawReason.includes('عن بعد')){
+  exit_reason_label = 'انصراف دوام عن بعد';
+ } else if(rawReason.includes('مغادرة') || rawReason === 'geofence'){
   exit_reason_label = 'مغادرة نطاق الموقع تلقائياً (GPS)';
  } else if(rawReason.includes('مجدولة') || rawReason === 'scheduled'){
   exit_reason_label = 'انتهاء فترة المناوبة المجدولة تلقائياً';
@@ -947,9 +954,11 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
     notifications.notifyCheckOut(req.user,branch.name,timeStr,workingMinutes).catch(err=>console.error('[Notification Error] Check-out email failed:',err.message));
    }
    const resolved = resolveRecordStatus(record);
-   const exitMsg = automatic
-     ? 'تم تسجيل خروجك التلقائي بنجاح لمغادرتك نطاق الفرع'
-     : (earlyMins > 0 ? `تم تسجيل انصرافك بنجاح (${reason})` : (isAuto ? 'تم تسجيل انصرافك تلقائياً بنهاية دوامك' : 'تم تسجيل انصرافك بنجاح'));
+   const exitMsg = isRemote
+     ? 'تم تسجيل انصرافك عن بعد بنجاح'
+     : (automatic
+       ? 'تم تسجيل خروجك التلقائي بنجاح لمغادرتك نطاق الفرع'
+       : (earlyMins > 0 ? `تم تسجيل انصرافك بنجاح (${reason})` : (isAuto ? 'تم تسجيل انصرافك تلقائياً بنهاية دوامك' : 'تم تسجيل انصرافك بنجاح')));
    return {
      record:{...record,...resolved},
      action:'exit',
@@ -992,14 +1001,19 @@ app.get('/api/attendance/me',employee,wrap(async(req,res)=>{
  }) || records[0] || null;
  const isInside = todayRecord && todayRecord.state === 'inside';
  const autoInfo = todayRecord ? resolveRecordStatus(todayRecord) : null;
+ const isRemote = Boolean(req.user.is_remote);
  const automatic_status = {
    is_inside: Boolean(isInside),
    suggested_action: isInside ? 'exit' : 'enter',
    status_label: isInside 
-     ? (todayRecord?.late_minutes > 0 ? `حاضر داخل موقع العمل (تأخير ${todayRecord.late_minutes} دقيقة)` : 'حاضر داخل موقع العمل (في الموعد)') 
-     : (todayRecord?.last_out ? (autoInfo?.status_label || 'تم تسجيل الانصراف') : 'خارج موقع العمل (جاهز لتسجيل الحضور)'),
-   next_action_label: isInside ? 'تسجيل الانصراف' : 'تسجيل الحضور',
-   exit_reason_label: autoInfo?.exit_reason_label || (isInside ? 'قيد الدوام (على رأس العمل)' : '—')
+     ? (isRemote
+         ? (todayRecord?.late_minutes > 0 ? `حاضر بالعمل عن بعد (تأخير ${todayRecord.late_minutes} دقيقة)` : 'على رأس العمل (دوام عن بعد)')
+         : (todayRecord?.late_minutes > 0 ? `حاضر داخل موقع العمل (تأخير ${todayRecord.late_minutes} دقيقة)` : 'حاضر داخل موقع العمل (في الموعد)')) 
+     : (todayRecord?.last_out 
+         ? (autoInfo?.status_label || (isRemote ? 'تم تسجيل الانصراف عن بعد' : 'تم تسجيل الانصراف')) 
+         : (isRemote ? 'جاهز لتسجيل الحضور عن بعد' : 'خارج موقع العمل (جاهز لتسجيل الحضور)')),
+   next_action_label: isInside ? (isRemote ? 'تسجيل الانصراف (عن بعد)' : 'تسجيل الانصراف') : (isRemote ? 'تسجيل الحضور (عن بعد)' : 'تسجيل الحضور'),
+   exit_reason_label: autoInfo?.exit_reason_label || (isInside ? (isRemote ? 'على رأس العمل (عن بعد)' : 'قيد الدوام (على رأس العمل)') : '—')
  };
  const branchId = isInside ? todayRecord.branch_id : (req.user.branch_id || 1);
  const branch = (await db.query('SELECT id, name, latitude, longitude, entry_radius, exit_radius, max_accuracy FROM branches WHERE id=$1', [branchId])).rows[0] || null;
@@ -1025,6 +1039,7 @@ async function recordsFor(user,from,to){
       a.id AS employee_id,
       a.name,
       a.identifier,
+      a.is_remote,
       COALESCE(b.id, a.branch_id) AS branch_id,
       COALESCE(b.name, 'الفرع الرئيسي') AS branch_name,
       COALESCE(s.id, a.shift_id) AS shift_id,
@@ -1079,6 +1094,7 @@ async function recordsFor(user,from,to){
      r.*,
      a.name,
      a.identifier,
+     a.is_remote,
      COALESCE(b.name, 'الفرع الرئيسي') AS branch_name,
      COALESCE(s.name, 'الدوام الافتراضي') AS shift_name,
      s.start_time,

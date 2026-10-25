@@ -45,6 +45,7 @@ CREATE TABLE public.accounts (
     active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     avatar text,
+    is_remote boolean DEFAULT false NOT NULL,
     CONSTRAINT accounts_role_check CHECK ((role = ANY (ARRAY['super_admin'::text, 'hr_admin'::text, 'branch_manager'::text, 'viewer'::text, 'employee'::text])))
 );
 
@@ -313,6 +314,7 @@ CREATE TABLE public.duty_records (
     gps_state text DEFAULT 'inside'::text NOT NULL,
     last_seen timestamp with time zone,
     exit_candidate jsonb,
+    is_remote boolean DEFAULT false NOT NULL,
     CONSTRAINT duty_records_check CHECK ((shift_end > shift_start)),
     CONSTRAINT duty_records_close_policy_check CHECK ((close_policy = ANY (ARRAY['actual_exit'::text, 'scheduled'::text]))),
     CONSTRAINT duty_records_state_check CHECK ((state = ANY (ARRAY['inside'::text, 'outside'::text, 'closed'::text])))

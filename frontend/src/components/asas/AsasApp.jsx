@@ -2276,7 +2276,14 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                                   </strong>
                                 </td>
                                 <td>
-                                  <strong>{emp.name}</strong>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <strong>{emp.name}</strong>
+                                    {emp.is_remote && (
+                                      <span className="asas-badge" style={{ fontSize: 10, padding: '1px 5px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}>
+                                        🌐 عن بعد
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
                                 <td>{emp.branch_name || 'الفرع الرئيسي'}</td>
                                 <td>{emp.shift_name || 'دوام رسمي'}</td>
@@ -2392,6 +2399,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6, fontSize: 13, color: 'var(--text-2)' }}>
                                 <span>📍 الفرع: <strong>{individualData.employee.branch_name || 'الفرع الرئيسي'}</strong></span>
                                 <span>⏰ الوردية: <strong>{individualData.employee.shift_name || 'دوام رسمي'}</strong></span>
+                                <span>طبيعة العمل: <strong style={{ color: individualData.employee.is_remote ? '#60a5fa' : 'inherit' }}>{individualData.employee.is_remote ? '🌐 دوام عن بعد (أونلاين)' : '🏢 دوام حضوري بالمقر'}</strong></span>
                                 {individualData.employee.shift_start_time && (
                                   <span>مواعيد الدوام: <strong>{String(individualData.employee.shift_start_time).slice(0, 5)} إلى {String(individualData.employee.shift_end_time).slice(0, 5)}</strong> (سماح {individualData.employee.grace_minutes || 10} د)</span>
                                 )}
@@ -2797,7 +2805,18 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <UserAvatar user={a} size="sm" />
                               <div>
-                                <strong>{a.name}</strong>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <strong>{a.name}</strong>
+                                  {a.is_remote ? (
+                                    <span className="asas-badge" style={{ fontSize: 10.5, padding: '1px 6px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                                      🌐 عن بعد
+                                    </span>
+                                  ) : (
+                                    <span className="asas-badge" style={{ fontSize: 10.5, padding: '1px 6px', background: 'rgba(156, 163, 175, 0.1)', color: 'var(--text-3)' }}>
+                                      🏢 حضوري
+                                    </span>
+                                  )}
+                                </div>
                                 <small style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent)' }}>{a.identifier}</small>
                               </div>
                             </div>
@@ -3811,6 +3830,19 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                     </Field>
                   </div>
 
+                  <div style={{ marginTop: 10, marginBottom: 12 }}>
+                    <Field label="طبيعة ونمط العمل">
+                      <select
+                        className="asas-input"
+                        value={form.is_remote ? 'remote' : 'onsite'}
+                        onChange={e => set('is_remote', e.target.value === 'remote')}
+                      >
+                        <option value="onsite">🏢 دوام حضوري (مكتبي داخل مقر الشركة)</option>
+                        <option value="remote">🌐 دوام عن بعد (أونلاين / من المنزل - بدون تقييد جغرافي)</option>
+                      </select>
+                    </Field>
+                  </div>
+
                   {form.id && <label className="asas-check"><input type="checkbox" checked={form.active} onChange={e => set('active', e.target.checked)} />حساب نشط</label>}
                 </>
               )}
@@ -4667,15 +4699,19 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     try {
       let currentToken = customToken || token;
       if (!currentToken) {
-        try {
-          const qrData = await api(`/attendance/active-qr?action=${action === 'auto' ? '' : action}`);
-          if (qrData?.token) currentToken = qrData.token;
-        } catch (err) {}
+        if (user?.is_remote) {
+          currentToken = 'remote_token';
+        } else {
+          try {
+            const qrData = await api(`/attendance/active-qr?action=${action === 'auto' ? '' : action}`);
+            if (qrData?.token) currentToken = qrData.token;
+          } catch (err) {}
+        }
       }
-      if (!currentToken) throw new Error('يرجى مسح رمز QR الخاص بالفرع لتأكيد التواجد');
+      if (!currentToken && !user?.is_remote) throw new Error('يرجى مسح رمز QR الخاص بالفرع لتأكيد التواجد');
 
       // Pre-validation to reject crossed actions immediately on client
-      const qrMeta = decodeQrToken(currentToken);
+      const qrMeta = currentToken !== 'remote_token' ? decodeQrToken(currentToken) : null;
       if (qrMeta?.action) {
         if (action === 'enter' && qrMeta.action === 'exit') {
           throw new Error('عفواً، رمز QR هذا مخصص لتسجيل الانصراف والخروج فقط، ولا يمكن استخدامه لتسجيل الدخول.');
@@ -4691,9 +4727,15 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         p = lastCoordsRef.current;
       } else {
         p = await new Promise((resolve, reject) => {
-          if (!navigator.geolocation) return reject(new Error('الموقع غير متاح'));
+          if (!navigator.geolocation) {
+            if (user?.is_remote) return resolve({ coords: { latitude: 0, longitude: 0, accuracy: 999 }, timestamp: Date.now() });
+            return reject(new Error('الموقع غير متاح'));
+          }
           navigator.geolocation.getCurrentPosition(resolve, () => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 });
+            navigator.geolocation.getCurrentPosition(resolve, (err) => {
+              if (user?.is_remote) return resolve({ coords: { latitude: 0, longitude: 0, accuracy: 999 }, timestamp: Date.now() });
+              reject(err);
+            }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 });
           }, { enableHighAccuracy: true, timeout: 4000, maximumAge: 6000 });
         });
         lastCoordsRef.current = p;
@@ -4748,7 +4790,14 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
     // Fast local client calculation if branch coords are known
     let localDist = null;
-    if (branchCoordsRef.current?.latitude && branchCoordsRef.current?.longitude) {
+    if (user?.is_remote) {
+      setGeofenceStatus(prev => ({
+        ...prev,
+        state: 'inside',
+        distance: null,
+        accuracy: Math.round(coords.accuracy)
+      }));
+    } else if (branchCoordsRef.current?.latitude && branchCoordsRef.current?.longitude) {
       localDist = haversineDistance(
         coords.latitude,
         coords.longitude,
@@ -4981,6 +5030,15 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 الرقم الوظيفي: {user.identifier}
               </span>
               <span className="asas-badge inside" style={{ fontSize: 11 }}>موظف معتمد</span>
+              {user.is_remote ? (
+                <span className="asas-badge" style={{ fontSize: 11, background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                  🌐 دوام عن بعد (أونلاين)
+                </span>
+              ) : (
+                <span className="asas-badge outside" style={{ fontSize: 11 }}>
+                  🏢 دوام حضوري بالمقر
+                </span>
+              )}
               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{user.email || '—'}</span>
             </div>
           </div>
@@ -5076,12 +5134,14 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 <strong style={{ fontSize: 16.5, color: isInside ? 'var(--paid)' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <span className="asas-pulse-status-dot" style={{ color: isInside ? 'var(--paid)' : 'var(--accent)' }} />
                   <Icon name={isInside ? 'checkCircle' : 'logOut'} style={{ width: 19, height: 19 }} />
-                  {isInside ? 'داخل مقر العمل (على رأس العمل - دوام مفتوح)' : (todayRecord?.last_out ? 'تم تسجيل الانصراف وإنهاء الدوام' : 'جاهز لتسجيل الحضور في المقر')}
+                  {isInside 
+                    ? (user?.is_remote ? 'على رأس العمل (دوام عن بعد - أونلاين)' : 'داخل مقر العمل (على رأس العمل - دوام مفتوح)') 
+                    : (todayRecord?.last_out ? (user?.is_remote ? 'تم تسجيل الانصراف وإنهاء الدوام (عن بعد)' : 'تم تسجيل الانصراف وإنهاء الدوام') : (user?.is_remote ? 'جاهز لتسجيل الحضور عن بعد' : 'جاهز لتسجيل الحضور في المقر'))}
                 </strong>
               </div>
               <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`} style={{ fontSize: 12, padding: '4px 10px' }}>
                 <Icon name={isInside ? 'logOut' : 'logIn'} style={{ width: 13, height: 13 }} />
-                الإجراء التلقائي: {isInside ? 'تسجيل الانصراف' : 'تسجيل الحضور'}
+                الإجراء: {isInside ? (user?.is_remote ? 'تسجيل الانصراف عن بعد' : 'تسجيل الانصراف') : (user?.is_remote ? 'تسجيل الحضور عن بعد' : 'تسجيل الحضور')}
               </span>
             </div>
 
@@ -5110,13 +5170,66 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                   <span>سبب الخروج / الحالة</span>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginTop: 2 }}>
-                  {todayRecord?.exit_reason_label || (isInside ? 'على رأس العمل' : 'جاهز للدخول')}
+                  {todayRecord?.exit_reason_label || (isInside ? (user?.is_remote ? 'على رأس العمل (عن بعد)' : 'على رأس العمل') : (user?.is_remote ? 'جاهز للدخول عن بعد' : 'جاهز للدخول'))}
                 </div>
               </div>
             </div>
 
             {/* Live Geofence Monitoring Capsule (التصميم الكبسولي السيادي الأصلي) */}
             {(() => {
+              if (user?.is_remote) {
+                return (
+                  <div
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.08)',
+                      border: '1px solid rgba(56, 189, 248, 0.25)',
+                      padding: '10px 14px',
+                      borderRadius: 12,
+                      marginBottom: 14,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                      fontSize: 12.5,
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span
+                        style={{
+                          width: 9,
+                          height: 9,
+                          borderRadius: '50%',
+                          background: '#38bdf8',
+                          boxShadow: '0 0 10px #38bdf8',
+                          display: 'inline-block',
+                          flexShrink: 0
+                        }}
+                      />
+                      <strong style={{ color: 'var(--text)' }}>طبيعة العمل:</strong>
+                      <span style={{ color: '#38bdf8', fontWeight: 700 }}>
+                        🌐 نظام الدوام عن بعد مفعّل (تسجيل الحضور والانصراف بضغطة زر)
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ color: 'var(--text-3)', fontSize: 11.5 }}>
+                        يتم توثيق إحداثيات GPS تلقائياً للمطابقة الإدارية
+                      </span>
+                      <button
+                        type="button"
+                        className="asas-btn sm"
+                        style={{ height: 22, padding: '0 6px', fontSize: 11, border: 'none', background: 'transparent', color: 'var(--accent)', cursor: 'pointer' }}
+                        onClick={triggerLocationCheck}
+                        disabled={checkingGps}
+                        title="إعادة فحص الإحداثيات اللحظية"
+                      >
+                        <Icon name="refresh" className={checkingGps ? 'asas-spin' : ''} style={{ width: 12, height: 12 }} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
               const dist = geofenceStatus.distance;
               const isInsidePerimeter = Boolean(
                 geofenceStatus.state === 'inside' ||
@@ -5254,7 +5367,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 }}
               >
                 <Icon name="logIn" style={{ width: 18, height: 18 }} />
-                <span>تسجيل الحضور</span>
+                <span>{user?.is_remote ? 'تسجيل الحضور (عن بعد)' : 'تسجيل الحضور'}</span>
               </button>
 
               <button
@@ -5275,30 +5388,53 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 }}
               >
                 <Icon name="logOut" style={{ width: 18, height: 18 }} />
-                <span>تسجيل الانصراف</span>
+                <span>{user?.is_remote ? 'تسجيل الانصراف (عن بعد)' : 'تسجيل الانصراف'}</span>
               </button>
             </div>
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button 
-                type="button"
-                className="asas-btn" 
-                onClick={startCamera} 
-                style={{ 
-                  flex: 1, 
-                  minWidth: 160, 
-                  height: 46, 
-                  justifyContent: 'center',
-                  borderRadius: 'var(--radius-pill)',
-                  border: '1px solid rgba(186, 149, 85, 0.35)',
-                  background: 'var(--glass-tint-strong)',
-                  fontWeight: 600,
-                  fontSize: 14
-                }}
-              >
-                <Icon name="camera" style={{ width: 18, height: 18, color: 'var(--accent)' }} />
-                <span>مسح كود QR بكاميرا الجوال</span>
-              </button>
+              {user?.is_remote ? (
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 160,
+                    height: 46,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    borderRadius: 'var(--radius-pill)',
+                    border: '1px solid rgba(56, 189, 248, 0.35)',
+                    background: 'rgba(56, 189, 248, 0.08)',
+                    color: '#38bdf8',
+                    fontWeight: 600,
+                    fontSize: 13.5
+                  }}
+                >
+                  <Icon name="checkCircle" style={{ width: 17, height: 17, color: '#38bdf8' }} />
+                  <span>أنت مسجل بنظام العمل عن بعد — لا يتطلب منك مسح كود QR الفرع</span>
+                </div>
+              ) : (
+                <button 
+                  type="button"
+                  className="asas-btn" 
+                  onClick={startCamera} 
+                  style={{ 
+                    flex: 1, 
+                    minWidth: 160, 
+                    height: 46, 
+                    justifyContent: 'center',
+                    borderRadius: 'var(--radius-pill)',
+                    border: '1px solid rgba(186, 149, 85, 0.35)',
+                    background: 'var(--glass-tint-strong)',
+                    fontWeight: 600,
+                    fontSize: 14
+                  }}
+                >
+                  <Icon name="camera" style={{ width: 18, height: 18, color: 'var(--accent)' }} />
+                  <span>مسح كود QR بكاميرا الجوال</span>
+                </button>
+              )}
             </div>
           </div>
         </Card>

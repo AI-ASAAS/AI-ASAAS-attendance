@@ -186,16 +186,17 @@ function generateEmployeeDossierDocx(dossier, from, to) {
 
     // Metadata Table
     table(
-      ['اسم الموظف', 'الرقم الوظيفي', 'الفرع', 'الوردية', 'الفترة المحددة', 'تاريخ الإصدار'],
+      ['اسم الموظف', 'الرقم الوظيفي', 'طبيعة الدوام', 'الفرع', 'الوردية', 'الفترة المحددة', 'تاريخ الإصدار'],
       [[
         { text: emp.name, bold: true },
         { text: emp.identifier, bold: true, color: '775B24' },
+        emp.is_remote ? 'دوام عن بعد (أونلاين)' : 'دوام حضوري (مقر الشركة)',
         emp.branch_name,
         emp.shift_name,
         `من ${from} إلى ${to}`,
         nowStr
       ]],
-      [2200, 1200, 1600, 1600, 1600, 1438]
+      [1800, 1100, 1600, 1400, 1300, 1200, 1238]
     ),
 
     p('', { after: 100 }),
@@ -292,10 +293,11 @@ function generateCollectiveSummaryDocx(report, from, to) {
     p('', { after: 120 })
   ];
 
-  const headers = ['الرقم الوظيفي', 'اسم الموظف', 'الفرع', 'الوردية', 'حضور', 'غياب', 'التأخير', 'ساعات العمل', 'الإجازات', 'نسبة الالتزام'];
+  const headers = ['الرقم الوظيفي', 'اسم الموظف', 'طبيعة الدوام', 'الفرع', 'الوردية', 'حضور', 'غياب', 'التأخير', 'ساعات العمل', 'الإجازات', 'نسبة الالتزام'];
   const rows = report.employees.map(e => [
     { text: e.identifier, bold: true, color: '775B24' },
     { text: e.name, bold: true, align: 'right' },
+    e.is_remote ? 'دوام عن بعد' : 'حضوري بالمقر',
     e.branch_name,
     e.shift_name,
     { text: `${e.present_days} يوم`, color: '2D6A4F', bold: true },
@@ -306,7 +308,7 @@ function generateCollectiveSummaryDocx(report, from, to) {
     { text: `${e.attendance_rate}%`, bold: true, color: e.attendance_rate >= 80 ? '2D6A4F' : 'B45309' }
   ]);
 
-  bodyParts.push(table(headers, rows, [1100, 1800, 1300, 1300, 800, 800, 1100, 950, 700, 788]));
+  bodyParts.push(table(headers, rows, [1000, 1600, 1100, 1100, 1100, 750, 750, 1000, 850, 650, 738]));
 
   return createDocxFromTemplate(bodyParts.join(''));
 }

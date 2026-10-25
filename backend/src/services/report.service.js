@@ -111,7 +111,7 @@ async function getEmployeeDossier(user, employeeId, from, to) {
   const broad = ['super_admin', 'hr_admin'].includes(user.role);
 
   const empRes = await db.query(`
-    SELECT a.id, a.name, a.identifier, a.branch_id, a.shift_id,
+    SELECT a.id, a.name, a.identifier, a.branch_id, a.shift_id, COALESCE(a.is_remote, false) AS is_remote,
            COALESCE(b.name, 'الفرع الرئيسي') AS branch_name,
            COALESCE(s.name, 'الدوام الافتراضي') AS shift_name,
            s.start_time, s.end_time, s.work_days, s.grace_minutes, s.deduct_away
@@ -337,11 +337,13 @@ async function getEmployeeDossier(user, employeeId, from, to) {
       branch_name: emp.branch_name,
       shift_id: emp.shift_id,
       shift_name: emp.shift_name,
+      is_remote: Boolean(emp.is_remote),
       shift_start_time: emp.start_time,
       shift_end_time: emp.end_time,
       start_time: emp.start_time,
       end_time: emp.end_time,
-      grace_minutes: emp.grace_minutes || 10
+      grace_minutes: emp.grace_minutes || 10,
+      is_remote: Boolean(emp.is_remote)
     },
     period: {
       from,
@@ -379,7 +381,7 @@ async function getCollectiveReport(user, from, to, branchId = null, search = '')
   const effectiveBranch = broad ? (branchId ? Number(branchId) : null) : user.branch_id;
 
   let query = `
-    SELECT a.id, a.name, a.identifier, a.branch_id, a.shift_id,
+    SELECT a.id, a.name, a.identifier, a.branch_id, a.shift_id, COALESCE(a.is_remote, false) AS is_remote,
            COALESCE(b.name, 'الفرع الرئيسي') AS branch_name,
            COALESCE(s.name, 'الدوام الافتراضي') AS shift_name,
            s.start_time, s.end_time, s.work_days, s.grace_minutes, s.deduct_away
@@ -567,6 +569,7 @@ async function getCollectiveReport(user, from, to, branchId = null, search = '')
       branch_name: emp.branch_name,
       shift_id: emp.shift_id,
       shift_name: emp.shift_name,
+      is_remote: Boolean(emp.is_remote),
       present_days: presentDays,
       absent_days: absentDays,
       late_days_count: lateDaysCount,
