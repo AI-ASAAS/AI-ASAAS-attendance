@@ -2038,6 +2038,59 @@ select.asas-input option {
 /* ============================================================================
    SOVEREIGN GOOGLE LOGIN & EMPLOYEE UI REFINEMENT (ASAAS BRAND SKILLS)
    ============================================================================ */
+/* Auth Mode Switcher Tabs */
+.asas-auth-tabs {
+  display: flex;
+  background: var(--glass-inset);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  gap: 6px;
+  margin-top: 14px;
+  border: 1px solid var(--hairline);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.asas-auth-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.22s var(--ease-spring);
+  text-decoration: none;
+}
+.asas-auth-tab-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--accent);
+  transition: color 0.22s ease, transform 0.22s ease;
+}
+.asas-auth-tab-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+.asas-auth-tab-btn.active {
+  color: #ffffff !important;
+  background: radial-gradient(120% 140% at 50% -40%, rgba(255, 255, 255, 0.45), transparent 55%),
+              linear-gradient(180deg, #cfae72 0%, var(--brand-gold) 55%, #a07c3f 100%) !important;
+  box-shadow: 0 4px 14px -3px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+.asas-auth-tab-btn.active svg {
+  color: #ffffff !important;
+}
+.asas-auth-tab-btn:active {
+  transform: scale(0.98);
+}
+
 .asas-google-login-section {
   margin-top: 14px;
   padding: 16px;
@@ -2077,7 +2130,7 @@ select.asas-input option {
 }
 .asas-google-fallback-btn {
   width: 100%;
-  max-width: 320px;
+  max-width: 340px;
   height: 44px;
   border-radius: var(--radius-pill);
   background: var(--glass-tint-strong);
@@ -2094,13 +2147,18 @@ select.asas-input option {
   transition: all 0.25s var(--ease-spring);
   text-decoration: none;
 }
-.asas-google-fallback-btn:hover {
+.asas-google-fallback-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.asas-google-fallback-btn:hover:not(:disabled) {
   background: var(--glass-sheen);
   border-color: var(--brand-gold);
   transform: translateY(-1px);
   box-shadow: 0 6px 18px -4px rgba(186, 149, 85, 0.3);
 }
-.asas-google-fallback-btn:active {
+.asas-google-fallback-btn:active:not(:disabled) {
   transform: scale(0.98);
 }
 .asas-google-pill-badge {
