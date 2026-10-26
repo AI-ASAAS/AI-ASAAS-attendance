@@ -7,3 +7,13 @@ attendance.ai-asaas.com {
 	encode zstd gzip
 	reverse_proxy frontend:3000
 }
+
+forms.ai-asaas.com {
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
+	encode zstd gzip
+	reverse_proxy asaas-forms:80
+}
