@@ -3989,6 +3989,9 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
           logo_alignment: 'center',
           locale: 'ar'
         });
+        try {
+          window.google.accounts.id.prompt();
+        } catch (_) {}
         setGsiReady(true);
       } catch (err) {
         console.warn('GSI render error:', err);
@@ -4201,7 +4204,17 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                     className="asas-google-fallback-btn"
                     onClick={() => {
                       if (window.google?.accounts?.id) {
-                        window.google.accounts.id.prompt();
+                        try {
+                          window.google.accounts.id.initialize({
+                            client_id: googleClientId,
+                            callback: handleGoogleCredentialResponse,
+                            auto_select: false,
+                            cancel_on_tap_outside: true,
+                          });
+                          window.google.accounts.id.prompt();
+                        } catch (e) {
+                          console.warn('Google prompt error:', e);
+                        }
                       }
                     }}
                     disabled={busy}
