@@ -35,6 +35,9 @@ services:
       QR_SECRET: 9989c9183fbb75956504d4abf7cd869e927c173b4d93a7fbe11626e43cb7d5f4
       WEB_ORIGIN: "*"
       NODE_ENV: production
+      APP_URL: https://attendance.ai-asaas.com
+      GOOGLE_CLIENT_ID: 331442639841-s48n1ir37vnn9nckg6ogn1hv8fl9fiq3.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: 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
     ports:
       - "5000:5000"
     depends_on:

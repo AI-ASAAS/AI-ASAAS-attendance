@@ -21,7 +21,7 @@ const isAllowedOrigin=(orig)=>{
  if(configured.includes('*')||process.env.NODE_ENV!=='production') return true;
  if(configured.includes(orig)||orig===origin()) return true;
  if(orig==='http://localhost:3000'||orig==='http://127.0.0.1:3000') return true;
- if(orig.endsWith('.trycloudflare.com')||orig.endsWith('.loca.lt')||orig.endsWith('.vercel.app')) return true;
+ if(orig.endsWith('.trycloudflare.com')||orig.endsWith('.loca.lt')||orig.endsWith('.ai-asaas.com')||orig==='https://attendance.ai-asaas.com') return true;
  return false;
 };
 const string=(value,max=150)=>{if(typeof value!=='string'||!value.trim()||value.length>max)error('VALIDATION','تحقق من الحقول المطلوبة');return value.trim();};
@@ -351,7 +351,9 @@ app.get('/api/admin/branches/:id/qr',admin,allow('qr.manage'),wrap(async(req,res
  const now=new Date();
  const tokenEnter=policy.issueQr(branch,process.env.QR_SECRET,now,'enter');
  const tokenExit=policy.issueQr(branch,process.env.QR_SECRET,now,'exit');
- const base = 'https://ai-asaas-attendance.vercel.app';
+ const reqHost = req.headers['x-forwarded-host'] || req.headers['host'];
+ const reqProto = req.headers['x-forwarded-proto'] || 'https';
+ const base = reqHost ? `${reqProto}://${reqHost}` : (process.env.APP_URL || 'https://attendance.ai-asaas.com');
  respond(res,{
   day:policy.localDay(now),
   branch:branch.name,
