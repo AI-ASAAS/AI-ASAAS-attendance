@@ -3962,6 +3962,80 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
   const triggerGoogleSignIn = useCallback(() => {
     if (typeof window === 'undefined') return;
+    setError('');
+
+    // Method 1: Google OAuth2 Token Client (Instant official popup for custom buttons)
+    if (window.google?.accounts?.oauth2) {
+      try {
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'email profile openid',
+          callback: async (tokenResponse) => {
+            if (tokenResponse.error) {
+              console.warn('Google OAuth token error:', tokenResponse);
+              if (tokenResponse.error !== 'popup_closed_by_user') {
+                setError(tokenResponse.error_description || tokenResponse.error || 'تعذر استكمال تسجيل الدخول عبر Google');
+              }
+              return;
+            }
+            if (tokenResponse.access_token) {
+              setBusy(true);
+              setError('');
+              try {
+                let userEmail = null;
+                let userName = null;
+                try {
+                  const uRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                  });
+                  if (uRes.ok) {
+                    const uData = await uRes.json();
+                    userEmail = uData.email;
+                    userName = uData.name || uData.given_name;
+                  }
+                } catch (_) {}
+
+                const device_id = getDeviceId();
+                const device_name = getDeviceName();
+                const d = await api('/auth/google', 'POST', {
+                  access_token: tokenResponse.access_token,
+                  email: userEmail,
+                  name: userName,
+                  phone: phone || undefined,
+                  device_id,
+                  device_name
+                });
+                if (d?.pending_approval) {
+                  setPendingInfo({
+                    title: 'تم إرسال طلب تسجيل حسابك بنجاح!',
+                    identifier: d.account?.identifier,
+                    name: d.account?.name,
+                    email: d.account?.email,
+                    message: d.message || 'طلبك قيد المراجعة والموافقة من قِبل إدارة النظام في لوحة التحكم.'
+                  });
+                  return;
+                }
+                if (typeof window !== 'undefined') {
+                  if (d?.token) localStorage.setItem('asas_token', d.token);
+                  if (d?.account) localStorage.setItem('asas_account', JSON.stringify(d.account));
+                }
+                onLogin(d.account);
+              } catch (err) {
+                setError(err.message || 'تعذر استكمال تسجيل الدخول عبر Google');
+              } finally {
+                setBusy(false);
+              }
+            }
+          }
+        });
+        tokenClient.requestAccessToken({ prompt: 'select_account' });
+        return;
+      } catch (err) {
+        console.warn('Google tokenClient init error:', err);
+      }
+    }
+
+    // Method 2: Google Identity Services ID Prompt fallback
     if (window.google?.accounts?.id) {
       try {
         window.google.accounts.id.initialize({
@@ -3971,13 +4045,14 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
           cancel_on_tap_outside: true,
         });
         window.google.accounts.id.prompt();
+        return;
       } catch (e) {
-        console.warn('Google prompt error:', e);
+        console.warn('Google id.prompt error:', e);
       }
-    } else {
-      setError('جاري تحميل خدمة Google… يرجى المحاولة بعد قليل');
     }
-  }, [handleGoogleCredentialResponse, googleClientId]);
+
+    setError('جاري تحميل خدمة Google… يرجى إعادة المحاولة خلال ثوانٍ');
+  }, [googleClientId, phone, onLogin, handleGoogleCredentialResponse]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

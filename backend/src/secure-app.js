@@ -180,10 +180,20 @@ app.post('/api/auth/register',rateLimit({windowMs:900000,max:15,standardHeaders:
 }));
 
 app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:true,legacyHeaders:false}),wrap(async(req,res)=>{
- const {credential,email:rawEmail,device_id,device_name,phone,name:rawName}=req.body;
+ const {credential,access_token,email:rawEmail,device_id,device_name,phone,name:rawName}=req.body;
  let targetEmail=null;
  let googleName=rawName?String(rawName).trim():null;
- if(credential&&typeof credential==='string'){
+ if(access_token&&typeof access_token==='string'){
+  try{
+   const aRes=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:`Bearer ${access_token}`}});
+   if(aRes.ok){
+    const aData=await aRes.json();
+    if(aData.email)targetEmail=aData.email.toLowerCase().trim();
+    if(aData.name&&!googleName)googleName=aData.name.trim();
+   }
+  }catch(_){}
+ }
+ if(!targetEmail&&credential&&typeof credential==='string'){
   try{
    const gRes=await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(credential));
    if(gRes.ok){
