@@ -6,7 +6,7 @@ services:
       context: ./database
       dockerfile: Dockerfile
     container_name: asas-postgres
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -26,7 +26,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: asas-backend
-    restart: unless-stopped
+    restart: always
     environment:
       HOST: 0.0.0.0
       PORT: 5000
@@ -46,7 +46,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: asas-frontend
-    restart: unless-stopped
+    restart: always
     environment:
       API_INTERNAL_URL: http://backend:5000
       NODE_ENV: production
@@ -56,13 +56,28 @@ services:
     depends_on:
       - backend
 
+  caddy:
+    image: caddy:alpine
+    container_name: asas-caddy
+    restart: always
+    ports:
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - asas_caddy_data:/data
+      - asas_caddy_config:/config
+    depends_on:
+      - frontend
+
   tunnel:
     image: cloudflare/cloudflared:latest
     container_name: asas-tunnel
-    restart: unless-stopped
+    restart: always
     command: tunnel --url http://frontend:3000
     depends_on:
       - frontend
 
 volumes:
   asas_pgdata:
+  asas_caddy_data:
+  asas_caddy_config:
