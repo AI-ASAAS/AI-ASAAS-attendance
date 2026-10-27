@@ -903,6 +903,53 @@ select.asas-input option {
   backdrop-filter: blur(12px) saturate(140%);
   border-left: 1px solid var(--glass-rim);
   transform: translateZ(0);
+  position: relative;
+  overflow: hidden;
+}
+.asas-login-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Enlarged Brand Logo in Login */
+.asas-login-hero .asas-logo {
+  gap: 16px;
+}
+.asas-login-hero .asas-mark {
+  width: 58px;
+  height: 64px;
+}
+.asas-login-hero .asas-logo strong {
+  font-size: 28px;
+  letter-spacing: 0.5px;
+}
+.asas-login-hero .asas-logo small {
+  font-size: 11.5px;
+  letter-spacing: 2px;
+}
+
+/* Sovereign Brand Watermark (Login Hero) */
+.asas-login-hero::before {
+  content: '';
+  position: absolute;
+  bottom: -40px;
+  left: -40px;
+  width: 500px;
+  height: 500px;
+  background: url('/logo-dark.png') center / contain no-repeat;
+  opacity: 0.045;
+  pointer-events: none;
+  z-index: 0;
+  transform: rotate(-8deg);
+  mask-image: radial-gradient(circle at 60% 60%, black 40%, transparent 80%);
+  -webkit-mask-image: radial-gradient(circle at 60% 60%, black 40%, transparent 80%);
+  filter: drop-shadow(0 0 30px rgba(186, 149, 85, 0.3));
+  transition: opacity 0.3s ease;
+}
+
+:root[data-theme='dark'] .asas-login-hero::before {
+  background-image: url('/logo-light.png');
+  opacity: 0.055;
 }
 .asas-login-hero h1 {
   font-family: var(--font-display);
@@ -946,10 +993,55 @@ select.asas-input option {
   border: 1px solid var(--glass-rim);
   box-shadow: var(--glass-shadow);
   transform: translateZ(0);
+  position: relative;
+  overflow: hidden;
 }
+.asas-login-box > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Sovereign Brand Watermark (Login Box Card) */
+.asas-login-box::before {
+  content: '';
+  position: absolute;
+  top: -24px;
+  left: -24px;
+  width: 250px;
+  height: 250px;
+  background: url('/logo-dark.png') center / contain no-repeat;
+  opacity: 0.035;
+  pointer-events: none;
+  z-index: 0;
+  transform: rotate(-10deg);
+  mask-image: radial-gradient(circle at center, black 35%, transparent 75%);
+  -webkit-mask-image: radial-gradient(circle at center, black 35%, transparent 75%);
+  transition: opacity 0.3s ease;
+}
+
+:root[data-theme='dark'] .asas-login-box::before {
+  background-image: url('/logo-light.png');
+  opacity: 0.045;
+}
+
 .asas-login-mobile-brand {
   display: none;
   margin-bottom: 16px;
+}
+.asas-login-mobile-brand .asas-logo {
+  gap: 14px;
+}
+.asas-login-mobile-brand .asas-mark {
+  width: 54px;
+  height: 60px;
+}
+.asas-login-mobile-brand .asas-logo strong {
+  font-size: 26px;
+  letter-spacing: 0.5px;
+}
+.asas-login-mobile-brand .asas-logo small {
+  font-size: 11px;
+  letter-spacing: 1.8px;
 }
 .asas-login-box h2 {
   font-family: var(--font-display);
@@ -1239,6 +1331,27 @@ select.asas-input option {
     width: 100% !important;
     padding: 32px 18px !important;
     box-sizing: border-box !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  .asas-login::before {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-6deg);
+    width: min(440px, 85vw);
+    height: min(440px, 85vw);
+    background: url('/logo-dark.png') center / contain no-repeat;
+    opacity: 0.038;
+    pointer-events: none;
+    z-index: 0;
+    mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+    -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+  }
+  :root[data-theme='dark'] .asas-login::before {
+    background-image: url('/logo-light.png');
+    opacity: 0.048;
   }
   .asas-login-hero {
     display: none !important;
