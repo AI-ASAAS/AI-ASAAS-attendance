@@ -4205,11 +4205,11 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
             <div className="asas-hero-features-list">
               <div className="asas-hero-feature-item">
                 <span className="asas-hero-feature-icon"><Icon name="shieldCheck" /></span>
-                <span>حضور موثق جغرافياً ومقيد بأجهزة الموظفين</span>
+                <span>تقييد أمني ذكي بأجهزة الموظفين المعتمدة</span>
               </div>
               <div className="asas-hero-feature-item">
-                <span className="asas-hero-feature-icon"><Icon name="clock" /></span>
-                <span>تسجيل فوري بدون إعلانات وبأعلى سرعة استجابة</span>
+                <span className="asas-hero-feature-icon"><Icon name="mapPin" /></span>
+                <span>تسجيل فوري دقيق عبر الـ GPS وبأعلى سرعة استجابة</span>
               </div>
               <div className="asas-hero-feature-item">
                 <span className="asas-hero-feature-icon"><Icon name="vault" /></span>
