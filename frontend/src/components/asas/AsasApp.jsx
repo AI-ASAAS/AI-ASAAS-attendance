@@ -1701,6 +1701,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
           onOpenInstall={() => setShowInstallModal(true)}
           installPrompt={installPrompt}
           defaultAction={defaultAction}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
         {showAnnouncementsModal && (
           <AnnouncementsModal
@@ -2067,8 +2069,9 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                     <div style={{
                       margin: '10px 0 16px',
                       padding: '14px 16px',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid var(--brand-gold, #b59045)',
+                      background: 'var(--glass-inset)',
+                      border: '1px solid var(--glass-rim)',
+                      backdropFilter: 'blur(16px)',
                       borderRadius: 10,
                       display: 'flex',
                       gap: 12,
@@ -4730,7 +4733,7 @@ function sendSystemNotification(title, body) {
   } catch (_) {}
 }
 
-function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProfile, onOpenInstall, installPrompt, defaultAction = 'auto' }) {
+function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProfile, onOpenInstall, installPrompt, defaultAction = 'auto', theme, onToggleTheme }) {
   const [empPage, setEmpPage] = useState('duty');
   const [data, setData] = useState(null);
   const [leaves, setLeaves] = useState([]);
@@ -5209,7 +5212,12 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             <Icon name="bell" />
             {announcements.length > 0 && <span className="asas-bell-badge">{announcements.length}</span>}
           </button>
-          <button className="asas-btn sm" onClick={logout}>
+          {onToggleTheme && (
+            <button className="asas-theme-btn" onClick={onToggleTheme} aria-label="تبديل مظهر النظام" title={theme === 'dark' ? 'التحويل للمظهر الفاتح' : 'التحويل للمظهر الداكن'}>
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+            </button>
+          )}
+          <button className="asas-btn sm" onClick={logout} title="تسجيل الخروج">
             <Icon name="logout" />
             خروج
           </button>

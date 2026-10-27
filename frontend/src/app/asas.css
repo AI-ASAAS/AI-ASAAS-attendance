@@ -23,6 +23,7 @@
   --warning-bg: var(--partial-bg, rgba(214, 139, 20, 0.16));
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 20px -8px rgba(74, 54, 22, 0.12);
   --shadow-md: var(--glass-shadow);
+  --border-glass: var(--glass-rim);
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 20px;
@@ -41,6 +42,7 @@
   --gold-soft: rgba(243, 214, 155, 0.25);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.16), 0 8px 24px -8px rgba(0, 0, 0, 0.32);
   --shadow-md: var(--glass-shadow);
+  --border-glass: var(--glass-rim);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -49,7 +51,9 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background: var(--bg);
+  background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.88) 0%, transparent 55%),
+              radial-gradient(circle at 0% 100%, rgba(226, 185, 118, 0.25) 0%, transparent 55%),
+              linear-gradient(135deg, rgba(246, 241, 232, 0.96) 0%, rgba(239, 233, 222, 0.94) 50%, rgba(230, 222, 208, 0.96) 100%);
   color: var(--text);
   font-family: var(--font, 'Thmanyah Sans', system-ui, sans-serif);
   direction: rtl;
@@ -86,25 +90,27 @@ html, body {
 }
 .asas-logo strong {
   font-family: var(--font-display, 'Thmanyah Serif Display', serif);
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1.2;
   color: var(--text);
   display: block;
+  letter-spacing: 0.2px;
 }
 .asas-logo small {
   display: block;
-  font-size: 10px;
-  letter-spacing: 1.5px;
+  font-size: 11px;
+  letter-spacing: 1.2px;
   color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
 }
 .asas-mark {
-  width: 44px;
-  height: 48px;
+  width: 50px;
+  height: 55px;
   flex-shrink: 0;
   border-radius: var(--radius-md);
   background: url('/logo-dark.png') center / contain no-repeat;
-  filter: drop-shadow(0 4px 8px rgba(186, 149, 85, 0.3));
+  filter: drop-shadow(0 6px 16px rgba(186, 149, 85, 0.40));
+  transition: filter 0.3s ease, transform 0.25s var(--ease-spring);
 }
 :root[data-theme='dark'] .asas-mark {
   background-image: url('/logo-light.png');
@@ -116,9 +122,9 @@ html, body {
   height: 100vh;
   height: 100dvh;
   flex-shrink: 0;
-  background: var(--glass-tint-strong);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  backdrop-filter: blur(12px) saturate(140%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(248, 242, 233, 0.78) 100%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
   border-left: 1px solid var(--glass-rim);
   box-shadow: inset -1px 0 0 var(--glass-rim-low), var(--glass-shadow);
   padding: 22px 14px;
@@ -182,10 +188,10 @@ html, body {
 }
 
 .asas-nav button.active {
-  background: linear-gradient(135deg, rgba(186, 149, 85, 0.22) 0%, rgba(186, 149, 85, 0.08) 100%);
+  background: linear-gradient(135deg, rgba(186, 149, 85, 0.25) 0%, rgba(186, 149, 85, 0.10) 100%);
   color: var(--accent);
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px rgba(186, 149, 85, 0.35), 0 4px 14px -4px var(--accent-glow);
+  box-shadow: inset 0 0 0 1px rgba(186, 149, 85, 0.45), 0 4px 16px -4px var(--accent-glow);
 }
 .asas-nav button.active svg {
   color: var(--accent);
@@ -242,11 +248,11 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 12px 28px;
-  background: var(--glass-tint-strong);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  backdrop-filter: blur(12px) saturate(140%);
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
   border-bottom: 1px solid var(--glass-rim);
-  box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px -8px rgba(110, 80, 35, 0.12);
   transform: translateZ(0);
 }
 
@@ -918,31 +924,66 @@ select.asas-input option {
   opacity: 0.9 !important;
 }
 
-/* Sovereign Brand Watermark (Fixed permanently in place on scroll) */
+/* Sovereign Brand Watermark (Fixed permanently across Login, Admin, and Employee) */
 .asas-fixed-watermark,
-.asas-login::before {
-  content: '';
+.asas-login::before,
+.asas-app::before,
+.asas-employee-page::before {
+  content: '' !important;
   position: fixed !important;
-  top: 50% !important;
-  right: 12% !important;
-  transform: translateY(-50%) rotate(-6deg) !important;
-  width: 820px !important;
-  height: 820px !important;
-  background: url('/logo-dark.png') center / contain no-repeat !important;
-  opacity: 0.18 !important;
   pointer-events: none !important;
   user-select: none !important;
   z-index: 0 !important;
+  background: url('/logo-dark.png') center / contain no-repeat !important;
   mask-image: radial-gradient(circle at center, black 62%, transparent 92%) !important;
   -webkit-mask-image: radial-gradient(circle at center, black 62%, transparent 92%) !important;
-  filter: drop-shadow(0 0 60px rgba(186, 149, 85, 0.55)) !important;
-  transition: opacity 0.3s ease !important;
+  filter: drop-shadow(0 0 60px rgba(186, 149, 85, 0.50)) !important;
+  transition: opacity 0.3s ease, filter 0.3s ease !important;
 }
 
 :root[data-theme='dark'] .asas-fixed-watermark,
-:root[data-theme='dark'] .asas-login::before {
+:root[data-theme='dark'] .asas-login::before,
+:root[data-theme='dark'] .asas-app::before,
+:root[data-theme='dark'] .asas-employee-page::before {
   background-image: url('/logo-light.png') !important;
+  filter: drop-shadow(0 0 65px rgba(243, 214, 155, 0.45)) !important;
+}
+
+.asas-login::before {
+  top: 50% !important;
+  right: 12% !important;
+  left: auto !important;
+  transform: translateY(-50%) rotate(-6deg) !important;
+  width: 820px !important;
+  height: 820px !important;
+  opacity: 0.18 !important;
+}
+:root[data-theme='dark'] .asas-login::before {
   opacity: 0.22 !important;
+}
+
+.asas-app::before {
+  top: 50% !important;
+  left: calc(50% - 135px) !important;
+  transform: translate(-50%, -50%) rotate(-6deg) !important;
+  width: min(85vw, 760px) !important;
+  height: min(85vw, 760px) !important;
+  opacity: 0.14 !important;
+}
+:root[data-theme='dark'] .asas-app::before {
+  opacity: 0.18 !important;
+}
+
+.asas-employee-page::before {
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) rotate(-6deg) !important;
+  width: min(90vw, 720px) !important;
+  height: min(90vw, 720px) !important;
+  opacity: 0.14 !important;
+}
+:root[data-theme='dark'] .asas-employee-page::before {
+  opacity: 0.18 !important;
 }
 
 .asas-login .asas-eyebrow {
@@ -1161,13 +1202,36 @@ select.asas-input option {
 
 /* Employee Page Base Layout */
 .asas-employee-page {
-  max-width: 860px;
+  max-width: 900px;
   width: 100%;
   margin: 0 auto;
   padding: 24px 20px 48px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.asas-employee-header {
+  padding: 14px 22px !important;
+  border-radius: var(--radius-xl) !important;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.85) 0%, rgba(248, 242, 232, 0.78) 100%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  border: 1px solid var(--glass-rim) !important;
+  box-shadow: inset 0 1px 0 var(--glass-rim), var(--glass-shadow) !important;
+}
+
+.asas-employee-profile {
+  padding: 24px !important;
+  border-radius: var(--radius-xl) !important;
+  background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.70) 0%, transparent 60%),
+              linear-gradient(165deg, rgba(255, 255, 255, 0.85) 0%, rgba(248, 242, 232, 0.75) 100%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  border: 1px solid var(--glass-rim) !important;
+  box-shadow: inset 0 1px 0 var(--glass-rim), var(--glass-shadow) !important;
 }
 
 .asas-employee-stats {
@@ -1192,13 +1256,13 @@ select.asas-input option {
   gap: 6px;
   width: 100%;
   box-sizing: border-box;
-  background: var(--glass-inset);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  backdrop-filter: blur(16px) saturate(160%);
+  background: rgba(235, 227, 215, 0.75);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
   padding: 5px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--hairline);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04), inset 0 1px 2px rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--glass-rim);
+  box-shadow: 0 6px 20px rgba(110, 80, 35, 0.08), inset 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .asas-employee-tab {
@@ -1244,10 +1308,10 @@ select.asas-input option {
 }
 
 .asas-employee-tab.active {
-  background: var(--glass-tint-strong);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 243, 235, 0.90) 100%);
   color: var(--accent);
-  border-color: rgba(186, 149, 85, 0.28);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border-color: rgba(186, 149, 85, 0.40);
+  box-shadow: 0 4px 16px rgba(186, 149, 85, 0.25), inset 0 1px 0 #ffffff;
   font-weight: 700;
 }
 
@@ -1749,129 +1813,175 @@ select.asas-input option {
   color: var(--accent);
 }
 
-/* ───────── Dark Mode Comprehensive Polish ───────── */
+/* ───────── Dark Mode Comprehensive Polish (Asas Warm Obsidian & Desert Amber Palette) ───────── */
+:root[data-theme='dark'] body,
+:root[data-theme='dark'] .asas-app,
+:root[data-theme='dark'] .asas-employee-page {
+  background: radial-gradient(1100px circle at 85% 15%, rgba(226, 185, 118, 0.28) 0%, transparent 65%),
+              radial-gradient(900px circle at 15% 85%, rgba(200, 160, 105, 0.22) 0%, transparent 60%),
+              radial-gradient(800px circle at 50% 50%, rgba(135, 115, 105, 0.25) 0%, transparent 70%),
+              linear-gradient(150deg, #4c423c 0%, #423933 40%, #3a322c 75%, #322a25 100%) !important;
+}
+
 :root[data-theme='dark'] .glass,
 :root[data-theme='dark'] .card {
-  background: linear-gradient(165deg, rgba(34, 28, 27, 0.72) 0%, rgba(20, 17, 16, 0.78) 100%) !important;
-  border: 1px solid rgba(255, 244, 222, 0.12) !important;
-  box-shadow: inset 0 1px 0 0 rgba(255, 244, 222, 0.22), inset 0 -1px 0 0 rgba(255, 244, 222, 0.05), 0 12px 36px -12px rgba(0, 0, 0, 0.75) !important;
+  background: radial-gradient(450px circle at 90% -10%, rgba(226, 185, 118, 0.20) 0%, transparent 60%),
+              linear-gradient(165deg, rgba(86, 74, 67, 0.92) 0%, rgba(70, 60, 54, 0.88) 50%, rgba(58, 50, 45, 0.94) 100%) !important;
+  border: 1px solid rgba(240, 218, 182, 0.32) !important;
+  box-shadow: inset 0 1px 0 0 rgba(255, 244, 222, 0.32), inset 0 -1px 0 0 rgba(255, 244, 222, 0.08), 0 14px 40px -14px rgba(0, 0, 0, 0.40) !important;
   color: var(--text);
 }
 
 :root[data-theme='dark'] .glass--thick,
 :root[data-theme='dark'] .asas-modal,
 :root[data-theme='dark'] .modal {
-  background: linear-gradient(165deg, rgba(32, 27, 26, 0.94) 0%, rgba(20, 17, 16, 0.96) 100%) !important;
-  border: 1px solid rgba(255, 244, 222, 0.18) !important;
-  box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.85) !important;
+  background: linear-gradient(165deg, rgba(88, 76, 69, 0.96) 0%, rgba(72, 62, 56, 0.96) 100%) !important;
+  border: 1.5px solid rgba(240, 218, 182, 0.35) !important;
+  box-shadow: 0 24px 64px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 244, 222, 0.30) !important;
 }
 
-:root[data-theme='dark'] .asas-sidebar,
+:root[data-theme='dark'] .asas-sidebar {
+  background: linear-gradient(180deg, rgba(74, 63, 57, 0.94) 0%, rgba(58, 49, 44, 0.94) 100%) !important;
+  border-left: 1px solid rgba(240, 218, 182, 0.28) !important;
+  box-shadow: inset -1px 0 0 rgba(255, 244, 222, 0.12), 0 8px 30px rgba(0, 0, 0, 0.30) !important;
+}
+
 :root[data-theme='dark'] .asas-topbar {
-  background: rgba(20, 17, 17, 0.85) !important;
-  border-color: rgba(255, 244, 222, 0.1) !important;
-  box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.4);
+  background: rgba(68, 58, 52, 0.90) !important;
+  border-bottom: 1px solid rgba(240, 218, 182, 0.25) !important;
+  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.35) !important;
+}
+
+:root[data-theme='dark'] .asas-employee-header {
+  background: linear-gradient(165deg, rgba(82, 70, 64, 0.92) 0%, rgba(64, 55, 49, 0.90) 100%) !important;
+  border: 1px solid rgba(240, 218, 182, 0.30) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.30), 0 12px 36px -12px rgba(0, 0, 0, 0.35) !important;
+}
+
+:root[data-theme='dark'] .asas-employee-profile {
+  background: radial-gradient(circle at 100% 0%, rgba(226, 185, 118, 0.20) 0%, transparent 60%),
+              linear-gradient(165deg, rgba(86, 74, 67, 0.92) 0%, rgba(70, 60, 54, 0.88) 100%) !important;
+  border: 1px solid rgba(240, 218, 182, 0.32) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.32), 0 14px 40px -14px rgba(0, 0, 0, 0.40) !important;
+}
+
+:root[data-theme='dark'] .asas-employee-tabs {
+  background: rgba(56, 48, 43, 0.80) !important;
+  border: 1px solid rgba(240, 218, 182, 0.28) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.30), inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+:root[data-theme='dark'] .asas-employee-tab.active {
+  background: linear-gradient(135deg, rgba(226, 185, 118, 0.28) 0%, rgba(186, 149, 85, 0.18) 100%) !important;
+  color: #f3d69b !important;
+  border-color: rgba(243, 214, 155, 0.50) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 244, 222, 0.35) !important;
 }
 
 :root[data-theme='dark'] .asas-hero-banner {
-  background: linear-gradient(165deg, rgba(42, 33, 27, 0.82) 0%, rgba(22, 18, 17, 0.9) 100%) !important;
-  border: 1px solid rgba(216, 179, 111, 0.28) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.25), 0 14px 40px -14px rgba(0, 0, 0, 0.8) !important;
+  background: radial-gradient(circle at 100% 0%, rgba(226, 185, 118, 0.22) 0%, transparent 55%),
+              linear-gradient(165deg, rgba(86, 74, 67, 0.90) 0%, rgba(70, 60, 54, 0.88) 55%, rgba(56, 48, 43, 0.92) 100%) !important;
+  border: 1px solid rgba(240, 218, 182, 0.32) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.32), 0 16px 48px -12px rgba(0, 0, 0, 0.45) !important;
 }
 
 :root[data-theme='dark'] .asas-stat-card {
-  background: linear-gradient(165deg, rgba(34, 28, 27, 0.75) 0%, rgba(20, 17, 16, 0.82) 100%) !important;
-  border: 1px solid rgba(255, 244, 222, 0.12) !important;
+  background: linear-gradient(165deg, rgba(86, 74, 67, 0.90) 0%, rgba(70, 60, 54, 0.86) 100%) !important;
+  border: 1px solid rgba(240, 218, 182, 0.30) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.28), 0 8px 24px -6px rgba(0, 0, 0, 0.35) !important;
 }
 
 :root[data-theme='dark'] .asas-tile-icon {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 244, 222, 0.12) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 244, 222, 0.10) !important;
+  border-color: rgba(240, 218, 182, 0.25) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
 }
 
 :root[data-theme='dark'] .asas-table-wrap,
 :root[data-theme='dark'] .table-wrap {
-  background: rgba(20, 17, 16, 0.65) !important;
-  border: 1px solid rgba(255, 244, 222, 0.1) !important;
+  background: linear-gradient(165deg, rgba(82, 70, 64, 0.90) 0%, rgba(64, 55, 49, 0.88) 100%) !important;
+  border: 1px solid rgba(240, 218, 182, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.25), 0 16px 40px -12px rgba(0, 0, 0, 0.35) !important;
 }
 
 :root[data-theme='dark'] .asas-table th,
 :root[data-theme='dark'] .table th {
-  background: rgba(255, 244, 222, 0.04) !important;
-  color: var(--text-3) !important;
-  border-bottom: 1px solid rgba(255, 244, 222, 0.08) !important;
+  background: rgba(255, 244, 222, 0.08) !important;
+  color: #f2e8dc !important;
+  border-bottom: 1px solid rgba(240, 218, 182, 0.22) !important;
 }
 
 :root[data-theme='dark'] .asas-table td,
 :root[data-theme='dark'] .table td {
-  border-bottom: 1px solid rgba(255, 244, 222, 0.06) !important;
+  border-bottom: 1px solid rgba(240, 218, 182, 0.12) !important;
   color: var(--text) !important;
 }
 
 :root[data-theme='dark'] .asas-table tbody tr:hover,
 :root[data-theme='dark'] .table tbody tr:hover {
-  background: rgba(255, 244, 222, 0.05) !important;
+  background: rgba(226, 185, 118, 0.12) !important;
 }
 
 :root[data-theme='dark'] .asas-announcement-card,
 :root[data-theme='dark'] .asas-qr-card {
-  background: linear-gradient(165deg, rgba(34, 28, 27, 0.72) 0%, rgba(20, 17, 16, 0.78) 100%) !important;
-  border: 1px solid rgba(255, 244, 222, 0.12) !important;
+  background: linear-gradient(165deg, rgba(86, 74, 67, 0.90) 0%, rgba(70, 60, 54, 0.86) 100%) !important;
+  border: 1px solid rgba(240, 218, 182, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.22), 0 8px 24px -6px rgba(0, 0, 0, 0.35) !important;
 }
 
 :root[data-theme='dark'] .asas-input,
 :root[data-theme='dark'] .input {
-  background: rgba(12, 10, 10, 0.65) !important;
-  color: var(--text) !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 244, 222, 0.12) !important;
+  background: rgba(56, 48, 43, 0.70) !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 0 0 1px rgba(240, 218, 182, 0.25) !important;
 }
 
 :root[data-theme='dark'] .asas-input:focus,
 :root[data-theme='dark'] .input:focus {
-  background: rgba(16, 13, 12, 0.9) !important;
-  box-shadow: inset 0 0 0 1.5px var(--accent-fill), 0 0 0 4px var(--accent-glow) !important;
+  background: rgba(64, 55, 50, 0.90) !important;
+  box-shadow: inset 0 0 0 1.5px #f3d69b, 0 0 0 4px rgba(226, 185, 118, 0.35) !important;
 }
 
 :root[data-theme='dark'] select.asas-input option,
 :root[data-theme='dark'] select.input option {
-  background: #181413 !important;
-  color: #f6f0e5 !important;
+  background: #403732 !important;
+  color: #f2e8dc !important;
 }
 
 :root[data-theme='dark'] .asas-btn:not(.primary):not(.danger),
 :root[data-theme='dark'] .btn--glass {
-  background: rgba(255, 244, 222, 0.08) !important;
-  color: var(--text) !important;
-  border-color: rgba(255, 244, 222, 0.16) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.2), 0 4px 14px -6px rgba(0, 0, 0, 0.5) !important;
+  background: rgba(255, 244, 222, 0.10) !important;
+  color: #ffffff !important;
+  border-color: rgba(240, 218, 182, 0.25) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.22), 0 4px 14px -6px rgba(0, 0, 0, 0.35) !important;
 }
 
 :root[data-theme='dark'] .asas-btn:not(.primary):not(.danger):hover:not(:disabled),
 :root[data-theme='dark'] .btn--glass:hover:not(:disabled) {
-  background: rgba(255, 244, 222, 0.14) !important;
+  background: rgba(255, 244, 222, 0.16) !important;
+  border-color: rgba(243, 214, 155, 0.45) !important;
 }
 
 :root[data-theme='dark'] .asas-notice {
-  background: rgba(255, 244, 222, 0.05) !important;
-  border-color: rgba(255, 244, 222, 0.12) !important;
+  background: rgba(255, 244, 222, 0.08) !important;
+  border-color: rgba(240, 218, 182, 0.22) !important;
   color: var(--text-2) !important;
 }
 
 :root[data-theme='dark'] .asas-notice.error {
-  background: rgba(176, 52, 44, 0.2) !important;
-  border-color: rgba(244, 135, 123, 0.35) !important;
-  color: var(--unpaid) !important;
+  background: rgba(176, 52, 44, 0.25) !important;
+  border-color: rgba(244, 135, 123, 0.45) !important;
+  color: #fca5a5 !important;
 }
 
 :root[data-theme='dark'] .asas-badge.outside {
-  background: rgba(255, 244, 222, 0.08) !important;
-  color: var(--text-2) !important;
+  background: rgba(255, 244, 222, 0.10) !important;
+  color: #f2e8dc !important;
 }
 
 :root[data-theme='dark'] .asas-clock-pill {
-  background: rgba(255, 244, 222, 0.06) !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 244, 222, 0.12) !important;
+  background: rgba(255, 244, 222, 0.08) !important;
+  box-shadow: inset 0 0 0 1px rgba(240, 218, 182, 0.22) !important;
 }
 
 :root[data-theme='dark'] .asas-login {
@@ -2719,16 +2829,28 @@ select.asas-input option {
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
 }
 .asas-hero-duty-banner.inside {
-  background: linear-gradient(135deg, rgba(35, 116, 74, 0.16) 0%, rgba(35, 116, 74, 0.04) 100%);
-  border: 1px solid rgba(35, 116, 74, 0.35);
-  box-shadow: 0 8px 24px -10px rgba(35, 116, 74, 0.3);
+  background: linear-gradient(135deg, rgba(35, 116, 74, 0.18) 0%, rgba(35, 116, 74, 0.06) 100%);
+  border: 1.5px solid rgba(35, 116, 74, 0.40);
+  box-shadow: 0 8px 24px -8px rgba(35, 116, 74, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+:root[data-theme='dark'] .asas-hero-duty-banner.inside {
+  background: linear-gradient(135deg, rgba(35, 116, 74, 0.35) 0%, rgba(20, 70, 44, 0.25) 100%) !important;
+  border: 1.5px solid rgba(74, 222, 128, 0.48) !important;
+  box-shadow: 0 8px 28px -6px rgba(35, 116, 74, 0.50), inset 0 1px 0 rgba(255, 244, 222, 0.25) !important;
 }
 .asas-hero-duty-banner.outside {
-  background: linear-gradient(135deg, rgba(186, 149, 85, 0.15) 0%, rgba(214, 196, 168, 0.04) 100%);
-  border: 1px solid rgba(186, 149, 85, 0.3);
-  box-shadow: 0 8px 24px -10px rgba(186, 149, 85, 0.2);
+  background: linear-gradient(135deg, rgba(186, 149, 85, 0.18) 0%, rgba(214, 196, 168, 0.08) 100%);
+  border: 1.5px solid rgba(186, 149, 85, 0.38);
+  box-shadow: 0 8px 24px -8px rgba(186, 149, 85, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+:root[data-theme='dark'] .asas-hero-duty-banner.outside {
+  background: linear-gradient(135deg, rgba(226, 185, 118, 0.22) 0%, rgba(86, 74, 67, 0.35) 100%) !important;
+  border: 1.5px solid rgba(243, 214, 155, 0.42) !important;
+  box-shadow: 0 8px 28px -6px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 244, 222, 0.25) !important;
 }
 .asas-pulse-status-dot {
   width: 10px;
@@ -2753,13 +2875,15 @@ select.asas-input option {
   100% { transform: scale(2.4); opacity: 0; }
 }
 .asas-stat-card {
-  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 100%);
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.82) 0%, rgba(248, 243, 235, 0.72) 100%);
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
   text-align: center;
-  border: 1px solid var(--hairline);
-  box-shadow: inset 0 1px 0 var(--glass-rim), 0 4px 16px -6px rgba(0, 0, 0, 0.05);
-  transition: transform 0.25s var(--ease-spring), border-color 0.25s ease;
+  border: 1px solid var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-rim), 0 6px 20px -6px rgba(110, 80, 35, 0.10);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  transition: transform 0.25s var(--ease-spring), box-shadow 0.25s, border-color 0.25s ease;
 }
 .asas-stat-card:hover {
   transform: translateY(-2px);
@@ -2832,6 +2956,8 @@ select.asas-input option {
   box-shadow: 0 0 26px rgba(243, 214, 155, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
 }
 
+.asas-topbar .asas-theme-btn,
+.asas-employee-header .asas-theme-btn,
 .asas-login-top-bar .asas-theme-btn {
   width: 44px !important;
   height: 44px !important;
@@ -2850,12 +2976,16 @@ select.asas-input option {
   transition: all 0.3s var(--ease-spring) !important;
 }
 
+:root[data-theme='dark'] .asas-topbar .asas-theme-btn,
+:root[data-theme='dark'] .asas-employee-header .asas-theme-btn,
 :root[data-theme='dark'] .asas-login-top-bar .asas-theme-btn {
   border-color: rgba(243, 214, 155, 0.6) !important;
   background: radial-gradient(circle at center, rgba(255, 255, 255, 0.15) 0%, rgba(226, 185, 118, 0.20) 100%) !important;
   color: #f3d69b !important;
 }
 
+.asas-topbar .asas-theme-btn:hover,
+.asas-employee-header .asas-theme-btn:hover,
 .asas-login-top-bar .asas-theme-btn:hover {
   background: rgba(226, 185, 118, 0.35) !important;
   border-color: var(--brand-gold) !important;
