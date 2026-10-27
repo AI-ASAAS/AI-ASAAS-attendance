@@ -126,18 +126,19 @@
 
 .ambient__mark {
   position: absolute;
-  width: min(52vw, 640px);
+  width: min(58vw, 720px);
   aspect-ratio: 331 / 400;
   left: -6vw;
   bottom: -10vw;
   background: url('/logo-dark.png') center / contain no-repeat;
-  opacity: 0.045;
+  opacity: 0.15;
   transform: rotate(-8deg);
+  filter: drop-shadow(0 0 50px rgba(186, 149, 85, 0.45));
 }
 
 :root[data-theme='dark'] .ambient__mark {
   background-image: url('/logo-light.png');
-  opacity: 0.035;
+  opacity: 0.18;
 }
 
 

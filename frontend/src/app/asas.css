@@ -30,16 +30,16 @@
 }
 
 :root[data-theme='dark'] {
-  --ink: var(--text, #fdfaf5);
-  --ink-light: var(--text-2, #ddd3c5);
-  --paper: var(--bg, #221d1b);
-  --cream: #2d2623;
-  --sand: #504439;
+  --ink: var(--text, #fffefc);
+  --ink-light: var(--text-2, #e4dad0);
+  --paper: var(--bg, #2d2623);
+  --cream: #382f2b;
+  --sand: #5c4e42;
   --line: var(--hairline);
   --line-strong: rgba(226, 191, 125, 0.4);
-  --gold-dark: #e2bf7d;
-  --gold-soft: rgba(226, 191, 125, 0.18);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25), 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  --gold-dark: #e5c386;
+  --gold-soft: rgba(226, 191, 125, 0.22);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2), 0 8px 24px -8px rgba(0, 0, 0, 0.4);
   --shadow-md: var(--glass-shadow);
 }
 
@@ -891,34 +891,37 @@ select.asas-input option {
   direction: rtl;
   position: relative;
   z-index: 1;
-  background: radial-gradient(900px circle at 85% 15%, rgba(186, 149, 85, 0.14) 0%, transparent 60%),
-              radial-gradient(800px circle at 15% 85%, rgba(214, 196, 168, 0.16) 0%, transparent 55%),
-              var(--bg);
+  background: radial-gradient(1100px circle at 85% 15%, rgba(214, 186, 138, 0.25) 0%, transparent 65%),
+              radial-gradient(900px circle at 15% 85%, rgba(195, 173, 141, 0.20) 0%, transparent 60%),
+              radial-gradient(800px circle at 50% 50%, rgba(255, 255, 255, 0.5) 0%, transparent 70%),
+              linear-gradient(150deg, #fcf9f4 0%, #f4ece0 35%, #ebe2d3 70%, #e2d6c5 100%);
 }
 
-/* Sovereign Brand Watermark (Fixed in place on scroll) */
+/* Sovereign Brand Watermark (Fixed permanently in place on scroll) */
+.asas-fixed-watermark,
 .asas-login::before {
   content: '';
   position: fixed !important;
   top: 50% !important;
-  right: 14% !important;
-  transform: translate(0, -50%) rotate(-6deg) !important;
-  width: 720px !important;
-  height: 720px !important;
+  right: 12% !important;
+  transform: translateY(-50%) rotate(-6deg) !important;
+  width: 820px !important;
+  height: 820px !important;
   background: url('/logo-dark.png') center / contain no-repeat !important;
-  opacity: 0.085 !important;
+  opacity: 0.18 !important;
   pointer-events: none !important;
   user-select: none !important;
   z-index: 0 !important;
-  mask-image: radial-gradient(circle at center, black 48%, transparent 84%) !important;
-  -webkit-mask-image: radial-gradient(circle at center, black 48%, transparent 84%) !important;
-  filter: drop-shadow(0 0 50px rgba(186, 149, 85, 0.45)) !important;
+  mask-image: radial-gradient(circle at center, black 62%, transparent 92%) !important;
+  -webkit-mask-image: radial-gradient(circle at center, black 62%, transparent 92%) !important;
+  filter: drop-shadow(0 0 60px rgba(186, 149, 85, 0.55)) !important;
   transition: opacity 0.3s ease !important;
 }
 
+:root[data-theme='dark'] .asas-fixed-watermark,
 :root[data-theme='dark'] .asas-login::before {
   background-image: url('/logo-light.png') !important;
-  opacity: 0.095 !important;
+  opacity: 0.22 !important;
 }
 
 .asas-login .asas-eyebrow {
@@ -935,12 +938,11 @@ select.asas-input option {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.7) 0%, transparent 55%),
-              linear-gradient(165deg, rgba(255, 253, 249, 0.85) 0%, rgba(246, 238, 225, 0.65) 50%, rgba(238, 225, 206, 0.78) 100%);
+  background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.85) 0%, transparent 55%),
+              linear-gradient(165deg, rgba(255, 253, 249, 0.90) 0%, rgba(248, 241, 230, 0.78) 50%, rgba(242, 232, 218, 0.88) 100%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   backdrop-filter: blur(14px) saturate(140%);
   border-left: 1px solid var(--glass-rim);
-  transform: translateZ(0);
   position: relative;
   overflow: hidden;
 }
@@ -949,24 +951,24 @@ select.asas-input option {
   z-index: 1;
 }
 
-/* Enlarged Brand Logo in Login (Official & Harmonious) */
+/* Enlarged Brand Logo in Login (Official & Authoritative) */
 .asas-login-hero .asas-logo {
-  gap: 22px;
+  gap: 24px;
 }
 .asas-login-hero .asas-mark {
-  width: 90px;
-  height: 98px;
-  filter: drop-shadow(0 8px 24px rgba(186, 149, 85, 0.5));
+  width: 130px;
+  height: 142px;
+  filter: drop-shadow(0 12px 32px rgba(186, 149, 85, 0.65));
 }
 .asas-login-hero .asas-logo strong {
-  font-size: 42px;
+  font-size: 52px;
   letter-spacing: 0.5px;
   line-height: 1.1;
   margin-bottom: 2px;
 }
 .asas-login-hero .asas-logo small {
-  font-size: 14.5px;
-  letter-spacing: 2.4px;
+  font-size: 16.5px;
+  letter-spacing: 2.8px;
 }
 .asas-login-hero h1 {
   font-family: var(--font-display);
@@ -1007,13 +1009,12 @@ select.asas-input option {
   max-width: 440px;
   padding: 36px 32px;
   border-radius: var(--radius-xl);
-  background: radial-gradient(400px circle at 90% -10%, rgba(255, 255, 255, 0.85) 0%, transparent 60%),
-              linear-gradient(165deg, rgba(255, 253, 249, 0.94) 0%, rgba(250, 243, 233, 0.8) 45%, rgba(243, 234, 218, 0.88) 100%);
+  background: radial-gradient(450px circle at 90% -10%, rgba(255, 255, 255, 0.95) 0%, transparent 60%),
+              linear-gradient(165deg, rgba(255, 254, 251, 0.97) 0%, rgba(250, 244, 235, 0.90) 45%, rgba(245, 236, 224, 0.94) 100%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
   backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(186, 149, 85, 0.32);
-  box-shadow: 0 4px 20px -4px rgba(74, 54, 22, 0.08), 0 24px 60px -18px rgba(74, 54, 22, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  transform: translateZ(0);
+  border: 1px solid rgba(186, 149, 85, 0.35);
+  box-shadow: 0 4px 20px -4px rgba(74, 54, 22, 0.08), 0 24px 60px -18px rgba(74, 54, 22, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   position: relative;
   overflow: hidden;
 }
@@ -1022,27 +1023,28 @@ select.asas-input option {
   z-index: 1;
 }
 
-/* Sovereign Brand Watermark (Login Box Card) */
+/* Sovereign Brand Watermark (Login Box Card — Clear & Prominent) */
 .asas-login-box::before {
   content: '';
   position: absolute;
   top: -30px;
   left: -30px;
-  width: 320px;
-  height: 320px;
+  width: 380px;
+  height: 380px;
   background: url('/logo-dark.png') center / contain no-repeat;
-  opacity: 0.055;
+  opacity: 0.14;
   pointer-events: none;
   z-index: 0;
   transform: rotate(-10deg);
-  mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
-  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+  mask-image: radial-gradient(circle at center, black 58%, transparent 88%);
+  -webkit-mask-image: radial-gradient(circle at center, black 58%, transparent 88%);
+  filter: drop-shadow(0 0 35px rgba(186, 149, 85, 0.45));
   transition: opacity 0.3s ease;
 }
 
 :root[data-theme='dark'] .asas-login-box::before {
   background-image: url('/logo-light.png');
-  opacity: 0.068;
+  opacity: 0.18;
 }
 
 .asas-login-mobile-brand {
@@ -1050,22 +1052,22 @@ select.asas-input option {
   margin-bottom: 20px;
 }
 .asas-login-mobile-brand .asas-logo {
-  gap: 18px;
+  gap: 20px;
 }
 .asas-login-mobile-brand .asas-mark {
-  width: 78px;
-  height: 86px;
-  filter: drop-shadow(0 6px 20px rgba(186, 149, 85, 0.45));
+  width: 104px;
+  height: 114px;
+  filter: drop-shadow(0 8px 24px rgba(186, 149, 85, 0.55));
 }
 .asas-login-mobile-brand .asas-logo strong {
-  font-size: 36px;
+  font-size: 44px;
   letter-spacing: 0.5px;
   line-height: 1.1;
   margin-bottom: 2px;
 }
 .asas-login-mobile-brand .asas-logo small {
-  font-size: 13.5px;
-  letter-spacing: 2px;
+  font-size: 15px;
+  letter-spacing: 2.2px;
 }
 .asas-login-box h2 {
   font-family: var(--font-display);
@@ -1358,24 +1360,26 @@ select.asas-input option {
     position: relative !important;
     overflow: hidden !important;
   }
+  .asas-fixed-watermark,
   .asas-login::before {
     content: '';
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-6deg);
-    width: min(580px, 92vw);
-    height: min(580px, 92vw);
-    background: url('/logo-dark.png') center / contain no-repeat;
-    opacity: 0.07;
-    pointer-events: none;
-    z-index: 0;
-    mask-image: radial-gradient(circle at center, black 45%, transparent 82%);
-    -webkit-mask-image: radial-gradient(circle at center, black 45%, transparent 82%);
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) rotate(-6deg) !important;
+    width: min(640px, 94vw) !important;
+    height: min(640px, 94vw) !important;
+    background: url('/logo-dark.png') center / contain no-repeat !important;
+    opacity: 0.16 !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+    mask-image: radial-gradient(circle at center, black 60%, transparent 90%) !important;
+    -webkit-mask-image: radial-gradient(circle at center, black 60%, transparent 90%) !important;
   }
+  :root[data-theme='dark'] .asas-fixed-watermark,
   :root[data-theme='dark'] .asas-login::before {
-    background-image: url('/logo-light.png');
-    opacity: 0.085;
+    background-image: url('/logo-light.png') !important;
+    opacity: 0.20 !important;
   }
   .asas-login-hero {
     display: none !important;
@@ -1846,22 +1850,23 @@ select.asas-input option {
 }
 
 :root[data-theme='dark'] .asas-login {
-  background: radial-gradient(900px circle at 85% 15%, rgba(186, 149, 85, 0.22) 0%, transparent 65%),
-              radial-gradient(800px circle at 15% 85%, rgba(195, 173, 141, 0.22) 0%, transparent 60%),
-              #221d1b !important;
+  background: radial-gradient(1100px circle at 85% 15%, rgba(207, 174, 114, 0.22) 0%, transparent 65%),
+              radial-gradient(900px circle at 15% 85%, rgba(186, 149, 85, 0.16) 0%, transparent 60%),
+              radial-gradient(800px circle at 50% 50%, rgba(100, 84, 76, 0.18) 0%, transparent 70%),
+              linear-gradient(150deg, #38302c 0%, #302824 40%, #29221f 75%, #231c19 100%) !important;
 }
 
 :root[data-theme='dark'] .asas-login-hero {
-  background: radial-gradient(circle at 100% 0%, rgba(186, 149, 85, 0.18) 0%, transparent 55%),
-              linear-gradient(165deg, rgba(46, 39, 36, 0.88) 0%, rgba(35, 29, 27, 0.86) 55%, rgba(27, 23, 21, 0.92) 100%) !important;
-  border-color: rgba(214, 196, 168, 0.22) !important;
+  background: radial-gradient(circle at 100% 0%, rgba(207, 174, 114, 0.18) 0%, transparent 55%),
+              linear-gradient(165deg, rgba(68, 58, 53, 0.88) 0%, rgba(54, 46, 41, 0.86) 55%, rgba(42, 35, 31, 0.92) 100%) !important;
+  border-color: rgba(230, 207, 168, 0.25) !important;
 }
 
 :root[data-theme='dark'] .asas-login-box {
-  background: radial-gradient(400px circle at 90% -10%, rgba(186, 149, 85, 0.22) 0%, transparent 60%),
-              linear-gradient(165deg, rgba(50, 42, 39, 0.95) 0%, rgba(38, 32, 29, 0.92) 50%, rgba(28, 23, 21, 0.96) 100%) !important;
-  border-color: rgba(214, 196, 168, 0.28) !important;
-  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.35), 0 24px 60px -16px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 244, 222, 0.22) !important;
+  background: radial-gradient(450px circle at 90% -10%, rgba(207, 174, 114, 0.22) 0%, transparent 60%),
+              linear-gradient(165deg, rgba(72, 61, 56, 0.95) 0%, rgba(58, 48, 44, 0.92) 50%, rgba(46, 38, 34, 0.96) 100%) !important;
+  border-color: rgba(230, 207, 168, 0.30) !important;
+  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.22), 0 24px 60px -16px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 244, 222, 0.28) !important;
 }
 
 
@@ -2798,9 +2803,9 @@ select.asas-input option {
 }
 
 :root[data-theme='dark'] .asas-login-top-bar {
-  background: rgba(26, 22, 21, 0.9) !important;
-  border-color: rgba(255, 244, 222, 0.18) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  background: rgba(45, 38, 35, 0.9) !important;
+  border-color: rgba(255, 244, 222, 0.22) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
 }
 
 .asas-login-top-bar .asas-theme-btn {
