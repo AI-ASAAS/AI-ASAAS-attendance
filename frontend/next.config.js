@@ -5,9 +5,10 @@ const nextConfig = {
   swcMinify: true,
   async redirects() {
     return [
-      { source:'/admin/:path*', destination:'/asas', permanent:false },
-      { source:'/login', destination:'/asas', permanent:false },
-      { source:'/employee/:path*', destination:'/asas', permanent:false },
+      { source: '/', destination: '/asas', permanent: false },
+      { source: '/admin/:path*', destination: '/asas', permanent: false },
+      { source: '/login', destination: '/asas', permanent: false },
+      { source: '/employee/:path*', destination: '/asas', permanent: false },
     ];
   },
   async rewrites() {

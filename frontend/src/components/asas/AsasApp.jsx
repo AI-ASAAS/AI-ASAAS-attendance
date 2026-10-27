@@ -3879,6 +3879,9 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
     return '';
   });
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [phone, setPhone] = useState('');
   const [rememberMe, setRememberMe] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -4185,312 +4188,444 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
             aria-label="تبديل مظهر النظام"
             title={theme === 'dark' ? 'التبديل إلى المظهر الفاتح' : 'التبديل إلى المظهر الداكن'}
           >
-            <Icon name={theme === 'dark' ? 'sun' : 'moon'} style={{ width: 18, height: 18 }} />
-          </button>
-        )}
-        {(onOpenInstall || installPrompt) && (
-          <button
-            type="button"
-            className="asas-direct-install-pill"
-            onClick={handleDirectInstall}
-            title="تحميل وتثبيت تطبيق أساس مباشرة على جهازك"
-          >
-            <span className="asas-install-pulse-dot" />
-            <Icon name="download" style={{ width: 15, height: 15, color: 'var(--brand-gold)' }} />
-            <span>تحميل التطبيق</span>
+            <span className="asas-theme-btn-inner">
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+            </span>
           </button>
         )}
       </div>
 
       <div className="asas-login">
         <section className="asas-login-hero">
-        <Brand />
-        <div>
-          <p className="asas-eyebrow">منظومة الحضور الذكية</p>
-          <h1><Swash>حضور مؤكد</Swash><br /><span>وفريق متصل دائماً.</span></h1>
-          <p>مساحة عمل تنفيذية لإدارة الحضور والانصراف بدقة وموثوقية عالية، متصلة بسجلات الأجهزة وقواعد البيانات السيادية.</p>
-        </div>
-        <footer>
-          <span>شركة أساس الذكاء الاصطناعي</span>
-          <p>نظام حضور ذكي ومحمي</p>
-        </footer>
-      </section>
-
-      <section className="asas-login-form-wrap">
-        <div className="asas-login-box">
-          <div className="asas-login-mobile-brand">
-            <Brand />
-          </div>
-          <p className="asas-eyebrow">بوابة الدخول الموحدة</p>
-          <h2>{authMode === 'login' ? 'تسجيل الدخول إلى أساس' : 'طلب تسجيل حساب موظف'}</h2>
-          <p className="asas-muted">
-            {authMode === 'login'
-              ? 'أدخل بياناتك المعتمدة للوصول إلى لوحة التحكم أو مساحة الموظف.'
-              : 'سجل بياناتك المعتمدة لتقديم طلب إنشاء حساب جديد لاعتماده من قِبل الإدارة.'}
-          </p>
-
-          {/* Mode Switcher Tabs */}
-          {!pendingInfo && (
-            <div className="asas-auth-tabs">
-              <button
-                type="button"
-                className={`asas-auth-tab-btn ${authMode === 'login' ? 'active' : ''}`}
-                onClick={() => { setAuthMode('login'); setError(''); }}
-              >
-                <Icon name="logIn" style={{ width: 16, height: 16 }} />
-                <span>تسجيل الدخول</span>
-              </button>
-              <button
-                type="button"
-                className={`asas-auth-tab-btn ${authMode === 'register' ? 'active' : ''}`}
-                onClick={() => { setAuthMode('register'); setError(''); }}
-              >
-                <Icon name="plus" style={{ width: 16, height: 16 }} />
-                <span>طلب حساب جديد</span>
-              </button>
-            </div>
-          )}
-
-          {/* Sovereign Google Login Section */}
-          {!pendingInfo && (
-            <div className="asas-google-login-section">
-              <div className="asas-google-header">
-                <Icon name="shieldCheck" style={{ width: 15, height: 15, color: 'var(--accent)' }} />
-                <span>{authMode === 'login' ? 'الدخول السريع عبر Google Workspace' : 'التسجيل الفوري بحساب Google'}</span>
+          <Brand />
+          <div>
+            <p className="asas-eyebrow">منظومة الحضور والعمل الذكية</p>
+            <h1><Swash>حضور مؤكد</Swash><br /><span>وفريق متصل دائماً.</span></h1>
+            <p>مساحة عمل تنفيذية لإدارة الحضور والانصراف بدقة وموثوقية عالية، متصلة بسجلات الأجهزة وقواعد البيانات السيادية.</p>
+            <div className="asas-hero-features-list">
+              <div className="asas-hero-feature-item">
+                <span className="asas-hero-feature-icon"><Icon name="shieldCheck" /></span>
+                <span>حضور موثق جغرافياً ومقيد بأجهزة الموظفين</span>
               </div>
+              <div className="asas-hero-feature-item">
+                <span className="asas-hero-feature-icon"><Icon name="clock" /></span>
+                <span>تسجيل فوري بدون إعلانات وبأعلى سرعة استجابة</span>
+              </div>
+              <div className="asas-hero-feature-item">
+                <span className="asas-hero-feature-icon"><Icon name="vault" /></span>
+                <span>حماية سيادية مشفرة متوافقة مع ضوابط الأمن السيبراني</span>
+              </div>
+            </div>
+          </div>
+          <footer>
+            <span>شركة أساس الذكاء الاصطناعي</span>
+            <p>نظام حضور ذكي ومحمي</p>
+          </footer>
+        </section>
 
-              <div className="asas-google-btn-wrapper">
+        <section className="asas-login-form-wrap">
+          <div className="asas-login-box">
+            <div className="asas-login-mobile-brand">
+              <Brand />
+            </div>
+            <p className="asas-eyebrow">بوابة الدخول الموحدة</p>
+            <h2>{authMode === 'login' ? 'تسجيل الدخول إلى أساس' : 'طلب تسجيل حساب موظف'}</h2>
+            <p className="asas-muted">
+              {authMode === 'login'
+                ? 'أدخل بياناتك المعتمدة للوصول إلى لوحة التحكم أو مساحة الموظف.'
+                : 'سجل بياناتك المعتمدة لتقديم طلب إنشاء حساب جديد لاعتماده من قِبل الإدارة.'}
+            </p>
+
+            {/* Mode Switcher Tabs with Asaas Skills Aesthetic */}
+            {!pendingInfo && (
+              <div className="asas-auth-tabs">
                 <button
                   type="button"
-                  className="asas-google-fallback-btn"
-                  onClick={triggerGoogleSignIn}
-                  disabled={busy}
+                  className={`asas-auth-tab-btn ${authMode === 'login' ? 'active' : ''}`}
+                  onClick={() => { setAuthMode('login'); setError(''); }}
                 >
-                  <svg viewBox="0 0 24 24" width="18" height="18" style={{ flexShrink: 0 }}>
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                  </svg>
-                  <span>{authMode === 'login' ? 'المتابعة باستخدام Google' : 'التسجيل باستخدام Google'}</span>
-                  <span className="asas-google-pill-badge">بصمة سريعة</span>
+                  <span className="asas-auth-tab-icon">
+                    <Icon name="logIn" />
+                  </span>
+                  <span>تسجيل الدخول</span>
                 </button>
-                <div id="google-btn-container" style={{ position: 'absolute', opacity: 0.01, pointerEvents: 'none', width: 1, height: 1, overflow: 'hidden' }} />
+                <button
+                  type="button"
+                  className={`asas-auth-tab-btn ${authMode === 'register' ? 'active' : ''}`}
+                  onClick={() => { setAuthMode('register'); setError(''); }}
+                >
+                  <span className="asas-auth-tab-icon">
+                    <Icon name="plus" />
+                  </span>
+                  <span>طلب حساب جديد</span>
+                </button>
               </div>
-            </div>
-          )}
+            )}
 
-          {!pendingInfo && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '14px 0 6px' }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
-              <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>
-                {authMode === 'login' ? 'أو الدخول اليدوي بالبيانات' : 'أو إدخال بيانات الحساب يدوياً'}
-              </span>
-              <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
-            </div>
-          )}
-
-          {pendingInfo ? (
-            <div style={{ textAlign: 'center', padding: '16px 8px', marginTop: 14 }}>
-              <div style={{
-                width: 60,
-                height: 60,
-                borderRadius: '50%',
-                background: 'rgba(245, 158, 11, 0.15)',
-                color: '#f59e0b',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 14,
-                border: '2px solid rgba(245, 158, 11, 0.4)'
-              }}>
-                <span style={{ fontSize: 28 }}>⏳</span>
-              </div>
-              <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 8px', color: 'var(--text)' }}>
-                {pendingInfo.title}
-              </h3>
-              <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, margin: '0 0 16px' }}>
-                {pendingInfo.message}
-              </p>
-
-              <div style={{
-                background: 'var(--glass-inset)',
-                borderRadius: 12,
-                padding: 14,
-                border: '1px solid var(--hairline)',
-                textAlign: 'right',
-                marginBottom: 16
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span className="asas-muted" style={{ fontSize: 12 }}>اسم الموظف:</span>
-                  <strong style={{ fontSize: 13 }}>{pendingInfo.name}</strong>
+            {/* Sovereign Google Login Section */}
+            {!pendingInfo && (
+              <div className="asas-google-login-section">
+                <div className="asas-google-header">
+                  <span className="asas-google-shield-icon">
+                    <Icon name="shieldCheck" />
+                  </span>
+                  <span>{authMode === 'login' ? 'الدخول السريع عبر Google Workspace' : 'التسجيل الفوري بحساب Google'}</span>
                 </div>
-                {pendingInfo.identifier && (
+
+                <div className="asas-google-btn-wrapper">
+                  <button
+                    type="button"
+                    className="asas-google-fallback-btn"
+                    onClick={triggerGoogleSignIn}
+                    disabled={busy}
+                  >
+                    <span className="asas-google-icon-wrapper">
+                      <svg viewBox="0 0 24 24" width="18" height="18" style={{ flexShrink: 0, display: 'block' }}>
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      </svg>
+                    </span>
+                    <span>{authMode === 'login' ? 'المتابعة باستخدام Google' : 'التسجيل باستخدام Google'}</span>
+                    <span className="asas-google-pill-badge">
+                      <span className="asas-install-pulse-dot" style={{ background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
+                      بصمة سريعة
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!pendingInfo && (
+              <div className="asas-auth-divider">
+                <div className="asas-divider-line" />
+                <span className="asas-divider-text">
+                  {authMode === 'login' ? 'أو الدخول اليدوي بالبيانات' : 'أو إدخال بيانات الحساب يدوياً'}
+                </span>
+                <div className="asas-divider-line" />
+              </div>
+            )}
+
+            {pendingInfo ? (
+              <div style={{ textAlign: 'center', padding: '16px 8px', marginTop: 14 }}>
+                <div style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: '50%',
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  color: '#f59e0b',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 14,
+                  border: '2px solid rgba(245, 158, 11, 0.4)'
+                }}>
+                  <Icon name="clock" style={{ width: 28, height: 28, color: '#f59e0b' }} />
+                </div>
+                <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 8px', color: 'var(--text)' }}>
+                  {pendingInfo.title}
+                </h3>
+                <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, margin: '0 0 16px' }}>
+                  {pendingInfo.message}
+                </p>
+
+                <div style={{
+                  background: 'var(--glass-inset)',
+                  borderRadius: 12,
+                  padding: 14,
+                  border: '1px solid var(--hairline)',
+                  textAlign: 'right',
+                  marginBottom: 16
+                }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span className="asas-muted" style={{ fontSize: 12 }}>الرقم الوظيفي المبدئي:</span>
-                    <strong style={{ fontFamily: 'monospace', color: 'var(--accent)', fontSize: 14 }}>{pendingInfo.identifier}</strong>
+                    <span className="asas-muted" style={{ fontSize: 12 }}>اسم الموظف:</span>
+                    <strong style={{ fontSize: 13 }}>{pendingInfo.name}</strong>
                   </div>
-                )}
-                {pendingInfo.email && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="asas-muted" style={{ fontSize: 12 }}>البريد الإلكتروني:</span>
-                    <span style={{ fontSize: 12.5 }} dir="ltr">{pendingInfo.email}</span>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ background: 'rgba(16, 185, 129, 0.08)', borderRadius: 10, padding: 10, border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: 11.5, color: 'var(--text-2)', marginBottom: 18, lineHeight: 1.5, textAlign: 'right' }}>
-                🔒 <strong>تنبيه الأمان والاعتماد:</strong> سيتم تفعيل حسابك فور موافقة إدارة النظام في لوحة التحكم. يمكنك بعدها تسجيل الدخول بالرقم الوظيفي أو البريد.
-              </div>
-
-              <button
-                className="asas-btn primary"
-                style={{ width: '100%', height: 44 }}
-                onClick={() => {
-                  setPendingInfo(null);
-                  setAuthMode('login');
-                  if (pendingInfo.identifier) setIdentifier(pendingInfo.identifier);
-                }}
-              >
-                العودة لتسجيل الدخول
-              </button>
-            </div>
-          ) : authMode === 'login' ? (
-            <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 18 }}>
-              {error && (
-                <div className={`asas-notice ${error.includes('بانتظار موافقة') || error.includes('قيد المراجعة') ? 'warning' : 'error'}`} role="alert" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {error.includes('بانتظار موافقة') || error.includes('قيد المراجعة') ? (
-                      <span style={{ fontSize: 18 }}>⏳</span>
-                    ) : null}
-                    <div>{error}</div>
-                  </div>
-                  {onRetry && (
-                    <button type="button" onClick={async () => { setBusy(true); await onRetry(); setBusy(false); }} disabled={busy} className="asas-btn sm" style={{ alignSelf: 'flex-start' }}>
-                      <Icon name="refresh" />
-                      {busy ? 'جارٍ الفحص…' : 'إعادة فحص الاتصال'}
-                    </button>
+                  {pendingInfo.identifier && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span className="asas-muted" style={{ fontSize: 12 }}>الرقم الوظيفي المبدئي:</span>
+                      <strong style={{ fontFamily: 'monospace', color: 'var(--accent)', fontSize: 14 }}>{pendingInfo.identifier}</strong>
+                    </div>
+                  )}
+                  {pendingInfo.email && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span className="asas-muted" style={{ fontSize: 12 }}>البريد الإلكتروني:</span>
+                      <span style={{ fontSize: 12.5 }} dir="ltr">{pendingInfo.email}</span>
+                    </div>
                   )}
                 </div>
-              )}
 
-              <Field
-                label="البريد الإلكتروني أو الرقم الوظيفي"
-                value={identifier}
-                onChange={e => setIdentifier(e.target.value)}
-                autoComplete="username"
-                required
-                placeholder="مثال: 001 أو name@company.com"
-              />
-
-              <Field
-                label="كلمة المرور"
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-                placeholder="••••••••••••"
-              />
-
-              <label className="asas-remember-row">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={e => setRememberMe(e.target.checked)}
-                />
-                <span>تذكر بيانات الدخول على هذا الجهاز</span>
-              </label>
-
-              <button className="asas-btn primary" type="submit" disabled={busy} style={{ width: '100%', height: 46 }}>
-                <Icon name="logIn" style={{ width: 18, height: 18, flexShrink: 0 }} />
-                <span>{busy ? 'جارٍ التحقق…' : 'تسجيل الدخول'}</span>
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={submitRegister} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 18 }}>
-              {error && (
-                <div className="asas-notice error" role="alert">
-                  {error}
+                <div style={{ background: 'rgba(16, 185, 129, 0.08)', borderRadius: 10, padding: 10, border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: 11.5, color: 'var(--text-2)', marginBottom: 18, lineHeight: 1.5, textAlign: 'right' }}>
+                  🔒 <strong>تنبيه الأمان والاعتماد:</strong> سيتم تفعيل حسابك فور موافقة إدارة النظام في لوحة التحكم. يمكنك بعدها تسجيل الدخول بالرقم الوظيفي أو البريد.
                 </div>
-              )}
 
-              <Field
-                label="الاسم الكامل الرباعي"
-                value={regName}
-                onChange={e => setRegName(e.target.value)}
-                required
-                placeholder="مثال: محمد أحمد علي صالح"
-              />
+                <button
+                  className="asas-btn primary asas-login-submit-btn"
+                  onClick={() => {
+                    setPendingInfo(null);
+                    setAuthMode('login');
+                    if (pendingInfo.identifier) setIdentifier(pendingInfo.identifier);
+                  }}
+                >
+                  <span className="asas-submit-icon-box">
+                    <Icon name="logIn" />
+                  </span>
+                  <span>العودة لتسجيل الدخول</span>
+                </button>
+              </div>
+            ) : authMode === 'login' ? (
+              <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 18 }}>
+                {error && (
+                  <div className={`asas-notice ${error.includes('بانتظار موافقة') || error.includes('قيد المراجعة') ? 'warning' : 'error'}`} role="alert" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {error.includes('بانتظار موافقة') || error.includes('قيد المراجعة') ? (
+                        <Icon name="clock" style={{ width: 18, height: 18, color: '#f59e0b', flexShrink: 0 }} />
+                      ) : (
+                        <Icon name="alert" style={{ width: 18, height: 18, flexShrink: 0 }} />
+                      )}
+                      <div>{error}</div>
+                    </div>
+                    {onRetry && (
+                      <button type="button" onClick={async () => { setBusy(true); await onRetry(); setBusy(false); }} disabled={busy} className="asas-btn sm" style={{ alignSelf: 'flex-start' }}>
+                        <Icon name="refresh" />
+                        {busy ? 'جارٍ الفحص…' : 'إعادة فحص الاتصال'}
+                      </button>
+                    )}
+                  </div>
+                )}
 
-              <Field
-                label="البريد الإلكتروني"
-                type="email"
-                value={regEmail}
-                onChange={e => setRegEmail(e.target.value)}
-                required
-                placeholder="name@company.com"
-              />
+                <div className="asas-modern-field-group">
+                  <label className="asas-modern-field-label">
+                    <span className="asas-field-label-icon"><Icon name="user" /></span>
+                    <span>البريد الإلكتروني أو الرقم الوظيفي</span>
+                  </label>
+                  <div className="asas-modern-input-wrapper">
+                    <span className="asas-input-adornment-start">
+                      <Icon name="user" />
+                    </span>
+                    <input
+                      type="text"
+                      className="asas-modern-input"
+                      value={identifier}
+                      onChange={e => setIdentifier(e.target.value)}
+                      autoComplete="username"
+                      required
+                      placeholder="مثال: 001 أو name@company.com"
+                    />
+                  </div>
+                </div>
 
-              <Field
-                label="رقم الهاتف أو الجوال (اختياري)"
-                type="tel"
-                value={regPhone}
-                onChange={e => setRegPhone(e.target.value)}
-                placeholder="+967 77xxxxxxx"
-              />
+                <div className="asas-modern-field-group">
+                  <label className="asas-modern-field-label">
+                    <span className="asas-field-label-icon"><Icon name="key" /></span>
+                    <span>كلمة المرور</span>
+                  </label>
+                  <div className="asas-modern-input-wrapper">
+                    <span className="asas-input-adornment-start">
+                      <Icon name="key" />
+                    </span>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className="asas-modern-input"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                      placeholder="••••••••••••"
+                    />
+                    <button
+                      type="button"
+                      className="asas-password-toggle-btn"
+                      onClick={() => setShowPassword(v => !v)}
+                      aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                      title={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                    >
+                      <Icon name={showPassword ? 'eyeOff' : 'eye'} />
+                    </button>
+                  </div>
+                </div>
 
-              {availableBranches.length > 0 && (
-                <Field label="الفرع أو مقر العمل المفضل">
-                  <select
-                    className="asas-input"
-                    value={regBranchId}
-                    onChange={e => setRegBranchId(e.target.value)}
-                  >
-                    {availableBranches.map(b => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                  </select>
-                </Field>
-              )}
+                <label className="asas-remember-row">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={e => setRememberMe(e.target.checked)}
+                  />
+                  <span>تذكر بيانات الدخول على هذا الجهاز</span>
+                </label>
 
-              <Field
-                label="كلمة المرور (6 خانات على الأقل)"
-                type="password"
-                value={regPassword}
-                onChange={e => setRegPassword(e.target.value)}
-                required
-                minLength={6}
-                placeholder="••••••••••••"
-              />
+                <button className="asas-btn primary asas-login-submit-btn" type="submit" disabled={busy}>
+                  <span className="asas-submit-icon-box">
+                    <Icon name="logIn" />
+                  </span>
+                  <span>{busy ? 'جارٍ التحقق…' : 'تسجيل الدخول'}</span>
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={submitRegister} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 18 }}>
+                {error && (
+                  <div className="asas-notice error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Icon name="alert" style={{ width: 18, height: 18, flexShrink: 0 }} />
+                    <div>{error}</div>
+                  </div>
+                )}
 
-              <Field
-                label="تأكيد كلمة المرور"
-                type="password"
-                value={regConfirmPassword}
-                onChange={e => setRegConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-                placeholder="••••••••••••"
-              />
+                <div className="asas-modern-field-group">
+                  <label className="asas-modern-field-label">
+                    <span className="asas-field-label-icon"><Icon name="user" /></span>
+                    <span>الاسم الكامل الرباعي</span>
+                  </label>
+                  <div className="asas-modern-input-wrapper">
+                    <span className="asas-input-adornment-start"><Icon name="user" /></span>
+                    <input
+                      type="text"
+                      className="asas-modern-input"
+                      value={regName}
+                      onChange={e => setRegName(e.target.value)}
+                      required
+                      placeholder="مثال: محمد أحمد علي صالح"
+                    />
+                  </div>
+                </div>
 
-              <button className="asas-btn primary" type="submit" disabled={busy} style={{ width: '100%', height: 46 }}>
-                <Icon name="plus" style={{ width: 18, height: 18, flexShrink: 0 }} />
-                <span>{busy ? 'جارٍ إرسال الطلب…' : 'إرسال طلب تسجيل الحساب للإدارة'}</span>
-              </button>
-            </form>
-          )}
+                <div className="asas-modern-field-group">
+                  <label className="asas-modern-field-label">
+                    <span className="asas-field-label-icon"><Icon name="mail" /></span>
+                    <span>البريد الإلكتروني المعتمد</span>
+                  </label>
+                  <div className="asas-modern-input-wrapper">
+                    <span className="asas-input-adornment-start"><Icon name="mail" /></span>
+                    <input
+                      type="email"
+                      dir="ltr"
+                      className="asas-modern-input"
+                      value={regEmail}
+                      onChange={e => setRegEmail(e.target.value)}
+                      required
+                      placeholder="name@company.com"
+                    />
+                  </div>
+                </div>
 
-          <div style={{ marginTop: 18, padding: 12, background: 'var(--glass-inset)', borderRadius: 10, fontSize: 11.5, color: 'var(--text-2)', display: 'flex', gap: 8, alignItems: 'flex-start', border: '1px solid var(--hairline)' }}>
-            <Icon name="smartphone" style={{ width: 16, height: 16, flexShrink: 0, marginTop: 2, color: 'var(--accent)' }} />
-            <div>
-              <strong>نظام تقييد الجوال المعتمد:</strong> يتم ربط الحساب بجوال الموظف الشخصي تلقائياً عند أول تسجيل دخول لضمان صحة التسجيل ومنع التحضير بالنيابة.
+                <div className="asas-modern-field-group">
+                  <label className="asas-modern-field-label">
+                    <span className="asas-field-label-icon"><Icon name="phone" /></span>
+                    <span>رقم الهاتف أو الجوال (اختياري)</span>
+                  </label>
+                  <div className="asas-modern-input-wrapper">
+                    <span className="asas-input-adornment-start"><Icon name="phone" /></span>
+                    <input
+                      type="tel"
+                      dir="ltr"
+                      className="asas-modern-input"
+                      value={regPhone}
+                      onChange={e => setRegPhone(e.target.value)}
+                      placeholder="+967 77xxxxxxx"
+                    />
+                  </div>
+                </div>
+
+                {availableBranches.length > 0 && (
+                  <div className="asas-modern-field-group">
+                    <label className="asas-modern-field-label">
+                      <span className="asas-field-label-icon"><Icon name="building" /></span>
+                      <span>الفرع أو مقر العمل المفضل</span>
+                    </label>
+                    <div className="asas-modern-input-wrapper">
+                      <span className="asas-input-adornment-start"><Icon name="building" /></span>
+                      <select
+                        className="asas-modern-input"
+                        value={regBranchId}
+                        onChange={e => setRegBranchId(e.target.value)}
+                      >
+                        {availableBranches.map(b => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                <div className="asas-modern-field-group">
+                  <label className="asas-modern-field-label">
+                    <span className="asas-field-label-icon"><Icon name="key" /></span>
+                    <span>كلمة المرور (6 خانات على الأقل)</span>
+                  </label>
+                  <div className="asas-modern-input-wrapper">
+                    <span className="asas-input-adornment-start"><Icon name="key" /></span>
+                    <input
+                      type={showRegPassword ? 'text' : 'password'}
+                      className="asas-modern-input"
+                      value={regPassword}
+                      onChange={e => setRegPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      placeholder="••••••••••••"
+                    />
+                    <button
+                      type="button"
+                      className="asas-password-toggle-btn"
+                      onClick={() => setShowRegPassword(v => !v)}
+                      aria-label={showRegPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                    >
+                      <Icon name={showRegPassword ? 'eyeOff' : 'eye'} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="asas-modern-field-group">
+                  <label className="asas-modern-field-label">
+                    <span className="asas-field-label-icon"><Icon name="shieldCheck" /></span>
+                    <span>تأكيد كلمة المرور</span>
+                  </label>
+                  <div className="asas-modern-input-wrapper">
+                    <span className="asas-input-adornment-start"><Icon name="shieldCheck" /></span>
+                    <input
+                      type={showRegConfirmPassword ? 'text' : 'password'}
+                      className="asas-modern-input"
+                      value={regConfirmPassword}
+                      onChange={e => setRegConfirmPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      placeholder="••••••••••••"
+                    />
+                    <button
+                      type="button"
+                      className="asas-password-toggle-btn"
+                      onClick={() => setShowRegConfirmPassword(v => !v)}
+                      aria-label={showRegConfirmPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                    >
+                      <Icon name={showRegConfirmPassword ? 'eyeOff' : 'eye'} />
+                    </button>
+                  </div>
+                </div>
+
+                <button className="asas-btn primary asas-login-submit-btn" type="submit" disabled={busy}>
+                  <span className="asas-submit-icon-box">
+                    <Icon name="plus" />
+                  </span>
+                  <span>{busy ? 'جارٍ إرسال الطلب…' : 'إرسال طلب تسجيل الحساب للإدارة'}</span>
+                </button>
+              </form>
+            )}
+
+            <div className="asas-device-restriction-card">
+              <div className="asas-device-badge-cube">
+                <Icon name="smartphone" />
+              </div>
+              <div className="asas-device-badge-content">
+                <div className="asas-device-badge-title">
+                  <Icon name="shieldCheck" />
+                  <span>نظام تقييد الجوال المعتمد</span>
+                </div>
+                <p>يتم ربط الحساب بجوال الموظف الشخصي تلقائياً عند أول تسجيل دخول لضمان صحة التسجيل ومنع التحضير بالنيابة.</p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-    </div>
-  </>
+        </section>
+      </div>
+    </>
   );
 }
 

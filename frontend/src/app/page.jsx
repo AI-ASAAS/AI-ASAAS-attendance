@@ -1,2 +1,11 @@
-import { redirect } from 'next/navigation';
-export default function Home() { redirect('/asas'); }
+'use client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function Home() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace('/asas');
+  }, [router]);
+  return null;
+}

@@ -2049,34 +2049,60 @@ select.asas-input option {
   border: 1px solid var(--hairline);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.08);
 }
+.asas-auth-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: var(--glass-inset);
+  border: 1px solid var(--hairline);
+  margin-top: 18px;
+}
 .asas-auth-tab-btn {
   flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 38px;
+  height: 42px;
   border-radius: var(--radius-sm);
   border: none;
   background: transparent;
   color: var(--text-2);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.22s var(--ease-spring);
+  transition: all 0.25s var(--ease-spring);
   text-decoration: none;
 }
-.asas-auth-tab-btn svg {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
+.asas-auth-tab-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(186, 149, 85, 0.1);
+  border: 1px solid rgba(186, 149, 85, 0.25);
   color: var(--accent);
-  transition: color 0.22s ease, transform 0.22s ease;
+  flex-shrink: 0;
+  transition: all 0.25s var(--ease-spring);
+}
+.asas-auth-tab-icon svg {
+  width: 15px;
+  height: 15px;
+  color: currentColor;
+  display: block;
 }
 .asas-auth-tab-btn:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
+}
+.asas-auth-tab-btn:hover:not(.active) .asas-auth-tab-icon {
+  background: rgba(186, 149, 85, 0.2);
+  border-color: var(--brand-gold);
+  color: var(--brand-gold);
 }
 .asas-auth-tab-btn.active {
   color: #ffffff !important;
@@ -2084,7 +2110,13 @@ select.asas-input option {
               linear-gradient(180deg, #cfae72 0%, var(--brand-gold) 55%, #a07c3f 100%) !important;
   box-shadow: 0 4px 14px -3px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
 }
-.asas-auth-tab-btn.active svg {
+.asas-auth-tab-btn.active .asas-auth-tab-icon {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+.asas-auth-tab-btn.active .asas-auth-tab-icon svg {
   color: #ffffff !important;
 }
 .asas-auth-tab-btn:active {
@@ -2093,7 +2125,7 @@ select.asas-input option {
 
 .asas-google-login-section {
   margin-top: 14px;
-  padding: 16px;
+  padding: 14px 16px;
   border-radius: var(--radius-lg);
   background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 100%);
   border: 1px solid rgba(186, 149, 85, 0.35);
@@ -2114,24 +2146,42 @@ select.asas-input option {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  font-size: 11.5px;
+  gap: 8px;
+  font-size: 12px;
   color: var(--accent);
   font-weight: 700;
   letter-spacing: 0.2px;
+}
+.asas-google-shield-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(186, 149, 85, 0.14);
+  border: 1px solid rgba(186, 149, 85, 0.3);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.asas-google-shield-icon svg {
+  width: 14px;
+  height: 14px;
+  color: currentColor;
 }
 .asas-google-btn-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
-  min-height: 44px;
+  min-height: 46px;
   position: relative;
 }
 .asas-google-fallback-btn {
   width: 100%;
-  max-width: 340px;
-  height: 44px;
+  max-width: 360px;
+  height: 46px;
+  padding: 0 16px;
   border-radius: var(--radius-pill);
   background: var(--glass-tint-strong);
   color: var(--text);
@@ -2139,7 +2189,7 @@ select.asas-input option {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06), inset 0 1px 0 var(--glass-rim);
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 10px;
   font-weight: 700;
   font-size: 13.5px;
@@ -2147,28 +2197,294 @@ select.asas-input option {
   transition: all 0.25s var(--ease-spring);
   text-decoration: none;
 }
-.asas-google-fallback-btn svg {
-  width: 18px;
-  height: 18px;
+.asas-google-icon-wrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   flex-shrink: 0;
 }
 .asas-google-fallback-btn:hover:not(:disabled) {
   background: var(--glass-sheen);
   border-color: var(--brand-gold);
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px -4px rgba(186, 149, 85, 0.3);
+  box-shadow: 0 6px 18px -4px rgba(186, 149, 85, 0.35);
 }
 .asas-google-fallback-btn:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.985);
 }
 .asas-google-pill-badge {
-  font-size: 10.5px;
-  padding: 2px 8px;
+  font-size: 11px;
+  padding: 3px 9px;
   border-radius: var(--radius-pill);
   background: rgba(186, 149, 85, 0.16);
   color: var(--accent);
-  border: 1px solid rgba(186, 149, 85, 0.3);
+  border: 1px solid rgba(186, 149, 85, 0.32);
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Auth Divider */
+.asas-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 6px;
+}
+.asas-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+}
+.asas-divider-text {
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Modern Input Fields (Asaas Skills) */
+.asas-modern-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.asas-modern-field-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  user-select: none;
+}
+.asas-field-label-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: rgba(186, 149, 85, 0.1);
+  border: 1px solid rgba(186, 149, 85, 0.22);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.asas-field-label-icon svg {
+  width: 12px;
+  height: 12px;
+  color: currentColor;
+}
+.asas-modern-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.asas-input-adornment-start {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+  pointer-events: none;
+  transition: color 0.25s ease, transform 0.25s ease;
+  z-index: 2;
+}
+.asas-input-adornment-start svg {
+  width: 17px;
+  height: 17px;
+  color: currentColor;
+}
+.asas-modern-input-wrapper:focus-within .asas-input-adornment-start {
+  color: var(--brand-gold);
+  transform: scale(1.1);
+}
+.asas-modern-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 42px 0 14px;
+  border-radius: var(--radius-sm);
+  background: var(--glass-inset);
+  border: 1px solid var(--hairline);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13.5px;
+  outline: none;
+  transition: all 0.25s var(--ease-spring);
+  box-sizing: border-box;
+}
+.asas-modern-input:focus {
+  border-color: var(--brand-gold);
+  background: var(--glass-tint-strong);
+  box-shadow: 0 0 0 3px rgba(186, 149, 85, 0.15), 0 4px 12px rgba(186, 149, 85, 0.12);
+}
+.asas-modern-input::placeholder {
+  color: var(--text-3);
+  font-size: 12.5px;
+}
+.asas-password-toggle-btn {
+  position: absolute;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-spring);
+  z-index: 2;
+  padding: 0;
+}
+.asas-password-toggle-btn:hover {
+  background: rgba(186, 149, 85, 0.14);
+  border-color: rgba(186, 149, 85, 0.3);
+  color: var(--accent);
+  transform: scale(1.08);
+}
+.asas-password-toggle-btn:active {
+  transform: scale(0.95);
+}
+.asas-password-toggle-btn svg {
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+}
+
+/* Submit Button & Micro-Icons */
+.asas-login-submit-btn {
+  width: 100%;
+  height: 48px !important;
+  font-size: 14.5px !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+}
+.asas-submit-icon-box {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.25s var(--ease-spring);
+}
+.asas-submit-icon-box svg {
+  width: 16px;
+  height: 16px;
+  color: #ffffff !important;
+}
+.asas-login-submit-btn:hover:not(:disabled) .asas-submit-icon-box {
+  transform: translateX(-3px);
+}
+
+/* Device Restriction Notice at Bottom */
+.asas-device-restriction-card {
+  margin-top: 18px;
+  padding: 14px;
+  background: var(--glass-inset);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  transition: all 0.25s ease;
+}
+.asas-device-restriction-card:hover {
+  border-color: rgba(186, 149, 85, 0.35);
+  background: var(--glass-tint);
+}
+.asas-device-badge-cube {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(186, 149, 85, 0.2) 0%, rgba(214, 196, 168, 0.08) 100%);
+  border: 1px solid rgba(186, 149, 85, 0.4);
+  box-shadow: 0 4px 12px -2px rgba(186, 149, 85, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.asas-device-badge-cube svg {
+  width: 18px;
+  height: 18px;
+  color: var(--brand-gold);
+}
+.asas-device-badge-content {
+  flex: 1;
+  text-align: right;
+}
+.asas-device-badge-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.asas-device-badge-title svg {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+}
+.asas-device-badge-content p {
+  font-size: 11.5px;
+  color: var(--text-2);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Hero Feature List */
+.asas-hero-features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+.asas-hero-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.88);
+}
+.asas-hero-feature-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ba9555;
+  flex-shrink: 0;
+}
+.asas-hero-feature-icon svg {
+  width: 16px;
+  height: 16px;
+  color: #ba9555;
 }
 
 #google-btn-container {
@@ -2295,148 +2611,77 @@ select.asas-input option {
 /* ───────── Login Fixed Top Bar Controls (ASAAS Brand Skills) ───────── */
 .asas-login-top-bar {
   position: fixed !important;
-  top: 16px !important;
-  left: 18px !important;
+  top: 18px !important;
+  left: 20px !important;
   z-index: 99999 !important;
   display: flex !important;
   align-items: center !important;
-  gap: 8px !important;
-  padding: 5px 8px !important;
-  border-radius: var(--radius-pill) !important;
+  padding: 4px !important;
+  border-radius: 50% !important;
   background: var(--glass-tint-strong) !important;
   -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
   backdrop-filter: blur(16px) saturate(160%) !important;
   border: 1px solid var(--glass-rim) !important;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.25), inset 0 1px 0 var(--glass-rim) !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.22), inset 0 1px 0 var(--glass-rim) !important;
   pointer-events: auto !important;
   transform: translateZ(0) !important;
 }
 
 :root[data-theme='dark'] .asas-login-top-bar {
-  background: rgba(26, 22, 21, 0.88) !important;
-  border-color: rgba(255, 244, 222, 0.16) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  background: rgba(26, 22, 21, 0.9) !important;
+  border-color: rgba(255, 244, 222, 0.18) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
 .asas-login-top-bar .asas-theme-btn {
-  width: 36px !important;
-  height: 36px !important;
+  width: 40px !important;
+  height: 40px !important;
   position: static !important;
-  top: auto !important;
-  left: auto !important;
   margin: 0 !important;
   flex-shrink: 0 !important;
   border-radius: 50% !important;
   border: 1px solid rgba(186, 149, 85, 0.35) !important;
   background: rgba(255, 255, 255, 0.08) !important;
   color: var(--accent) !important;
-  display: grid !important;
-  place-items: center !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   cursor: pointer !important;
-  transition: all 0.25s var(--ease-spring) !important;
+  transition: all 0.3s var(--ease-spring) !important;
 }
 
 .asas-login-top-bar .asas-theme-btn:hover {
   background: rgba(186, 149, 85, 0.22) !important;
   border-color: var(--brand-gold) !important;
-  transform: rotate(18deg) scale(1.06) !important;
+  transform: rotate(24deg) scale(1.08) !important;
+  box-shadow: 0 0 14px rgba(186, 149, 85, 0.35) !important;
 }
 
-.asas-direct-install-pill {
-  height: 36px !important;
-  padding: 0 14px !important;
-  border-radius: var(--radius-pill) !important;
-  background: linear-gradient(135deg, rgba(186, 149, 85, 0.22) 0%, rgba(214, 196, 168, 0.1) 100%) !important;
-  border: 1px solid rgba(186, 149, 85, 0.45) !important;
-  color: var(--text) !important;
-  font-family: var(--font) !important;
-  font-weight: 700 !important;
-  font-size: 13px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  cursor: pointer !important;
-  transition: all 0.25s var(--ease-spring) !important;
-  text-decoration: none !important;
-  white-space: nowrap !important;
-  box-shadow: 0 2px 10px -2px rgba(186, 149, 85, 0.25) !important;
-}
-
-.asas-direct-install-pill:hover {
-  background: linear-gradient(135deg, rgba(186, 149, 85, 0.35) 0%, rgba(214, 196, 168, 0.2) 100%) !important;
-  border-color: var(--brand-gold) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 6px 18px -2px rgba(186, 149, 85, 0.4) !important;
-  color: var(--accent) !important;
-}
-
-.asas-direct-install-pill:active {
-  transform: scale(0.97) !important;
-}
-
-.asas-install-pulse-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--paid);
-  box-shadow: 0 0 8px var(--paid);
-  display: inline-block;
-  flex-shrink: 0;
-  animation: asasPulseInstall 2s infinite;
-}
-
-@keyframes asasPulseInstall {
-  0% { transform: scale(0.9); opacity: 0.8; }
-  50% { transform: scale(1.3); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0.8; }
-}
-
-.asas-hero-direct-install-btn {
-  height: 44px;
-  padding: 0 20px;
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.12);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  backdrop-filter: blur(12px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  color: #ffffff;
-  font-family: var(--font);
-  font-weight: 700;
-  font-size: 14px;
-  display: inline-flex;
+.asas-theme-btn-inner {
+  display: flex;
   align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  transition: all 0.25s var(--ease-spring);
+  justify-content: center;
 }
 
-.asas-hero-direct-install-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.55);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.asas-hero-direct-install-btn:active {
-  transform: scale(0.98);
+.asas-theme-btn-inner svg {
+  width: 19px;
+  height: 19px;
+  color: var(--accent);
+  transition: color 0.25s ease;
 }
 
 @media (max-width: 640px) {
   .asas-login-top-bar {
-    top: max(10px, env(safe-area-inset-top, 10px)) !important;
-    left: max(10px, env(safe-area-inset-left, 10px)) !important;
-    padding: 4px 6px !important;
-    gap: 6px !important;
+    top: max(12px, env(safe-area-inset-top, 12px)) !important;
+    left: max(12px, env(safe-area-inset-left, 12px)) !important;
+    padding: 3px !important;
   }
   .asas-login-top-bar .asas-theme-btn {
-    width: 32px !important;
-    height: 32px !important;
+    width: 36px !important;
+    height: 36px !important;
   }
-  .asas-direct-install-pill {
-    height: 32px !important;
-    padding: 0 10px !important;
-    font-size: 11.5px !important;
-    gap: 6px !important;
+  .asas-theme-btn-inner svg {
+    width: 17px !important;
+    height: 17px !important;
   }
 }
