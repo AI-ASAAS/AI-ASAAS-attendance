@@ -4197,6 +4197,7 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
       <div className="asas-login">
         <div className="asas-fixed-watermark" aria-hidden="true" />
+        <div className="asas-luminous-halo" aria-hidden="true" />
         <section className="asas-login-hero">
           <Brand />
           <div>
