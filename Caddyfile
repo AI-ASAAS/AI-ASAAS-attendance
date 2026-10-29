@@ -1,5 +1,9 @@
-https://attendance.ai-asaas.com:9443, https://attendance.ai-asaas.com:8443 {
-	tls /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/attendance.ai-asaas.com/attendance.ai-asaas.com.crt /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/attendance.ai-asaas.com/attendance.ai-asaas.com.key
+attendance.ai-asaas.com {
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
 	encode zstd gzip
 	reverse_proxy host.docker.internal:7443 host.docker.internal:7777 host.docker.internal:3001 {
 		lb_policy first
@@ -8,8 +12,12 @@ https://attendance.ai-asaas.com:9443, https://attendance.ai-asaas.com:8443 {
 	}
 }
 
-https://forms.ai-asaas.com:9443, https://forms.ai-asaas.com:8443 {
-	tls /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/forms.ai-asaas.com/forms.ai-asaas.com.crt /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/forms.ai-asaas.com/forms.ai-asaas.com.key
+forms.ai-asaas.com {
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
 	encode zstd gzip
 	reverse_proxy asaas-forms:80
 }

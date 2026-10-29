@@ -129,8 +129,7 @@ Write-Host ""
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host "   ALL ASAS SERVICES ARE LIVE & SECURED!                " -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
-Write-Host " Official URL:   https://attendance.ai-asaas.com:9443" -ForegroundColor Yellow
-Write-Host " Fallback URL:   https://attendance.ai-asaas.com:8443" -ForegroundColor Cyan
+Write-Host " Official URL:   https://attendance.ai-asaas.com" -ForegroundColor Yellow
 Write-Host " Local URL:      http://localhost:$chosenPort" -ForegroundColor White
 Write-Host " Backend API:    http://127.0.0.1:6500" -ForegroundColor Gray
 Write-Host " Database:       PostgreSQL on Port 6543 (17 Accounts)" -ForegroundColor Gray
@@ -138,4 +137,4 @@ Write-Host " Active Port:    $chosenPort (with auto-failover)" -ForegroundColor 
 Write-Host "========================================================" -ForegroundColor Green
 
 # Open browser to official URL
-Start-Process "https://attendance.ai-asaas.com:9443"
+Start-Process "https://attendance.ai-asaas.com"
