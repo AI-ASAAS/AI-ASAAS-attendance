@@ -204,7 +204,7 @@ function Ensure-Frontend {
 }
 
 function Ensure-DockerAndCaddy {
-    $caddyPort = 443
+    $caddyPort = 8443
     if (Test-TcpPort -Port $caddyPort) {
         return $true
     }
@@ -247,14 +247,15 @@ function Run-HealthCycle {
 
     $allHealthy = $dbOk -and $beOk -and ($null -ne $fePort) -and $cadOk
     if ($allHealthy) {
-        # Check domain end-to-end
+        # Check domain end-to-end (local or via Cloudflare proxy)
         try {
             $domRes = Invoke-WebRequest -Uri "https://attendance.ai-asaas.com/" -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue
             if ($domRes -and $domRes.StatusCode -eq 200) {
-                # Everything 100% fine
                 return $true
             }
         } catch {}
+        # Port 8443 is healthy
+        return $true
     }
     return $allHealthy
 }
