@@ -1,11 +1,5 @@
-'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import AsasApp from '@/components/asas/AsasApp';
 
 export default function Home() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace('/asas');
-  }, [router]);
-  return null;
+  return <AsasApp />;
 }

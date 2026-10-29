@@ -5,7 +5,11 @@ attendance.ai-asaas.com {
 		}
 	}
 	encode zstd gzip
-	reverse_proxy frontend:3000
+	reverse_proxy host.docker.internal:7443 host.docker.internal:7777 host.docker.internal:3001 frontend:3000 {
+		lb_policy first
+		lb_try_duration 3s
+		fail_duration 5s
+	}
 }
 
 forms.ai-asaas.com {

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getDeviceId, getDeviceName } from '../../utils/device';
@@ -400,7 +400,7 @@ function InstallAppModal({ onClose, installPrompt }) {
     return 'android';
   });
 
-  const appUrl = typeof window !== 'undefined' ? `${window.location.origin}/asas` : 'https://attendance.ai-asaas.com/asas';
+  const appUrl = typeof window !== 'undefined' ? `${window.location.origin}` : 'https://attendance.ai-asaas.com';
 
   return (
     <div className="asas-modal-backdrop" onClick={onClose}>
@@ -553,12 +553,12 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
 
   const fixUrl = (u) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://attendance.ai-asaas.com';
-    if (!u) return `${origin}/asas`;
+    if (!u) return `${origin}`;
     try {
       const p = new URL(u, origin);
-      return `${origin}/asas${p.search}${p.hash}`;
+      return `${origin}${p.search}${p.hash}`;
     } catch (e) {
-      return `${origin}/asas`;
+      return `${origin}`;
     }
   };
 
@@ -3152,12 +3152,12 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                     {(() => {
                       const fixUrl = (u) => {
                         const origin = typeof window !== 'undefined' ? window.location.origin : 'https://attendance.ai-asaas.com';
-                        if (!u) return `${origin}/asas`;
+                        if (!u) return `${origin}`;
                         try {
                           const p = new URL(u, origin);
-                          return `${origin}/asas${p.search}${p.hash}`;
+                          return `${origin}${p.search}${p.hash}`;
                         } catch (e) {
-                          return `${origin}/asas`;
+                          return `${origin}`;
                         }
                       };
                       const enterUrl = fixUrl(qr.enter?.url || qr.url);
