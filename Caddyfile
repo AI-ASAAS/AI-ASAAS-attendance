@@ -1,9 +1,5 @@
-attendance.ai-asaas.com {
-	tls {
-		issuer acme {
-			disable_http_challenge
-		}
-	}
+attendance.ai-asaas.com, attendance.ai-asaas.com:5000, attendance.ai-asaas.com:5080 {
+	tls /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/attendance.ai-asaas.com/attendance.ai-asaas.com.crt /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/attendance.ai-asaas.com/attendance.ai-asaas.com.key
 	encode zstd gzip
 	reverse_proxy host.docker.internal:7443 host.docker.internal:7777 host.docker.internal:3001 {
 		lb_policy first

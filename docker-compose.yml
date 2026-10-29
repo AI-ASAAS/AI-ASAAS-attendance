@@ -66,6 +66,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "5000:5000"
+      - "5080:5080"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - asas_caddy_data:/data

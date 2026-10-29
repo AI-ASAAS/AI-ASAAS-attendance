@@ -204,11 +204,20 @@ function Ensure-Frontend {
 }
 
 function Ensure-DockerAndCaddy {
-    if (Test-TcpPort -Port 443) {
+    $caddyPorts = @(443, 5000, 5080)
+    $allPortsUp = $true
+    foreach ($cp in $caddyPorts) {
+        if (-not (Test-TcpPort -Port $cp)) {
+            $allPortsUp = $false
+            break
+        }
+    }
+
+    if ($allPortsUp) {
         return $true
     }
 
-    Log-Message "Caddy Reverse Proxy (Port 443) is DOWN. Checking Docker..." "WARN"
+    Log-Message "Caddy Gateway (Ports 443, 5000, 5080) is partially or fully DOWN. Checking Docker..." "WARN"
 
     # Check Docker Desktop
     $dockerProc = Get-Process "Docker Desktop" -ErrorAction SilentlyContinue
@@ -229,12 +238,12 @@ function Ensure-DockerAndCaddy {
     & docker compose up -d caddy | Out-Null
     Start-Sleep -Seconds 3
 
-    if (Test-TcpPort -Port 443) {
-        Log-Message "Caddy Reverse Proxy recovered successfully on port 443!" "SUCCESS"
+    if (Test-TcpPort -Port 5000 -or Test-TcpPort -Port 5080 -or Test-TcpPort -Port 443) {
+        Log-Message "Caddy Gateway recovered successfully on public ports (443, 5000, 5080)!" "SUCCESS"
         return $true
     }
 
-    Log-Message "Failed to recover Caddy Reverse Proxy" "ERROR"
+    Log-Message "Failed to recover Caddy Gateway" "ERROR"
     return $false
 }
 

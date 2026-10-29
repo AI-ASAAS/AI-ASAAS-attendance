@@ -130,6 +130,8 @@ Write-Host "========================================================" -Foregroun
 Write-Host "   ALL ASAS SERVICES ARE LIVE & SECURED!                " -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host " Official URL:   https://attendance.ai-asaas.com" -ForegroundColor Yellow
+Write-Host " Port 5000:      https://attendance.ai-asaas.com:5000" -ForegroundColor Cyan
+Write-Host " Port 5080:      https://attendance.ai-asaas.com:5080" -ForegroundColor Cyan
 Write-Host " Local URL:      http://localhost:$chosenPort" -ForegroundColor White
 Write-Host " Backend API:    http://127.0.0.1:6500" -ForegroundColor Gray
 Write-Host " Database:       PostgreSQL on Port 6543 (17 Accounts)" -ForegroundColor Gray
