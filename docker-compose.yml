@@ -69,16 +69,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - asas_caddy_data:/data
       - asas_caddy_config:/config
-    depends_on:
-      - frontend
-
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: asas-tunnel
-    restart: always
-    command: tunnel --url http://frontend:3000
-    depends_on:
-      - frontend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   asas_pgdata:

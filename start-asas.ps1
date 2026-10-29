@@ -123,66 +123,18 @@ if (Test-Path $watchdogBat) {
 }
 
 # -----------------------------------------------------------------------------
-# 4. Cloudflare Remote Tunnel targeting the chosen port
+# 4. Status Summary
 # -----------------------------------------------------------------------------
-$cfExe = Join-Path $root ".local\cloudflared.exe"
-$tunnelLog = Join-Path $root ".local\tunnel.log"
-$urlFile = Join-Path $root "active-url.txt"
-
-$cfProcess = Get-Process -Name "cloudflared" -ErrorAction SilentlyContinue
-$needRestartTunnel = (-not $cfProcess)
-
-if ($cfProcess -and (Test-Path $tunnelLog)) {
-    # Check if existing tunnel was routed to a different port
-    $prevPortMatch = Select-String -Path $tunnelLog -Pattern "http://localhost:(\d+)" | Select-Object -Last 1
-    if ($prevPortMatch -and $prevPortMatch.Matches.Groups[1].Value -ne "$chosenPort") {
-        Write-Host "[4/4] Existing tunnel target mismatch, adjusting to port $chosenPort..." -ForegroundColor Yellow
-        Stop-Process -Name "cloudflared" -Force -ErrorAction SilentlyContinue
-        $needRestartTunnel = $true
-    }
-}
-
-if ($needRestartTunnel -and (Test-Path $cfExe)) {
-    Write-Host "[4/4] Starting Cloudflare Remote Tunnel for port $chosenPort..." -ForegroundColor Cyan
-    if (Test-Path $tunnelLog) { Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue }
-    Start-Process -FilePath $cfExe -ArgumentList "tunnel --url http://localhost:$chosenPort --logfile `"$tunnelLog`"" -WindowStyle Minimized
-    
-    # Wait up to 10 seconds to capture the public URL
-    for ($i = 0; $i -lt 10; $i++) {
-        Start-Sleep -Seconds 1
-        if (Test-Path $tunnelLog) {
-            $found = Get-Content $tunnelLog -ErrorAction SilentlyContinue | Select-String "https://[a-zA-Z0-9\-]+\.trycloudflare\.com"
-            if ($found) { break }
-        }
-    }
-} else {
-    Write-Host "[4/4] Cloudflare Tunnel is already active and routing to port $chosenPort." -ForegroundColor Green
-}
-
-# -----------------------------------------------------------------------------
-# Extract & Display Public and Local URLs
-# -----------------------------------------------------------------------------
-$publicUrl = ""
-if (Test-Path $tunnelLog) {
-    $match = Get-Content $tunnelLog -ErrorAction SilentlyContinue | Select-String "https://[a-zA-Z0-9\-]+\.trycloudflare\.com" | Select-Object -Last 1
-    if ($match -and $match.Line -match "(https://[a-zA-Z0-9\-]+\.trycloudflare\.com)") {
-        $publicUrl = "$($matches[1])"
-        Set-Content -Path $urlFile -Value $publicUrl -Encoding UTF8
-    }
-}
-
 Write-Host ""
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host "   ALL ASAS SERVICES ARE LIVE & SECURED!                " -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
-Write-Host " Official URL:   https://attendance.ai-asaas.com" -ForegroundColor Yellow
+Write-Host " Official URL:   https://attendance.ai-asaas.com (Port 443)" -ForegroundColor Yellow
 Write-Host " Local URL:      http://localhost:$chosenPort" -ForegroundColor White
-if ($publicUrl) {
-    Write-Host " Public Tunnel:  $publicUrl" -ForegroundColor Cyan
-    Write-Host " (Saved to file: active-url.txt)" -ForegroundColor Gray
-}
+Write-Host " Backend API:    http://127.0.0.1:6500" -ForegroundColor Gray
+Write-Host " Database:       PostgreSQL on Port 6543 (17 Accounts)" -ForegroundColor Gray
 Write-Host " Active Port:    $chosenPort (with auto-failover)" -ForegroundColor Cyan
 Write-Host "========================================================" -ForegroundColor Green
 
-# Open browser to local dashboard
-Start-Process "http://localhost:$chosenPort"
+# Open browser to official URL
+Start-Process "https://attendance.ai-asaas.com"
