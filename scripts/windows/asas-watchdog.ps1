@@ -204,7 +204,7 @@ function Ensure-Frontend {
 }
 
 function Ensure-DockerAndCaddy {
-    if ((Test-TcpPort -Port 8443) -or (Test-TcpPort -Port 443)) {
+    if ((Test-TcpPort -Port 443) -or (Test-TcpPort -Port 9443) -or (Test-TcpPort -Port 8443)) {
         return $true
     }
 
@@ -229,12 +229,12 @@ function Ensure-DockerAndCaddy {
     & docker compose up -d caddy | Out-Null
     Start-Sleep -Seconds 3
 
-    if (Test-TcpPort -Port $caddyPort) {
-        Log-Message "Caddy Reverse Proxy on port $caddyPort recovered successfully!" "SUCCESS"
+    if ((Test-TcpPort -Port 443) -or (Test-TcpPort -Port 9443) -or (Test-TcpPort -Port 8443)) {
+        Log-Message "Caddy Reverse Proxy recovered successfully!" "SUCCESS"
         return $true
     }
 
-    Log-Message "Failed to recover Caddy on port $caddyPort" "ERROR"
+    Log-Message "Failed to recover Caddy Reverse Proxy" "ERROR"
     return $false
 }
 
