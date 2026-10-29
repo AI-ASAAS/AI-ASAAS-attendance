@@ -204,12 +204,11 @@ function Ensure-Frontend {
 }
 
 function Ensure-DockerAndCaddy {
-    $caddyPort = 8443
-    if (Test-TcpPort -Port $caddyPort) {
+    if ((Test-TcpPort -Port 8443) -or (Test-TcpPort -Port 443)) {
         return $true
     }
 
-    Log-Message "Caddy Reverse Proxy (Port $caddyPort) is DOWN. Checking Docker..." "WARN"
+    Log-Message "Caddy Reverse Proxy is DOWN. Checking Docker..." "WARN"
 
     # Check Docker Desktop
     $dockerProc = Get-Process "Docker Desktop" -ErrorAction SilentlyContinue
