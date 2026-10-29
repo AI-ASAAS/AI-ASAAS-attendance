@@ -24,15 +24,19 @@ function isPortOpen(port, host = '127.0.0.1') {
 
 async function ensureLocalDatabase() {
   const dbUrl = process.env.DATABASE_URL || '';
-  if (!dbUrl.includes('5433') && !dbUrl.includes('localhost') && !dbUrl.includes('127.0.0.1')) {
-    return;
-  }
+  const portMatch = dbUrl.match(/:(\d+)\//);
+  const targetPort = portMatch ? parseInt(portMatch[1], 10) : 6543;
 
-  const isOpen = await isPortOpen(5433);
+  const isOpen = await isPortOpen(targetPort);
   if (isOpen) return;
 
-  const pgDataPath = path.resolve(__dirname, '../../../database/pgdata');
-  if (!fs.existsSync(pgDataPath)) return;
+  const candidatePaths = [
+    'C:\\Users\\Anoos.alaghbari\\asas_pgdata',
+    path.resolve(__dirname, '../../../database/pgdata')
+  ];
+
+  let pgDataPath = candidatePaths.find(p => fs.existsSync(p));
+  if (!pgDataPath) return;
 
   // Clean stale lock file if postgres was abruptly stopped
   const pidFile = path.join(pgDataPath, 'postmaster.pid');
@@ -53,19 +57,19 @@ async function ensureLocalDatabase() {
     if (shortPath) safeDataPath = shortPath;
   } catch (e) {}
 
-  console.log(`[Database Auto-Start] Starting in-project PostgreSQL from: ${safeDataPath}`);
-  const child = spawn(pgExe, ['-D', safeDataPath, '-p', '5433'], {
+  console.log(`[Database Auto-Start] Starting PostgreSQL on port ${targetPort} from: ${safeDataPath}`);
+  const child = spawn(pgExe, ['-D', safeDataPath, '-p', String(targetPort)], {
     detached: true,
     stdio: 'ignore',
     windowsHide: true
   });
   child.unref();
 
-  // Wait up to 5 seconds for PostgreSQL to become ready
-  for (let i = 0; i < 15; i++) {
-    await new Promise((r) => setTimeout(r, 350));
-    if (await isPortOpen(5433)) {
-      console.log('✅ In-project PostgreSQL is ready on port 5433');
+  // Wait up to 10 seconds for PostgreSQL to become ready
+  for (let i = 0; i < 25; i++) {
+    await new Promise((r) => setTimeout(r, 400));
+    if (await isPortOpen(targetPort)) {
+      console.log(`✅ PostgreSQL is ready on port ${targetPort}`);
       return;
     }
   }

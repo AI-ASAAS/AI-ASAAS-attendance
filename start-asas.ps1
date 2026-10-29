@@ -11,14 +11,14 @@ Write-Host "========================================================" -Foregroun
 # -----------------------------------------------------------------------------
 function Get-AvailablePort {
     param(
-        [int[]]$CandidatePorts = @(7443, 7777, 3001, 3000)
+        [int[]]$CandidatePorts = @(7443, 7777, 3001)
     )
     foreach ($port in $CandidatePorts) {
         # Check if already running our ASAS app
         $listenConn = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue
         if ($listenConn) {
             try {
-                $res = Invoke-WebRequest -Uri "http://localhost:$port/asas" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
+                $res = Invoke-WebRequest -Uri "http://localhost:$port/" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
                 if ($res -and $res.StatusCode -eq 200) {
                     Write-Host "[+] Port $port is active and healthy (reusing existing session)." -ForegroundColor Green
                     return $port
@@ -47,46 +47,56 @@ function Get-AvailablePort {
             continue
         }
     }
-    return 3000
+    return 7443
 }
 
 # -----------------------------------------------------------------------------
-# 1. PostgreSQL on port 5433
+# 1. PostgreSQL on port 6543
 # -----------------------------------------------------------------------------
-$pgRunning = Get-NetTCPConnection -State Listen -LocalPort 5433 -ErrorAction SilentlyContinue
+$pgRunning = Get-NetTCPConnection -State Listen -LocalPort 6543 -ErrorAction SilentlyContinue
 if (-not $pgRunning) {
-    Write-Host "[1/4] Starting PostgreSQL on port 5433..." -ForegroundColor Cyan
+    Write-Host "[1/4] Starting PostgreSQL on port 6543..." -ForegroundColor Cyan
     $pgData = "C:\Users\Anoos.alaghbari\asas_pgdata"
     $pidFile = Join-Path $pgData "postmaster.pid"
     if (Test-Path $pidFile) { Remove-Item $pidFile -Force -ErrorAction SilentlyContinue }
     
-    $pgExe = "C:\Program Files\PostgreSQL\18\bin\postgres.exe"
-    if (-not (Test-Path $pgExe)) { $pgExe = "C:\Program Files\PostgreSQL\17\bin\postgres.exe" }
+    $pgCtl = "C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe"
+    if (-not (Test-Path $pgCtl)) { $pgCtl = "C:\Program Files\PostgreSQL\17\bin\pg_ctl.exe" }
     
-    Start-Process -FilePath $pgExe -ArgumentList "-D `"$pgData`" -p 5433" -WindowStyle Hidden
+    if (Test-Path $pgCtl) {
+        $serverLog = Join-Path $pgData "server.log"
+        & $pgCtl start -D "$pgData" -l "$serverLog" -s -w -t 20 | Out-Null
+    } else {
+        $pgExe = "C:\Program Files\PostgreSQL\18\bin\postgres.exe"
+        Start-Process -FilePath $pgExe -ArgumentList "-D `"$pgData`" -p 6543" -WindowStyle Hidden
+    }
     Start-Sleep -Seconds 2
 } else {
-    Write-Host "[1/4] PostgreSQL is already active on port 5433." -ForegroundColor Green
+    Write-Host "[1/4] PostgreSQL is already active on port 6543." -ForegroundColor Green
 }
 
 # -----------------------------------------------------------------------------
-# 2. Backend API on port 5000
+# 2. Backend API on port 6500
 # -----------------------------------------------------------------------------
-$backendRunning = Get-NetTCPConnection -State Listen -LocalPort 5000 -ErrorAction SilentlyContinue
+$backendRunning = Get-NetTCPConnection -State Listen -LocalPort 6500 -ErrorAction SilentlyContinue
 if (-not $backendRunning) {
-    Write-Host "[2/4] Starting Backend API on port 5000..." -ForegroundColor Cyan
+    Write-Host "[2/4] Starting Backend API on port 6500..." -ForegroundColor Cyan
     $backendDir = Join-Path $root "backend"
-    Start-Process -FilePath "node" -ArgumentList "src/asas-server.js" -WorkingDirectory $backendDir -WindowStyle Hidden
+    $logDir = Join-Path $root "logs"
+    if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+    $bOut = Join-Path $logDir "backend.log"
+    $bErr = Join-Path $logDir "backend_error.log"
+    Start-Process -FilePath "node" -ArgumentList "src/asas-server.js" -WorkingDirectory $backendDir -WindowStyle Hidden -RedirectStandardOutput $bOut -RedirectStandardError $bErr
     Start-Sleep -Seconds 2
 } else {
-    Write-Host "[2/4] Backend is already active on port 5000." -ForegroundColor Green
+    Write-Host "[2/4] Backend is already active on port 6500." -ForegroundColor Green
 }
 
 # -----------------------------------------------------------------------------
 # 3. Frontend Web App with Dynamic Port Selection & Failover
 # -----------------------------------------------------------------------------
-Write-Host "[3/4] Probing candidate ports [7443, 7777, 3001, 3000] for Frontend..." -ForegroundColor Cyan
-$chosenPort = Get-AvailablePort -CandidatePorts @(7443, 7777, 3001, 3000)
+Write-Host "[3/4] Probing candidate ports [7443, 7777, 3001] for Frontend..." -ForegroundColor Cyan
+$chosenPort = Get-AvailablePort -CandidatePorts @(7443, 7777, 3001)
 
 $frontendDir = Join-Path $root "frontend"
 $isFrontendRunning = Get-NetTCPConnection -State Listen -LocalPort $chosenPort -ErrorAction SilentlyContinue
@@ -102,7 +112,15 @@ if (-not $isFrontendRunning) {
         if ($check) { break }
     }
 }
-Write-Host "    -> Frontend is UP on port $chosenPort (http://localhost:$chosenPort/asas)" -ForegroundColor Green
+Write-Host "    -> Frontend is UP on port $chosenPort (http://localhost:$chosenPort)" -ForegroundColor Green
+
+# -----------------------------------------------------------------------------
+# 4. 24/7 Watchdog Service Initialization
+# -----------------------------------------------------------------------------
+$watchdogBat = Join-Path $root "scripts\windows\run-watchdog-silent.bat"
+if (Test-Path $watchdogBat) {
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$watchdogBat`"" -WindowStyle Hidden
+}
 
 # -----------------------------------------------------------------------------
 # 4. Cloudflare Remote Tunnel targeting the chosen port

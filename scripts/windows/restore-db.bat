@@ -42,6 +42,7 @@ if /i not "%CONFIRM%"=="YES" (
 echo.
 echo [معلومات] جارٍ استعادة البيانات من %BACKUP_FILE% ...
 
+set "PATH=C:\Program Files\PostgreSQL\18\bin;C:\Program Files\PostgreSQL\17\bin;C:\Program Files\PostgreSQL\16\bin;%PATH%"
 where pg_restore >nul 2>nul
 if %errorlevel% equ 0 (
     pg_restore --clean --if-exists -d "%DB_URL%" "%BACKUP_FILE%"

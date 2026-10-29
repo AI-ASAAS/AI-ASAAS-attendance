@@ -26,6 +26,7 @@ if "%DB_URL%"=="" (
     set /p DB_URL="يرجى إدخال عنوان اتصال PostgreSQL (DATABASE_URL): "
 )
 
+set "PATH=C:\Program Files\PostgreSQL\18\bin;C:\Program Files\PostgreSQL\17\bin;C:\Program Files\PostgreSQL\16\bin;%PATH%"
 where pg_dump >nul 2>nul
 if %errorlevel% neq 0 (
     echo [تنبيه] أمر pg_dump غير متاح مباشرة في PATH.

@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 65001 >nul
-title تشغيل واجهة أساس - Next.js Frontend
+title تشغيل واجهة أساس - Next.js Frontend (Port 7443)
 
 echo ========================================================
 echo         نظام أساس للحضور والانصراف - لوحة التحكم
@@ -16,19 +16,12 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-if not exist "node_modules" (
-    echo [معلومات] جارٍ تثبيت حزم الواجهة الأمامية...
-    call npm install
-)
+set "PORT=%1"
+if "%PORT%"=="" set "PORT=7443"
 
-if not exist ".next" (
-    echo [معلومات] جارٍ بناء ملفات الإنتاج لضمان أقصى سرعة...
-    call npm run build
-)
-
-echo [معلومات] جارٍ تشغيل لوحة التحكم بالنمط السريع على المنفذ 3000...
-echo يمكنك فتح الرابط التالي في المتصفح: http://localhost:3000
-npm start
+echo [معلومات] جارٍ تشغيل لوحة التحكم بالنمط السريع على المنفذ %PORT%...
+echo يمكنك فتح الرابط التالي في المتصفح: http://localhost:%PORT%
+call "%~dp0..\..\frontend\run-frontend.bat" %PORT%
 if %errorlevel% neq 0 (
     echo [خطأ] توقفت واجهة المستخدم عن العمل.
     pause
