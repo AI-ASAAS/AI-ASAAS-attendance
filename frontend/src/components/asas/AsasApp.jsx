@@ -1873,8 +1873,9 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                     </button>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div className="asas-mark" />
+                <div className="asas-hero-banner-visual">
+                  <img src="/brand/mascot/confident.png" alt="روبوت أساس التنفيذي" className="asas-dashboard-mascot-img" />
+                  <div className="asas-mark asas-dashboard-hero-mark" />
                 </div>
               </Glass>
 
@@ -4202,11 +4203,31 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
         <div className="asas-fixed-watermark" aria-hidden="true" />
         <div className="asas-luminous-halo" aria-hidden="true" />
         <section className="asas-login-hero">
-          <Brand />
+          <div className="asas-hero-top-row">
+            <Brand />
+            <div className="asas-hero-mascot-pill">
+              <img src="/brand/mascot/face_welcome.png" alt="مساعد أساس" className="asas-mascot-face-mini" />
+              <span>نظام سيادي ذكي</span>
+            </div>
+          </div>
           <div>
             <p className="asas-eyebrow">منظومة الحضور والعمل الذكية</p>
             <h1><Swash>حضور مؤكد</Swash><br /><span>وفريق متصل دائماً.</span></h1>
             <p>مساحة عمل تنفيذية لإدارة الحضور والانصراف بدقة وموثوقية عالية، متصلة بسجلات الأجهزة وقواعد البيانات السيادية.</p>
+
+            <div className="asas-hero-mascot-showcase">
+              <div className="asas-mascot-img-wrap">
+                <img src="/brand/mascot/welcome.png" alt="روبوت أساس الترحيبي" className="asas-mascot-img" />
+              </div>
+              <div className="asas-mascot-speech">
+                <div className="asas-mascot-speech-badge">
+                  <span className="asas-pulse-status-dot" style={{ color: 'var(--paid)' }} />
+                  <span>المساعد التنفيذي الذكي</span>
+                </div>
+                <p>«<Stretch before="أهْـ" after="ـلاً" length={2} /> بك في أساس! سجل حضورك بلمسة واحدة أو امسح الباركود لتوثيق فوري.»</p>
+              </div>
+            </div>
+
             <div className="asas-hero-features-list">
               <div className="asas-hero-feature-item">
                 <span className="asas-hero-feature-icon"><Icon name="shieldCheck" /></span>
@@ -4232,6 +4253,10 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
           <div className="asas-login-box">
             <div className="asas-login-mobile-brand">
               <Brand />
+              <div className="asas-mobile-mascot-badge">
+                <img src="/brand/mascot/face_welcome.png" alt="روبوت أساس" className="asas-mascot-face-mini" />
+                <span>مرحباً بك في منظومة أساس</span>
+              </div>
             </div>
             <p className="asas-eyebrow">بوابة الدخول الموحدة</p>
             <h2>{authMode === 'login' ? 'تسجيل الدخول إلى أساس' : 'طلب تسجيل حساب موظف'}</h2>
@@ -5225,9 +5250,13 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       </Glass>
 
       {/* Profile Card */}
-      <Glass className="asas-employee-profile" style={{ padding: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <UserAvatar user={user} size="lg" onClick={onOpenProfile} />
+      <Glass className="asas-employee-profile" style={{ padding: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, position: 'relative', overflow: 'hidden' }}>
+        <div className="asas-card-watermark" aria-hidden="true" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', zIndex: 1 }}>
+          <div className="asas-employee-avatar-wrap">
+            <UserAvatar user={user} size="lg" onClick={onOpenProfile} />
+            {isInside && <span className="asas-avatar-status-beacon" title="على رأس العمل" />}
+          </div>
           <div>
             <h1 style={{ fontSize: 22, margin: '0 0 4px', color: 'var(--text)' }}>
               <Stretch before="أهْـ" after="ـلاً" length={2} />، {user.name}
