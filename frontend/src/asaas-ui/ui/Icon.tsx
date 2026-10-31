@@ -300,6 +300,12 @@ const paths = {
       <path d="M22 12h-4M6 12H2M12 6V2M12 22v-4" />
     </>
   ),
+  award: (
+    <>
+      <circle cx="12" cy="8" r="6" />
+      <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof paths;

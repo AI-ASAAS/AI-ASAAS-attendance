@@ -1748,7 +1748,9 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               : 0;
             return (
               <button className={tab === key ? 'active' : ''} key={key} onClick={() => { setTab(key); setOpen(false); setData(null); setNotice(''); setSearch(''); setAccountFilter('all'); setRecordFilter('all'); }}>
-                <Icon name={iconName} />
+                <span className="asas-nav-icon">
+                  <Icon name={iconName} />
+                </span>
                 <span>{label}</span>
                 {key === 'announcements' && announcements.length > 0 && (
                   <span className="asas-badge urgent" style={{ marginRight: 'auto', fontSize: 10, padding: '1px 6px' }}>{announcements.length}</span>
