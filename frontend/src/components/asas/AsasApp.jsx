@@ -1873,9 +1873,8 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                     </button>
                   </div>
                 </div>
-                <div className="asas-hero-banner-visual">
-                  <img src="/brand/mascot/confident.png" alt="روبوت أساس التنفيذي" className="asas-dashboard-mascot-img" />
-                  <div className="asas-mark asas-dashboard-hero-mark" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="asas-mark" />
                 </div>
               </Glass>
 
@@ -3428,35 +3427,6 @@ function AsasAppInner({ defaultAction = 'auto' }) {
         </main>
       </div>
 
-      {/* Floating Asas AI Assistant Robot */}
-      <AssistantWidget
-        user={{ id: String(user.id), displayName: user.name }}
-        title="مساعد أساس الذكي"
-        subtitle="استفسر عن مواعيد الحضور، النطاق الجغرافي، أو سياسات النظام"
-        suggestions={[
-          'كيف أسجل حضوري وانصرافي؟',
-          'ما هي ساعات الدوام الرسمية؟',
-          'كيف أغير صورة حسابي أو كلمة المرور؟',
-          'ما هو نطاق الموقع الجغرافي؟'
-        ]}
-        ask={async (messages) => {
-          const last = messages[messages.length - 1]?.content || '';
-          if (last.includes('حضور') || last.includes('انصراف')) {
-            return { reply: 'لتسجيل الحضور أو الانصراف: يمكنك الضغط على الزر الذكي المباشر في صفحتك، أو مسح رمز QR المعلق عند مدخل الفرع بكاميرا الجوال، مع تفعيل خدمة الموقع الجغرافي (GPS).' };
-          }
-          if (last.includes('دوام') || last.includes('ساعات')) {
-            return { reply: 'ساعات العمل الرسمية المعتمدة تبدأ من الساعة 08:00 صباحاً وحتى 04:00 عصراً، مع فترة سماح 15 دقيقة للتأخير الصباحي.' };
-          }
-          if (last.includes('كلمة') || last.includes('مرور') || last.includes('صورة') || last.includes('أفاتار')) {
-            return { reply: 'يمكنك تغيير صورة حسابك أو كلمة المرور بالضغط على صورتك الرمزية أو زر «الملف الشخصي والأمان» في أعلى الصفحة واختيار الأفاتار أو إدخال كلمة المرور الجديدة.' };
-          }
-          if (last.includes('موقع') || last.includes('نطاق') || last.includes('GPS')) {
-            return { reply: 'نطاق الموقع الجغرافي المعتمد هو 80 متراً لدخول النطاق و120 متراً لتأكيد الخروج، مع هامش خطأ أقصاه 30 متراً.' };
-          }
-          return { reply: 'أهلاً بك في نظام أساس! أنا هنا لمساعدتك في استفسارات الحضور والانصراف، وربط الأجهزة، ومواعيد المناوبات.' };
-        }}
-      />
-
       {/* MODALS */}
       {showAnnouncementsModal && (
         <AnnouncementsModal
@@ -4203,30 +4173,11 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
         <div className="asas-fixed-watermark" aria-hidden="true" />
         <div className="asas-luminous-halo" aria-hidden="true" />
         <section className="asas-login-hero">
-          <div className="asas-hero-top-row">
-            <Brand />
-            <div className="asas-hero-mascot-pill">
-              <img src="/brand/mascot/face_welcome.png" alt="مساعد أساس" className="asas-mascot-face-mini" />
-              <span>نظام سيادي ذكي</span>
-            </div>
-          </div>
+          <Brand />
           <div>
             <p className="asas-eyebrow">منظومة الحضور والعمل الذكية</p>
             <h1><Swash>حضور مؤكد</Swash><br /><span>وفريق متصل دائماً.</span></h1>
             <p>مساحة عمل تنفيذية لإدارة الحضور والانصراف بدقة وموثوقية عالية، متصلة بسجلات الأجهزة وقواعد البيانات السيادية.</p>
-
-            <div className="asas-hero-mascot-showcase">
-              <div className="asas-mascot-img-wrap">
-                <img src="/brand/mascot/welcome.png" alt="روبوت أساس الترحيبي" className="asas-mascot-img" />
-              </div>
-              <div className="asas-mascot-speech">
-                <div className="asas-mascot-speech-badge">
-                  <span className="asas-pulse-status-dot" style={{ color: 'var(--paid)' }} />
-                  <span>المساعد التنفيذي الذكي</span>
-                </div>
-                <p>«<Stretch before="أهْـ" after="ـلاً" length={2} /> بك في أساس! سجل حضورك بلمسة واحدة أو امسح الباركود لتوثيق فوري.»</p>
-              </div>
-            </div>
 
             <div className="asas-hero-features-list">
               <div className="asas-hero-feature-item">
@@ -4253,10 +4204,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
           <div className="asas-login-box">
             <div className="asas-login-mobile-brand">
               <Brand />
-              <div className="asas-mobile-mascot-badge">
-                <img src="/brand/mascot/face_welcome.png" alt="روبوت أساس" className="asas-mascot-face-mini" />
-                <span>مرحباً بك في منظومة أساس</span>
-              </div>
             </div>
             <p className="asas-eyebrow">بوابة الدخول الموحدة</p>
             <h2>{authMode === 'login' ? 'تسجيل الدخول إلى أساس' : 'طلب تسجيل حساب موظف'}</h2>
@@ -5799,32 +5746,6 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           <Records rows={(data?.records || []).map(r => ({ ...r, name: user.name, identifier: user.identifier }))} />
         </Card>
       )}
-
-      {/* Floating Asas AI Assistant Robot for Employee */}
-      <AssistantWidget
-        user={{ id: String(user.id), displayName: user.name }}
-        title="مساعد أساس الذكي"
-        subtitle="مساعدك الذكي للاستفسار عن الحضور والدوام والإجازات"
-        suggestions={[
-          'كيف أسجل حضوري الآن؟',
-          'كم باقي على نهاية الدوام؟',
-          'كيف أطلب إجازة أو عذر؟',
-          'ما هي سياسة التأخير المعتمدة؟'
-        ]}
-        ask={async (messages) => {
-          const last = messages[messages.length - 1]?.content || '';
-          if (last.includes('حضور') || last.includes('انصراف')) {
-            return { reply: 'لتسجيل حضورك: تأكد من تفعيل خدمة الموقع (GPS) بجوالك، ثم اضغط على زر "تسجيل الحضور الآن" الذهبي، أو امسح رمز الـ QR عند مدخل المقر.' };
-          }
-          if (last.includes('دوام') || last.includes('وقت') || last.includes('ساعات')) {
-            return { reply: 'ساعات العمل الرسمية تبدأ من 08:00 صباحاً وحتى 04:00 عصراً بتوقيت صنعاء، وفترة السماح المعتمدة 15 دقيقة.' };
-          }
-          if (last.includes('إجازة') || last.includes('عذر') || last.includes('طلب')) {
-            return { reply: 'يمكنك تقديم طلب إجازة مباشرة من نموذج "طلب إجازة / عذر" في أسفل هذه الصفحة وسيرسل فوراً للمراجعة الإدارية.' };
-          }
-          return { reply: 'مرحباً بك يا ' + user.name + '! أنا مساعد أساس الذكي، جاهز للإجابة عن أي استفسار يخص الدوام وسجلات حضورك.' };
-        }}
-      />
     </div>
   );
 }
