@@ -1780,12 +1780,18 @@ function AsasAppInner({ defaultAction = 'auto' }) {
 
       {/* Main Workspace */}
       <div className="asas-main">
-        <header className="asas-topbar">
+                <header className="asas-topbar">
           <div className="asas-topbar-title">
             <button className="asas-menu-btn" onClick={() => setOpen(!open)} aria-label="القائمة">
               <Icon name="grid" />
             </button>
-            <span><span className="asas-topbar-breadcrumb">لوحة القيادة / </span><strong><Swash>{title}</Swash></strong></span>
+            <div className="asas-topbar-icon-capsule" title={title}>
+              <Icon name={currentTabInfo?.[2] || 'dashboard'} />
+            </div>
+            <div className="asas-topbar-title-text">
+              <span className="asas-topbar-breadcrumb">لوحة القيادة / </span>
+              <strong><Swash>{title}</Swash></strong>
+            </div>
           </div>
 
           <div className="asas-topbar-controls">
@@ -1794,12 +1800,12 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               <span><span className="asas-clock-label">صنعاء: </span><strong>{liveTime || '—'}</strong></span>
             </div>
 
-            <button className="asas-bell-btn" onClick={() => setShowAnnouncementsModal(true)} aria-label="التعميمات">
+            <button className="asas-bell-btn" onClick={() => setShowAnnouncementsModal(true)} aria-label="التعميمات" title="التعميمات الرسمية">
               <Icon name="bell" />
               {announcements.length > 0 && <span className="asas-bell-badge">{announcements.length}</span>}
             </button>
 
-            <button className="asas-theme-btn" onClick={toggleTheme} aria-label="تبديل مظهر النظام">
+            <button className="asas-theme-btn" onClick={toggleTheme} aria-label="تبديل مظهر النظام" title={theme === 'dark' ? 'التحويل للمظهر الفاتح' : 'التحويل للمظهر الداكن'}>
               <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
             </button>
 
@@ -3426,6 +3432,65 @@ function AsasAppInner({ defaultAction = 'auto' }) {
             </form>
           )}
         </main>
+
+        {/* Mobile Fixed Floating Navigation Dock */}
+        <nav className="asas-mobile-dock" aria-label="التنقل السريع للهاتف">
+          <button
+            type="button"
+            className={`asas-mobile-dock-item ${tab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => { setTab('dashboard'); setOpen(false); setNotice(''); }}
+          >
+            <span className="asas-mobile-dock-icon"><Icon name="dashboard" /></span>
+            <span className="asas-mobile-dock-label">الرئيسية</span>
+          </button>
+
+          <button
+            type="button"
+            className={`asas-mobile-dock-item ${tab === 'records' ? 'active' : ''}`}
+            onClick={() => { setTab('records'); setOpen(false); setNotice(''); }}
+          >
+            <span className="asas-mobile-dock-icon"><Icon name="calendar" /></span>
+            <span className="asas-mobile-dock-label">الحضور</span>
+          </button>
+
+          {can('employees.read') && (
+            <button
+              type="button"
+              className={`asas-mobile-dock-item ${tab === 'accounts' ? 'active' : ''}`}
+              onClick={() => { setTab('accounts'); setOpen(false); setNotice(''); }}
+            >
+              <span className="asas-mobile-dock-icon">
+                <Icon name="users" />
+                {Array.isArray(data) && tab === 'accounts' && data.filter(a => !a.active).length > 0 && (
+                  <span className="asas-dock-badge-dot" />
+                )}
+              </span>
+              <span className="asas-mobile-dock-label">الموظفون</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className={`asas-mobile-dock-item ${tab === 'announcements' ? 'active' : ''}`}
+            onClick={() => { setTab('announcements'); setOpen(false); setNotice(''); }}
+          >
+            <span className="asas-mobile-dock-icon">
+              <Icon name="bell" />
+              {announcements.length > 0 && <span className="asas-dock-badge-dot" />}
+            </span>
+            <span className="asas-mobile-dock-label">التعميمات</span>
+          </button>
+
+          <button
+            type="button"
+            className="asas-mobile-dock-item"
+            onClick={() => setOpen(true)}
+            aria-label="المزيد من التبويبات"
+          >
+            <span className="asas-mobile-dock-icon"><Icon name="grid" /></span>
+            <span className="asas-mobile-dock-label">المزيد</span>
+          </button>
+        </nav>
       </div>
 
       {/* MODALS */}

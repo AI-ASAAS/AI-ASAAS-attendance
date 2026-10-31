@@ -399,48 +399,84 @@ html, body {
   position: relative;
 }
 
-/* Liquid-Glass Topbar */
+/* Sovereign Floating Fixed Topbar Capsule */
 .asas-topbar {
   position: sticky;
-  top: 0;
-  z-index: 20;
+  top: 14px;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 64px;
   min-height: 64px;
   max-height: 64px;
-  padding: 0 24px;
+  margin: 14px 24px 0;
+  padding: 0 20px;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.88);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  backdrop-filter: blur(20px) saturate(160%);
-  border-bottom: 1px solid rgba(186, 149, 85, 0.20);
-  box-shadow: 0 4px 20px -8px rgba(35, 31, 32, 0.08);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(246, 240, 230, 0.88) 50%, rgba(239, 233, 216, 0.92) 100%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+  border: 1px solid rgba(186, 149, 85, 0.28);
+  box-shadow: 0 10px 30px -8px rgba(35, 31, 32, 0.08), 0 2px 6px -1px rgba(186, 149, 85, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: all 0.25s var(--ease-spring);
   transform: translateZ(0);
 }
 
+/* Title Section & Icon Capsule */
 .asas-topbar-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--text-2);
+  gap: 12px;
+  min-width: 0;
+}
+
+.asas-topbar-icon-capsule {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%);
+  border: 1px solid rgba(255, 255, 255, 0.50);
+  color: #ffffff;
+  box-shadow: 0 4px 14px -2px rgba(186, 149, 85, 0.50), inset 0 1px 0 rgba(255, 255, 255, 0.60);
+  flex-shrink: 0;
+  transition: all 0.25s var(--ease-spring);
+}
+.asas-topbar-icon-capsule svg {
+  width: 19px;
+  height: 19px;
+  color: #ffffff !important;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+
+.asas-topbar-title-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .asas-topbar-breadcrumb {
+  font-size: 13.5px;
   color: var(--text-3);
   font-weight: 500;
 }
 .asas-topbar-title strong {
+  font-size: 15px;
   color: var(--text);
   font-weight: 700;
-  font-size: 15px;
+  letter-spacing: 0.2px;
 }
 
 .asas-topbar-controls {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 /* Symmetrical Capsules: Unified 38px height across all topbar controls */
@@ -551,9 +587,9 @@ html, body {
 
 /* Dark mode for topbar & controls */
 :root[data-theme='dark'] .asas-topbar {
-  background: rgba(28, 24, 25, 0.94) !important;
-  border-bottom: 1px solid rgba(186, 149, 85, 0.25) !important;
-  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.55) !important;
+  background: linear-gradient(135deg, rgba(38, 33, 34, 0.94) 0%, rgba(28, 24, 25, 0.96) 50%, rgba(22, 19, 20, 0.94) 100%) !important;
+  border: 1px solid rgba(186, 149, 85, 0.32) !important;
+  box-shadow: 0 14px 36px -10px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(186, 149, 85, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
 }
 
 :root[data-theme='dark'] .asas-clock-pill,
@@ -573,9 +609,122 @@ html, body {
   box-shadow: 0 4px 16px -2px rgba(186, 149, 85, 0.45) !important;
 }
 
+/* Mobile Bottom Fixed Floating Dock Styles */
+.asas-mobile-dock {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .asas-mobile-dock {
+    position: fixed;
+    bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    left: 12px;
+    right: 12px;
+    z-index: 50;
+    height: 62px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(246, 240, 230, 0.90) 50%, rgba(239, 233, 216, 0.94) 100%);
+    -webkit-backdrop-filter: blur(24px) saturate(170%);
+    backdrop-filter: blur(24px) saturate(170%);
+    border: 1px solid rgba(186, 149, 85, 0.30);
+    box-shadow: 0 12px 36px -6px rgba(35, 31, 32, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 6px;
+    margin: 0 auto;
+    max-width: 480px;
+  }
+
+  :root[data-theme='dark'] .asas-mobile-dock {
+    background: linear-gradient(135deg, rgba(38, 33, 34, 0.96) 0%, rgba(28, 24, 25, 0.98) 50%, rgba(22, 19, 20, 0.96) 100%);
+    border-color: rgba(186, 149, 85, 0.35);
+    box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .asas-mobile-dock-item {
+    border: 0;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 8px;
+    border-radius: 12px;
+    color: var(--text-3);
+    font-size: 10.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s var(--ease-spring);
+    flex: 1;
+    position: relative;
+  }
+
+  .asas-mobile-dock-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: rgba(186, 149, 85, 0.08);
+    border: 1px solid rgba(186, 149, 85, 0.16);
+    color: var(--text-2);
+    transition: all 0.22s var(--ease-spring);
+    position: relative;
+  }
+  .asas-mobile-dock-icon svg {
+    width: 16px;
+    height: 16px;
+    color: currentColor;
+  }
+
+  .asas-mobile-dock-item:hover {
+    color: var(--text);
+  }
+
+  .asas-mobile-dock-item.active {
+    color: var(--brand-gold);
+    font-weight: 700;
+  }
+  .asas-mobile-dock-item.active .asas-mobile-dock-icon {
+    background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%);
+    border: 1px solid rgba(255, 255, 255, 0.50);
+    color: #ffffff;
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 4px 12px -2px rgba(186, 149, 85, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.60);
+  }
+  .asas-mobile-dock-item.active .asas-mobile-dock-icon svg {
+    color: #ffffff !important;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+  }
+
+  :root[data-theme='dark'] .asas-mobile-dock-item.active .asas-mobile-dock-icon {
+    color: #231f20 !important;
+  }
+  :root[data-theme='dark'] .asas-mobile-dock-item.active .asas-mobile-dock-icon svg {
+    color: #231f20 !important;
+  }
+
+  .asas-dock-badge-dot {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--unpaid);
+    border: 1.5px solid var(--bg);
+  }
+
+  .asas-content {
+    padding-bottom: 96px !important;
+  }
+}
+
 /* Content Container */
 .asas-content {
-  padding: 24px 28px 48px;
+  padding: 18px 24px 48px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -1793,7 +1942,12 @@ select.asas-input option {
     display: inline-flex !important;
   }
   .asas-topbar {
-    padding: 10px 18px;
+    margin: 10px 16px 0;
+    height: 58px;
+    min-height: 58px;
+    max-height: 58px;
+    padding: 0 16px;
+    border-radius: 16px;
   }
   .asas-content {
     padding: 20px 18px 44px;
@@ -1950,7 +2104,12 @@ select.asas-input option {
 /* Mobile Phones (max-width: 480px) */
 @media (max-width: 480px) {
   .asas-topbar {
-    padding: 8px 10px;
+    margin: 8px 10px 0;
+    height: 52px;
+    min-height: 52px;
+    max-height: 52px;
+    padding: 0 10px;
+    border-radius: 14px;
     gap: 6px;
   }
   .asas-topbar-title {
@@ -2121,9 +2280,9 @@ select.asas-input option {
 }
 
 :root[data-theme='dark'] .asas-topbar {
-  background: rgba(28, 24, 25, 0.90) !important;
-  border-bottom: 1px solid rgba(186, 149, 85, 0.25) !important;
-  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.45) !important;
+  background: linear-gradient(135deg, rgba(38, 33, 34, 0.94) 0%, rgba(28, 24, 25, 0.96) 50%, rgba(22, 19, 20, 0.94) 100%) !important;
+  border: 1px solid rgba(186, 149, 85, 0.32) !important;
+  box-shadow: 0 14px 36px -10px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(186, 149, 85, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
 }
 
 :root[data-theme='dark'] .asas-employee-header {
