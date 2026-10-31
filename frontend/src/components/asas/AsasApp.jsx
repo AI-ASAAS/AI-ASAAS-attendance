@@ -1753,10 +1753,10 @@ function AsasAppInner({ defaultAction = 'auto' }) {
                 </span>
                 <span>{label}</span>
                 {key === 'announcements' && announcements.length > 0 && (
-                  <span className="asas-badge urgent" style={{ marginRight: 'auto', fontSize: 10, padding: '1px 6px' }}>{announcements.length}</span>
+                  <span className="asas-badge urgent" style={{ marginInlineStart: 'auto', fontSize: 10, padding: '2px 8px', borderRadius: 999 }}>{announcements.length}</span>
                 )}
                 {key === 'accounts' && pendingAccountsCount > 0 && (
-                  <span className="asas-badge pending" style={{ marginRight: 'auto', fontSize: 10, padding: '1px 6px', background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)' }}>{pendingAccountsCount}</span>
+                  <span className="asas-badge pending" style={{ marginInlineStart: 'auto', fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(186, 149, 85, 0.2)', color: 'var(--brand-gold)', border: '1px solid rgba(186, 149, 85, 0.4)' }}>{pendingAccountsCount}</span>
                 )}
               </button>
             );
@@ -1771,7 +1771,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               <p>{roles[user.role]}</p>
             </div>
           </div>
-          <button className="asas-btn sm" onClick={logout} style={{ width: '100%', justifyContent: 'center' }}>
+          <button className="asas-btn sm asas-sidebar-logout" onClick={logout} style={{ width: '100%', justifyContent: 'center' }}>
             <Icon name="logout" />
             تسجيل الخروج
           </button>
@@ -1782,7 +1782,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
       <div className="asas-main">
         <header className="asas-topbar">
           <div className="asas-topbar-title">
-            <button className="asas-btn sm asas-menu-btn" style={{ padding: '0 8px' }} onClick={() => setOpen(!open)} aria-label="القائمة">
+            <button className="asas-menu-btn" onClick={() => setOpen(!open)} aria-label="القائمة">
               <Icon name="grid" />
             </button>
             <span><span className="asas-topbar-breadcrumb">لوحة القيادة / </span><strong><Swash>{title}</Swash></strong></span>
@@ -1790,7 +1790,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
 
           <div className="asas-topbar-controls">
             <div className="asas-clock-pill">
-              <Icon name="clock" style={{ width: 15, height: 15, color: 'var(--accent)' }} />
+              <Icon name="clock" style={{ width: 15, height: 15, color: 'var(--brand-gold)' }} />
               <span><span className="asas-clock-label">صنعاء: </span><strong>{liveTime || '—'}</strong></span>
             </div>
 
@@ -1803,7 +1803,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
               <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
             </button>
 
-            <div style={{ cursor: 'pointer' }} onClick={() => setShowProfileModal(true)} title="الملف الشخصي">
+            <div className="asas-topbar-user" onClick={() => setShowProfileModal(true)} title="الملف الشخصي">
               <UserAvatar user={user} size="sm" />
             </div>
           </div>
