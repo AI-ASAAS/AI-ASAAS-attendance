@@ -10,7 +10,6 @@ import {
   Swash,
   Stretch,
   useTheme,
-  AssistantWidget,
   formatNumber
 } from '../../asaas-ui';
 

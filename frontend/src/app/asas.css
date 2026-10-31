@@ -1,27 +1,27 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    AI-ASAAS Sovereign Attendance System — Executive Asas UI Design
-   Incorporating Thmanyah Type, Liquid Glass, Ambient Refraction & Brand Tokens
+   Incorporating Thmanyah Type, Liquid Glass, Sovereign Watermark & Brand Tokens
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --ink: var(--text, #221f1f);
-  --ink-light: var(--text-2, rgba(34, 31, 31, 0.7));
+  --ink: var(--brand-ink, #231f20);
+  --ink-light: var(--text-2, rgba(35, 31, 32, 0.72));
   --gold: var(--brand-gold, #ba9555);
   --gold-dark: #8f6a2e;
   --gold-soft: rgba(186, 149, 85, 0.14);
   --sand: var(--brand-sand, #d3c6b4);
-  --cream: var(--brand-cream, #ede7da);
-  --paper: var(--bg, #ece5d7);
-  --line: var(--hairline, rgba(34, 31, 31, 0.08));
+  --cream: var(--brand-cream, #efe9d8);
+  --paper: var(--bg, #efe9d8);
+  --line: var(--hairline, rgba(35, 31, 32, 0.08));
   --line-strong: rgba(186, 149, 85, 0.35);
-  --muted: var(--text-3, rgba(34, 31, 31, 0.5));
+  --muted: var(--text-3, rgba(35, 31, 32, 0.48));
   --success: var(--paid, #23744a);
   --success-bg: var(--paid-bg, rgba(35, 116, 74, 0.12));
   --danger: var(--unpaid, #b0342c);
   --danger-bg: var(--unpaid-bg, rgba(176, 52, 44, 0.1));
   --warning: var(--partial, #9a5f05);
   --warning-bg: var(--partial-bg, rgba(214, 139, 20, 0.16));
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 20px -8px rgba(74, 54, 22, 0.12);
+  --shadow-sm: 0 1px 3px rgba(35, 31, 32, 0.04), 0 8px 20px -8px rgba(186, 149, 85, 0.12);
   --shadow-md: var(--glass-shadow);
   --border-glass: var(--glass-rim);
   --radius-sm: 10px;
@@ -31,16 +31,16 @@
 }
 
 :root[data-theme='dark'] {
-  --ink: var(--text, #ffffff);
-  --ink-light: var(--text-2, #f2e8dc);
-  --paper: var(--bg, #403732);
-  --cream: #4c413b;
-  --sand: #6a5c53;
-  --line: var(--hairline);
-  --line-strong: rgba(240, 218, 182, 0.45);
-  --gold-dark: #f3d69b;
-  --gold-soft: rgba(243, 214, 155, 0.25);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.16), 0 8px 24px -8px rgba(0, 0, 0, 0.32);
+  --ink: var(--text, #efe9d8);
+  --ink-light: var(--text-2, rgba(239, 233, 216, 0.75));
+  --paper: var(--bg, #231f20);
+  --cream: #2d2829;
+  --sand: #d3c6b4;
+  --line: var(--hairline, rgba(186, 149, 85, 0.22));
+  --line-strong: rgba(186, 149, 85, 0.45);
+  --gold-dark: #ba9555;
+  --gold-soft: rgba(186, 149, 85, 0.25);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25), 0 8px 24px -8px rgba(0, 0, 0, 0.50);
   --shadow-md: var(--glass-shadow);
   --border-glass: var(--glass-rim);
 }
@@ -51,10 +51,8 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.88) 0%, transparent 55%),
-              radial-gradient(circle at 0% 100%, rgba(226, 185, 118, 0.25) 0%, transparent 55%),
-              linear-gradient(135deg, rgba(246, 241, 232, 0.96) 0%, rgba(239, 233, 222, 0.94) 50%, rgba(230, 222, 208, 0.96) 100%);
-  color: var(--text);
+  background-color: var(--bg, #efe9d8);
+  color: var(--text, #231f20);
   font-family: var(--font, 'Thmanyah Sans', system-ui, sans-serif);
   direction: rtl;
   overflow-x: hidden;
@@ -897,31 +895,14 @@ select.asas-input option {
   direction: rtl;
   position: relative;
   z-index: 1;
-  background: radial-gradient(1000px circle at 85% 12%, rgba(235, 194, 120, 0.42) 0%, transparent 62%),
-              radial-gradient(900px circle at 15% 85%, rgba(214, 168, 120, 0.35) 0%, transparent 58%),
-              radial-gradient(750px circle at 20% 15%, rgba(240, 185, 145, 0.28) 0%, transparent 55%),
-              radial-gradient(850px circle at 50% 45%, rgba(255, 255, 255, 0.8) 0%, transparent 65%),
-              linear-gradient(145deg, #fdfbf7 0%, #f7efe1 25%, #eee2ce 55%, #e8d5bc 85%, #dec9ad 100%);
+  background-color: var(--bg, #efe9d8);
+}
+:root[data-theme='dark'] .asas-login {
+  background-color: #231f20 !important;
 }
 
-/* Fixed Ambient Luminous Aura above login box on the left */
 .asas-luminous-halo {
-  position: fixed !important;
-  top: -40px !important;
-  left: 20px !important;
-  width: 440px !important;
-  height: 440px !important;
-  border-radius: 50% !important;
-  background: radial-gradient(circle, rgba(235, 194, 120, 0.38) 0%, rgba(240, 185, 145, 0.20) 45%, transparent 70%) !important;
-  pointer-events: none !important;
-  user-select: none !important;
-  z-index: 0 !important;
-  filter: blur(40px) !important;
-  transition: opacity 0.3s ease !important;
-}
-:root[data-theme='dark'] .asas-luminous-halo {
-  background: radial-gradient(circle, rgba(243, 214, 155, 0.28) 0%, rgba(226, 185, 118, 0.16) 45%, transparent 70%) !important;
-  opacity: 0.9 !important;
+  display: none !important;
 }
 
 /* Sovereign Brand Watermark (Fixed permanently across Login, Admin, and Employee) */
@@ -1000,8 +981,8 @@ select.asas-input option {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.88) 0%, transparent 55%),
-              linear-gradient(165deg, rgba(255, 255, 255, 0.70) 0%, rgba(250, 244, 234, 0.54) 50%, rgba(242, 232, 218, 0.68) 100%);
+  background: rgba(255, 255, 255, 0.65);
+  border-left: 1px solid rgba(186, 149, 85, 0.25);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
   backdrop-filter: blur(28px) saturate(180%);
   border-left: 1.5px solid rgba(255, 255, 255, 0.9);
@@ -1072,8 +1053,8 @@ select.asas-input option {
   max-width: 440px;
   padding: 36px 32px;
   border-radius: var(--radius-xl);
-  background: radial-gradient(450px circle at 90% -10%, rgba(255, 255, 255, 0.9) 0%, transparent 60%),
-              linear-gradient(165deg, rgba(255, 255, 255, 0.76) 0%, rgba(255, 250, 242, 0.58) 45%, rgba(248, 238, 222, 0.70) 100%);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(186, 149, 85, 0.28);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
   backdrop-filter: blur(28px) saturate(190%);
   border: 1.5px solid rgba(255, 255, 255, 0.95);
@@ -1813,158 +1794,152 @@ select.asas-input option {
   color: var(--accent);
 }
 
-/* ───────── Dark Mode Comprehensive Polish (Asas Warm Obsidian & Desert Amber Palette) ───────── */
+/* ───────── Dark Mode Comprehensive Polish (Asas Sovereign Ink #231f20 Palette) ───────── */
 :root[data-theme='dark'] body,
 :root[data-theme='dark'] .asas-app,
 :root[data-theme='dark'] .asas-employee-page {
-  background: radial-gradient(1100px circle at 85% 15%, rgba(226, 185, 118, 0.28) 0%, transparent 65%),
-              radial-gradient(900px circle at 15% 85%, rgba(200, 160, 105, 0.22) 0%, transparent 60%),
-              radial-gradient(800px circle at 50% 50%, rgba(135, 115, 105, 0.25) 0%, transparent 70%),
-              linear-gradient(150deg, #4c423c 0%, #423933 40%, #3a322c 75%, #322a25 100%) !important;
+  background-color: #231f20 !important;
 }
 
 :root[data-theme='dark'] .glass,
 :root[data-theme='dark'] .card {
-  background: radial-gradient(450px circle at 90% -10%, rgba(226, 185, 118, 0.20) 0%, transparent 60%),
-              linear-gradient(165deg, rgba(86, 74, 67, 0.92) 0%, rgba(70, 60, 54, 0.88) 50%, rgba(58, 50, 45, 0.94) 100%) !important;
-  border: 1px solid rgba(240, 218, 182, 0.32) !important;
-  box-shadow: inset 0 1px 0 0 rgba(255, 244, 222, 0.32), inset 0 -1px 0 0 rgba(255, 244, 222, 0.08), 0 14px 40px -14px rgba(0, 0, 0, 0.40) !important;
-  color: var(--text);
+  background: rgba(35, 31, 32, 0.82) !important;
+  border: 1px solid rgba(186, 149, 85, 0.32) !important;
+  box-shadow: inset 0 1px 0 0 rgba(186, 149, 85, 0.25), inset 0 -1px 0 0 rgba(186, 149, 85, 0.08), 0 14px 40px -14px rgba(0, 0, 0, 0.60) !important;
+  color: var(--text) !important;
 }
 
 :root[data-theme='dark'] .glass--thick,
 :root[data-theme='dark'] .asas-modal,
 :root[data-theme='dark'] .modal {
-  background: linear-gradient(165deg, rgba(88, 76, 69, 0.96) 0%, rgba(72, 62, 56, 0.96) 100%) !important;
-  border: 1.5px solid rgba(240, 218, 182, 0.35) !important;
-  box-shadow: 0 24px 64px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 244, 222, 0.30) !important;
+  background: rgba(28, 24, 25, 0.95) !important;
+  border: 1.5px solid rgba(186, 149, 85, 0.35) !important;
+  box-shadow: 0 24px 64px -10px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(186, 149, 85, 0.30) !important;
 }
 
 :root[data-theme='dark'] .asas-sidebar {
-  background: linear-gradient(180deg, rgba(74, 63, 57, 0.94) 0%, rgba(58, 49, 44, 0.94) 100%) !important;
-  border-left: 1px solid rgba(240, 218, 182, 0.28) !important;
-  box-shadow: inset -1px 0 0 rgba(255, 244, 222, 0.12), 0 8px 30px rgba(0, 0, 0, 0.30) !important;
+  background: rgba(28, 24, 25, 0.90) !important;
+  border-left: 1px solid rgba(186, 149, 85, 0.28) !important;
+  box-shadow: inset -1px 0 0 rgba(186, 149, 85, 0.12), 0 8px 30px rgba(0, 0, 0, 0.40) !important;
 }
 
 :root[data-theme='dark'] .asas-topbar {
-  background: rgba(68, 58, 52, 0.90) !important;
-  border-bottom: 1px solid rgba(240, 218, 182, 0.25) !important;
-  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.35) !important;
+  background: rgba(28, 24, 25, 0.90) !important;
+  border-bottom: 1px solid rgba(186, 149, 85, 0.25) !important;
+  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.45) !important;
 }
 
 :root[data-theme='dark'] .asas-employee-header {
-  background: linear-gradient(165deg, rgba(82, 70, 64, 0.92) 0%, rgba(64, 55, 49, 0.90) 100%) !important;
-  border: 1px solid rgba(240, 218, 182, 0.30) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.30), 0 12px 36px -12px rgba(0, 0, 0, 0.35) !important;
+  background: rgba(35, 31, 32, 0.85) !important;
+  border: 1px solid rgba(186, 149, 85, 0.30) !important;
+  box-shadow: inset 0 1px 0 rgba(186, 149, 85, 0.25), 0 12px 36px -12px rgba(0, 0, 0, 0.45) !important;
 }
 
 :root[data-theme='dark'] .asas-employee-profile {
-  background: radial-gradient(circle at 100% 0%, rgba(226, 185, 118, 0.20) 0%, transparent 60%),
-              linear-gradient(165deg, rgba(86, 74, 67, 0.92) 0%, rgba(70, 60, 54, 0.88) 100%) !important;
-  border: 1px solid rgba(240, 218, 182, 0.32) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.32), 0 14px 40px -14px rgba(0, 0, 0, 0.40) !important;
+  background: rgba(35, 31, 32, 0.85) !important;
+  border: 1px solid rgba(186, 149, 85, 0.32) !important;
+  box-shadow: inset 0 1px 0 rgba(186, 149, 85, 0.25), 0 14px 40px -14px rgba(0, 0, 0, 0.50) !important;
 }
 
 :root[data-theme='dark'] .asas-employee-tabs {
-  background: rgba(56, 48, 43, 0.80) !important;
-  border: 1px solid rgba(240, 218, 182, 0.28) !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.30), inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+  background: rgba(24, 20, 21, 0.85) !important;
+  border: 1px solid rgba(186, 149, 85, 0.28) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40), inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
 }
 
 :root[data-theme='dark'] .asas-employee-tab.active {
-  background: linear-gradient(135deg, rgba(226, 185, 118, 0.28) 0%, rgba(186, 149, 85, 0.18) 100%) !important;
-  color: #f3d69b !important;
-  border-color: rgba(243, 214, 155, 0.50) !important;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 244, 222, 0.35) !important;
+  background: rgba(186, 149, 85, 0.22) !important;
+  color: #ba9555 !important;
+  border-color: rgba(186, 149, 85, 0.55) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(186, 149, 85, 0.35) !important;
 }
 
 :root[data-theme='dark'] .asas-hero-banner {
-  background: radial-gradient(circle at 100% 0%, rgba(226, 185, 118, 0.22) 0%, transparent 55%),
-              linear-gradient(165deg, rgba(86, 74, 67, 0.90) 0%, rgba(70, 60, 54, 0.88) 55%, rgba(56, 48, 43, 0.92) 100%) !important;
-  border: 1px solid rgba(240, 218, 182, 0.32) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.32), 0 16px 48px -12px rgba(0, 0, 0, 0.45) !important;
+  background: rgba(35, 31, 32, 0.85) !important;
+  border: 1px solid rgba(186, 149, 85, 0.32) !important;
+  box-shadow: inset 0 1px 0 rgba(186, 149, 85, 0.25), 0 16px 48px -12px rgba(0, 0, 0, 0.55) !important;
 }
 
 :root[data-theme='dark'] .asas-stat-card {
-  background: linear-gradient(165deg, rgba(86, 74, 67, 0.90) 0%, rgba(70, 60, 54, 0.86) 100%) !important;
-  border: 1px solid rgba(240, 218, 182, 0.30) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.28), 0 8px 24px -6px rgba(0, 0, 0, 0.35) !important;
+  background: rgba(35, 31, 32, 0.82) !important;
+  border: 1px solid rgba(186, 149, 85, 0.30) !important;
+  box-shadow: inset 0 1px 0 rgba(186, 149, 85, 0.20), 0 8px 24px -6px rgba(0, 0, 0, 0.45) !important;
 }
 
 :root[data-theme='dark'] .asas-tile-icon {
-  background: rgba(255, 244, 222, 0.10) !important;
-  border-color: rgba(240, 218, 182, 0.25) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  background: rgba(186, 149, 85, 0.12) !important;
+  border-color: rgba(186, 149, 85, 0.30) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
 :root[data-theme='dark'] .asas-table-wrap,
 :root[data-theme='dark'] .table-wrap {
-  background: linear-gradient(165deg, rgba(82, 70, 64, 0.90) 0%, rgba(64, 55, 49, 0.88) 100%) !important;
-  border: 1px solid rgba(240, 218, 182, 0.28) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.25), 0 16px 40px -12px rgba(0, 0, 0, 0.35) !important;
+  background: rgba(35, 31, 32, 0.85) !important;
+  border: 1px solid rgba(186, 149, 85, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(186, 149, 85, 0.20), 0 16px 40px -12px rgba(0, 0, 0, 0.50) !important;
 }
 
 :root[data-theme='dark'] .asas-table th,
 :root[data-theme='dark'] .table th {
-  background: rgba(255, 244, 222, 0.08) !important;
-  color: #f2e8dc !important;
-  border-bottom: 1px solid rgba(240, 218, 182, 0.22) !important;
+  background: rgba(28, 24, 25, 0.80) !important;
+  color: #efe9d8 !important;
+  border-bottom: 1px solid rgba(186, 149, 85, 0.22) !important;
 }
 
 :root[data-theme='dark'] .asas-table td,
 :root[data-theme='dark'] .table td {
-  border-bottom: 1px solid rgba(240, 218, 182, 0.12) !important;
+  border-bottom: 1px solid rgba(186, 149, 85, 0.12) !important;
   color: var(--text) !important;
 }
 
 :root[data-theme='dark'] .asas-table tbody tr:hover,
 :root[data-theme='dark'] .table tbody tr:hover {
-  background: rgba(226, 185, 118, 0.12) !important;
+  background: rgba(186, 149, 85, 0.12) !important;
 }
 
 :root[data-theme='dark'] .asas-announcement-card,
 :root[data-theme='dark'] .asas-qr-card {
-  background: linear-gradient(165deg, rgba(86, 74, 67, 0.90) 0%, rgba(70, 60, 54, 0.86) 100%) !important;
-  border: 1px solid rgba(240, 218, 182, 0.28) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.22), 0 8px 24px -6px rgba(0, 0, 0, 0.35) !important;
+  background: rgba(35, 31, 32, 0.82) !important;
+  border: 1px solid rgba(186, 149, 85, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(186, 149, 85, 0.20), 0 8px 24px -6px rgba(0, 0, 0, 0.45) !important;
 }
 
 :root[data-theme='dark'] .asas-input,
 :root[data-theme='dark'] .input {
-  background: rgba(56, 48, 43, 0.70) !important;
+  background: rgba(24, 20, 21, 0.80) !important;
   color: #ffffff !important;
-  box-shadow: inset 0 0 0 1px rgba(240, 218, 182, 0.25) !important;
+  box-shadow: inset 0 0 0 1px rgba(186, 149, 85, 0.28) !important;
 }
 
 :root[data-theme='dark'] .asas-input:focus,
 :root[data-theme='dark'] .input:focus {
-  background: rgba(64, 55, 50, 0.90) !important;
-  box-shadow: inset 0 0 0 1.5px #f3d69b, 0 0 0 4px rgba(226, 185, 118, 0.35) !important;
+  background: rgba(28, 24, 25, 0.95) !important;
+  box-shadow: inset 0 0 0 1.5px #ba9555, 0 0 0 4px rgba(186, 149, 85, 0.35) !important;
 }
 
 :root[data-theme='dark'] select.asas-input option,
 :root[data-theme='dark'] select.input option {
-  background: #403732 !important;
-  color: #f2e8dc !important;
+  background: #231f20 !important;
+  color: #efe9d8 !important;
 }
 
 :root[data-theme='dark'] .asas-btn:not(.primary):not(.danger),
 :root[data-theme='dark'] .btn--glass {
-  background: rgba(255, 244, 222, 0.10) !important;
+  background: rgba(186, 149, 85, 0.12) !important;
   color: #ffffff !important;
-  border-color: rgba(240, 218, 182, 0.25) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.22), 0 4px 14px -6px rgba(0, 0, 0, 0.35) !important;
+  border-color: rgba(186, 149, 85, 0.30) !important;
+  box-shadow: inset 0 1px 0 rgba(186, 149, 85, 0.22), 0 4px 14px -6px rgba(0, 0, 0, 0.45) !important;
 }
 
 :root[data-theme='dark'] .asas-btn:not(.primary):not(.danger):hover:not(:disabled),
 :root[data-theme='dark'] .btn--glass:hover:not(:disabled) {
-  background: rgba(255, 244, 222, 0.16) !important;
-  border-color: rgba(243, 214, 155, 0.45) !important;
+  background: rgba(186, 149, 85, 0.20) !important;
+  border-color: rgba(186, 149, 85, 0.50) !important;
 }
 
 :root[data-theme='dark'] .asas-notice {
-  background: rgba(255, 244, 222, 0.08) !important;
-  border-color: rgba(240, 218, 182, 0.22) !important;
+  background: rgba(186, 149, 85, 0.08) !important;
+  border-color: rgba(186, 149, 85, 0.22) !important;
   color: var(--text-2) !important;
 }
 
@@ -1975,36 +1950,29 @@ select.asas-input option {
 }
 
 :root[data-theme='dark'] .asas-badge.outside {
-  background: rgba(255, 244, 222, 0.10) !important;
-  color: #f2e8dc !important;
+  background: rgba(186, 149, 85, 0.12) !important;
+  color: #efe9d8 !important;
 }
 
 :root[data-theme='dark'] .asas-clock-pill {
-  background: rgba(255, 244, 222, 0.08) !important;
-  box-shadow: inset 0 0 0 1px rgba(240, 218, 182, 0.22) !important;
+  background: rgba(186, 149, 85, 0.10) !important;
+  box-shadow: inset 0 0 0 1px rgba(186, 149, 85, 0.25) !important;
 }
 
 :root[data-theme='dark'] .asas-login {
-  background: radial-gradient(1100px circle at 85% 15%, rgba(226, 185, 118, 0.28) 0%, transparent 65%),
-              radial-gradient(900px circle at 15% 85%, rgba(200, 160, 105, 0.22) 0%, transparent 60%),
-              radial-gradient(800px circle at 50% 50%, rgba(135, 115, 105, 0.25) 0%, transparent 70%),
-              linear-gradient(150deg, #4c423c 0%, #423933 40%, #3a322c 75%, #322a25 100%) !important;
+  background-color: #231f20 !important;
 }
 
 :root[data-theme='dark'] .asas-login-hero {
-  background: radial-gradient(circle at 100% 0%, rgba(226, 185, 118, 0.22) 0%, transparent 55%),
-              linear-gradient(165deg, rgba(86, 74, 67, 0.88) 0%, rgba(70, 60, 54, 0.86) 55%, rgba(56, 48, 43, 0.92) 100%) !important;
-  border-color: rgba(240, 218, 182, 0.32) !important;
+  background: rgba(35, 31, 32, 0.85) !important;
+  border-color: rgba(186, 149, 85, 0.32) !important;
 }
 
 :root[data-theme='dark'] .asas-login-box {
-  background: radial-gradient(450px circle at 90% -10%, rgba(226, 185, 118, 0.25) 0%, transparent 60%),
-              linear-gradient(165deg, rgba(92, 79, 72, 0.94) 0%, rgba(76, 65, 59, 0.90) 50%, rgba(62, 53, 47, 0.95) 100%) !important;
-  border-color: rgba(240, 218, 182, 0.36) !important;
-  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.18), 0 24px 60px -16px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 244, 222, 0.35) !important;
+  background: rgba(35, 31, 32, 0.90) !important;
+  border-color: rgba(186, 149, 85, 0.36) !important;
+  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.30), 0 24px 60px -16px rgba(0, 0, 0, 0.60), inset 0 1px 0 rgba(186, 149, 85, 0.30) !important;
 }
-
-
 
 /* ========================================================
    A4 QR POSTER & PRINTING STYLES (منظومة أساس السيادية)
@@ -3025,7 +2993,7 @@ select.asas-input option {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ASAAS BRAND GUIDELINE & LIQUID-GLASS IDENTITY POLISH
-   Watermark Precision, Mascot Integration, and Refined Design Scale
+   Watermark Precision, Liquid Glass, and Sovereign Design Scale
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* 1. Global Sovereign Watermark Precision */
@@ -3049,7 +3017,7 @@ select.asas-input option {
 :root[data-theme='dark'] .asas-app::before,
 :root[data-theme='dark'] .asas-employee-page::before {
   background-image: url('/logo-light.png') !important;
-  filter: drop-shadow(0 0 50px rgba(243, 214, 155, 0.45)) !important;
+  filter: drop-shadow(0 0 50px rgba(186, 149, 85, 0.35)) !important;
 }
 
 /* Subtle corner watermark on cards */
@@ -3072,146 +3040,6 @@ select.asas-input option {
   opacity: 0.08;
 }
 
-/* 2. Hero Mascot Showcase in Login */
-.asas-hero-top-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.asas-hero-mascot-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: var(--radius-pill);
-  background: var(--glass-tint-strong);
-  border: 1px solid rgba(186, 149, 85, 0.35);
-  box-shadow: 0 4px 14px -4px rgba(186, 149, 85, 0.25);
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--accent);
-}
-.asas-mascot-face-mini {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1.5px solid var(--brand-gold);
-  background: #ffffff;
-}
-
-.asas-hero-mascot-showcase {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin: 24px 0;
-  padding: 16px 20px;
-  border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.65) 0%, rgba(248, 238, 222, 0.45) 100%);
-  border: 1.5px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 12px 32px -8px rgba(110, 80, 35, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  position: relative;
-  overflow: hidden;
-}
-:root[data-theme='dark'] .asas-hero-mascot-showcase {
-  background: linear-gradient(135deg, rgba(78, 66, 60, 0.65) 0%, rgba(55, 45, 40, 0.45) 100%);
-  border-color: rgba(255, 244, 222, 0.25);
-  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 244, 222, 0.2);
-}
-.asas-mascot-img-wrap {
-  width: 88px;
-  height: 88px;
-  flex-shrink: 0;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.asas-mascot-img-wrap::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(186, 149, 85, 0.35) 0%, transparent 70%);
-  animation: asas-pulse-halo 3s ease-in-out infinite;
-}
-@keyframes asas-pulse-halo {
-  0%, 100% { transform: scale(1); opacity: 0.6; }
-  50% { transform: scale(1.15); opacity: 0.9; }
-}
-.asas-mascot-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  position: relative;
-  z-index: 1;
-  filter: drop-shadow(0 6px 14px rgba(186, 149, 85, 0.45));
-  animation: asas-float 4s ease-in-out infinite;
-}
-@keyframes asas-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-
-.asas-mascot-speech {
-  flex: 1;
-  min-width: 0;
-}
-.asas-mascot-speech-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--accent);
-  margin-bottom: 4px;
-}
-.asas-mascot-speech p {
-  font-family: var(--font-text);
-  font-size: 14px;
-  color: var(--text);
-  line-height: 1.5;
-  margin: 0;
-  font-style: normal;
-}
-
-.asas-mobile-mascot-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 12px;
-  border-radius: var(--radius-pill);
-  background: var(--glass-tint-strong);
-  border: 1px solid rgba(186, 149, 85, 0.3);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--accent);
-  margin-top: 10px;
-}
-
-/* 3. Dashboard Hero Visual */
-.asas-hero-banner-visual {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-shrink: 0;
-}
-.asas-dashboard-mascot-img {
-  width: 110px;
-  height: 110px;
-  object-fit: contain;
-  filter: drop-shadow(0 8px 20px rgba(186, 149, 85, 0.4));
-  animation: asas-float 5s ease-in-out infinite;
-}
-@media (max-width: 768px) {
-  .asas-dashboard-mascot-img {
-    width: 72px;
-    height: 72px;
-  }
-}
-
 /* 4. Employee Profile Beacon */
 .asas-employee-avatar-wrap {
   position: relative;
@@ -3232,32 +3060,4 @@ select.asas-input option {
 @keyframes asas-beacon-pulse {
   0%, 100% { transform: scale(1); box-shadow: 0 0 8px var(--paid); }
   50% { transform: scale(1.15); box-shadow: 0 0 16px var(--paid); }
-}
-
-/* 5. Duty Celebratory Mascot in Employee Banner */
-.asas-duty-mascot-badge {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 14px;
-  border-radius: var(--radius-md);
-  background: rgba(35, 116, 74, 0.12);
-  border: 1px solid rgba(35, 116, 74, 0.3);
-  margin-top: 10px;
-}
-.asas-duty-mascot-icon {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-  filter: drop-shadow(0 4px 8px rgba(35, 116, 74, 0.3));
-}
-.asas-duty-mascot-badge strong {
-  display: block;
-  font-size: 13.5px;
-  color: var(--paid);
-}
-.asas-duty-mascot-badge small {
-  display: block;
-  font-size: 11.5px;
-  color: var(--text-2);
 }
