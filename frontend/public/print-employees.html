@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>كشف الموظفين والأرقام الوظيفية - نظام أساس</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      padding: 24px;
+      direction: rtl;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 32px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #ba9555;
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+    }
+
+    .header-info h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #1c1819;
+      margin-bottom: 4px;
+    }
+
+    .header-info p {
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #ba9555, #9e7939);
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .btn-print {
+      background: #ba9555;
+      color: #ffffff;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-print:hover {
+      background: #9e7939;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13.5px;
+    }
+
+    th {
+      background-color: #231f20;
+      color: #efe9d8;
+      padding: 12px 14px;
+      text-align: right;
+      font-weight: 700;
+      border-top: 1px solid #332d2e;
+    }
+
+    th:first-child {
+      border-top-right-radius: 8px;
+    }
+
+    th:last-child {
+      border-top-left-radius: 8px;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    tr:nth-child(even) {
+      background-color: #fbf9f5;
+    }
+
+    tr:hover {
+      background-color: #f1ebd8;
+    }
+
+    .id-badge {
+      display: inline-block;
+      font-weight: 800;
+      color: #ba9555;
+      background: rgba(186, 149, 85, 0.12);
+      padding: 2px 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 14px;
+      letter-spacing: 1px;
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .role-admin { background: #fee2e2; color: #b91c1c; }
+    .role-emp { background: #e0f2fe; color: #0369a1; }
+    .role-hr { background: #fef3c7; color: #92400e; }
+
+    .footer {
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .container {
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .actions {
+        display: none;
+      }
+      th {
+        background-color: #231f20 !important;
+        color: #efe9d8 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .id-badge {
+        color: #000 !important;
+        background: #eee !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      tr:nth-child(even) {
+        background-color: #f9f9f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <div class="header-info">
+        <h1>كشف موظفي شركة أساس الذكية (AI-ASAAS)</h1>
+        <p>نظام إدارة الحضور والانصراف الذكي — الأرقام الوظيفية وحسابات الدخول</p>
+      </div>
+      <div class="brand-badge">أساس | ASAS</div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-print" onclick="window.print()">🖨️ طباعة الكشف (Ctrl + P)</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 50px; text-align: center;">م</th>
+          <th style="width: 110px;">الرقم الوظيفي</th>
+          <th>اسم الموظف</th>
+          <th>المسمى الوظيفي / الدور</th>
+          <th>رقم الهاتف / البريد</th>
+          <th>الفرع</th>
+          <th>الوردية</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align: center;">1</td>
+          <td><span class="id-badge">admin</span></td>
+          <td><strong>مدير أساس</strong></td>
+          <td><span class="role-badge role-admin">مدير عام النظام</span></td>
+          <td>+967 737771246</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">2</td>
+          <td><span class="id-badge">004</span></td>
+          <td><strong>علياء خليل الدلالي (aliaa.khalil.aldalali)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>aliaa.khalil.aldalai@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">3</td>
+          <td><span class="id-badge">006</span></td>
+          <td><strong>عبدالرحمن الردمي (abdullrahman alradami)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>774714492</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">4</td>
+          <td><span class="id-badge">007</span></td>
+          <td><strong>محمود بامطرف (Mahmoud Bamtref)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>msb701789@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">5</td>
+          <td><span class="id-badge">008</span></td>
+          <td><strong>عماد الدين (Emad'adin)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>emadadin17@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">6</td>
+          <td><span class="id-badge">009</span></td>
+          <td><strong>أسامة عبدالهادي (OSAMA ABID HADI)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>osamaabidhadi@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">7</td>
+          <td><span class="id-badge">010</span></td>
+          <td><strong>علاء العامري (Alaa Alameire)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>alaa.alameire@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">8</td>
+          <td><span class="id-badge">011</span></td>
+          <td><strong>شريف درهم (SHARIF DERHEM)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>sharifderhem@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">9</td>
+          <td><span class="id-badge">012</span></td>
+          <td><strong>أمة الفخري (AMAT AL-FAKHRI)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>amatalfakhri@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">10</td>
+          <td><span class="id-badge">013</span></td>
+          <td><strong>عبدالغني علي الشيبامي (Abdulghani Ali Ashebami)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>samyemen987@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">11</td>
+          <td><span class="id-badge">014</span></td>
+          <td><strong>أنس الأغبري (Anas Alaghbari)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>anoos.alaghbari@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">12</td>
+          <td><span class="id-badge">015</span></td>
+          <td><strong>عمار عبيد (Ammar Obaid)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>ammarobaid77212@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">13</td>
+          <td><span class="id-badge">016</span></td>
+          <td><strong>نائب مدير الموارد البشرية</strong></td>
+          <td><span class="role-badge role-hr">مراقب الموارد البشرية</span></td>
+          <td>—</td>
+          <td>الفرع الرئيسي</td>
+          <td>الوردية الصباحية</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">14</td>
+          <td><span class="id-badge">017</span></td>
+          <td><strong>الحسن الشامي (ALHassan ALShami)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>772765120</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">15</td>
+          <td><span class="id-badge">018</span></td>
+          <td><strong>أنس خذيف (anas khodayf)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>anaskhodayf@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">16</td>
+          <td><span class="id-badge">019</span></td>
+          <td><strong>عبدالمجيد قاط (Abdulmajeed Qat)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>abdulmajeedqat@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">17</td>
+          <td><span class="id-badge">020</span></td>
+          <td><strong>حذيفة صادق مهدي (hothifa sadiqmahdi)</strong></td>
+          <td><span class="role-badge role-emp">موظف</span></td>
+          <td>hothifasadiqmahdi@gmail.com</td>
+          <td>AI-ASAAS</td>
+          <td>الفتره الاولى</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <div>إجمالي الموظفين المسجلين: 17 موظفاً</div>
+      <div>تم التصدير من قاعدة بيانات نظام أساس الذكي في 2026-11-02</div>
+    </div>
+  </div>
+
+</body>
+</html>

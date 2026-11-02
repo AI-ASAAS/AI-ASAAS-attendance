@@ -21,7 +21,7 @@ const isAllowedOrigin=(orig)=>{
  if(configured.includes('*')||process.env.NODE_ENV!=='production') return true;
  if(configured.includes(orig)||orig===origin()) return true;
  if(orig==='http://localhost:3000'||orig==='http://127.0.0.1:3000') return true;
- if(orig.endsWith('.trycloudflare.com')||orig.endsWith('.loca.lt')||orig.endsWith('.ai-asaas.com')||orig==='https://attendance.ai-asaas.com') return true;
+ if(orig.includes('ai-asaas.com')||orig.includes('157.90.133.20')||orig.endsWith('.trycloudflare.com')||orig.endsWith('.loca.lt')) return true;
  return false;
 };
 const string=(value,max=150)=>{if(typeof value!=='string'||!value.trim()||value.length>max)error('VALIDATION','تحقق من الحقول المطلوبة');return value.trim();};
