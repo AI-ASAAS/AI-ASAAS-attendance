@@ -1010,7 +1010,7 @@ app.get('/api/attendance/me',employee,wrap(async(req,res)=>{
      const nowDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden' }).format(new Date());
      return recDate === nowDate;
    } catch { return false; }
- }) || records[0] || null;
+ }) || null;
  const isInside = todayRecord && todayRecord.state === 'inside';
  const autoInfo = todayRecord ? resolveRecordStatus(todayRecord) : null;
  const isRemote = Boolean(req.user.is_remote);
@@ -1249,7 +1249,7 @@ app.get('/api/admin/dashboard',admin,wrap(async(req,res)=>{
  await closeScheduled();const broad=['super_admin','hr_admin'].includes(req.user.role);
  const accounts=(await db.query("SELECT id,name,branch_id FROM accounts WHERE role='employee' AND active=TRUE AND ($1::boolean OR branch_id=$2)",[broad,req.user.branch_id])).rows;
  const today=policy.localDay(),records=await recordsFor(req.user,today,today);
- const active=(await db.query("SELECT r.* FROM duty_records r WHERE state='inside' AND ($1::boolean OR branch_id=$2)",[broad,req.user.branch_id])).rows;
+ const active=(await db.query("SELECT r.* FROM duty_records r WHERE state='inside' AND (shift_start AT TIME ZONE 'Asia/Aden')::date = $1::date AND ($2::boolean OR branch_id=$3)",[today,broad,req.user.branch_id])).rows;
  const fresh=active.filter(r=>r.last_seen&&Date.now()-new Date(r.last_seen)<90000&&r.gps_state==='inside').length;
  respond(res,{
   total:accounts.length,

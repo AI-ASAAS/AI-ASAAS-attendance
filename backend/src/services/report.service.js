@@ -323,10 +323,10 @@ async function getEmployeeDossier(user, employeeId, from, to) {
   const totalDays = dateList.length;
   const scheduledWorkDays = days.filter(d => d.is_workday).length;
 
-  const totalCalculatedWorkdays = presentDays + absentDays;
+  const totalCalculatedWorkdays = presentDays + absentDays + pendingTodayCount;
   const attendanceRate = totalCalculatedWorkdays > 0
     ? Math.round((presentDays / totalCalculatedWorkdays) * 100)
-    : (presentDays > 0 ? 100 : 0);
+    : 0;
 
   return {
     employee: {
@@ -480,6 +480,7 @@ async function getCollectiveReport(user, from, to, branchId = null, search = '')
   let overallWorkMinutes = 0;
   let overallLeaveDays = 0;
   let overallIncomplete = 0;
+  let overallPending = 0;
 
   const employeeSummaries = [];
 
@@ -548,13 +549,14 @@ async function getCollectiveReport(user, from, to, branchId = null, search = '')
       }
     }
 
-    const calculatedWorkdays = presentDays + absentDays;
+    const calculatedWorkdays = presentDays + absentDays + pendingTodayCount;
     const rate = calculatedWorkdays > 0 
       ? Math.round((presentDays / calculatedWorkdays) * 100) 
-      : (presentDays > 0 ? 100 : 0);
+      : 0;
 
     overallPresent += presentDays;
     overallAbsent += absentDays;
+    overallPending += pendingTodayCount;
     overallLateCount += lateDaysCount;
     overallLateMinutes += totalLateMinutes;
     overallWorkMinutes += totalWorkMinutes;
@@ -584,10 +586,10 @@ async function getCollectiveReport(user, from, to, branchId = null, search = '')
     });
   }
 
-  const totalPossible = overallPresent + overallAbsent;
+  const totalPossible = overallPresent + overallAbsent + overallPending;
   const avgAttendanceRate = totalPossible > 0
     ? Math.round((overallPresent / totalPossible) * 100)
-    : (overallPresent > 0 ? 100 : 0);
+    : 0;
 
   return {
     period: {
@@ -598,7 +600,8 @@ async function getCollectiveReport(user, from, to, branchId = null, search = '')
     overall: {
       total_employees: employees.length,
       total_present_days: overallPresent,
-      total_absent_days: overallAbsent,
+      total_absent_days: overallAbsent + overallPending,
+      total_pending_today: overallPending,
       total_late_days: overallLateCount,
       total_late_minutes: overallLateMinutes,
       total_work_minutes: overallWorkMinutes,
