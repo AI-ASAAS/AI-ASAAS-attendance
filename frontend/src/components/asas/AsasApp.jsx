@@ -5568,15 +5568,15 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               <div>
                 <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', fontWeight: 600 }}>حالة الدوام اللحظية:</span>
                 <strong style={{ fontSize: 16.5, color: isInside ? 'var(--paid)' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <span className="asas-pulse-status-dot" style={{ color: isInside ? 'var(--paid)' : 'var(--accent)' }} />
-                  <Icon name={isInside ? 'checkCircle' : 'logOut'} style={{ width: 19, height: 19 }} />
+                  <span className="asas-pulse-status-dot" style={{ color: isInside ? 'var(--paid)' : (isRemote ? '#38bdf8' : 'var(--accent)') }} />
+                  <Icon name={isInside ? 'checkCircle' : (isRemote ? 'globe' : 'logOut')} style={{ width: 19, height: 19, color: isInside ? 'var(--paid)' : (isRemote ? '#38bdf8' : 'var(--accent)') }} />
                   {isInside 
                     ? (isRemote ? 'على رأس العمل (دوام عن بعد - أونلاين)' : 'داخل مقر العمل (على رأس العمل - دوام مفتوح)') 
                     : (todayRecord?.last_out ? (isRemote ? 'تم تسجيل الانصراف وإنهاء الدوام (عن بعد)' : 'تم تسجيل الانصراف وإنهاء الدوام') : (isRemote ? 'جاهز لتسجيل الحضور عن بعد' : 'جاهز لتسجيل الحضور في المقر'))}
                 </strong>
               </div>
               <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`} style={{ fontSize: 12, padding: '4px 10px' }}>
-                <Icon name={isInside ? 'logOut' : 'logIn'} style={{ width: 13, height: 13 }} />
+                <Icon name={isInside ? (isRemote ? 'remoteOut' : 'logOut') : (isRemote ? 'remoteIn' : 'logIn')} style={{ width: 14, height: 14 }} />
                 الإجراء: {isInside ? (isRemote ? 'تسجيل الانصراف عن بعد' : 'تسجيل الانصراف') : (isRemote ? 'تسجيل الحضور عن بعد' : 'تسجيل الحضور')}
               </span>
             </div>
@@ -5644,23 +5644,14 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                       />
                       <strong style={{ color: 'var(--text)' }}>طبيعة العمل:</strong>
                       <span style={{ color: '#38bdf8', fontWeight: 700 }}>
-                        🌐 نظام الدوام عن بعد مفعّل (تسجيل الحضور والانصراف بضغطة زر)
+                        🌐 نظام الدوام عن بعد معتمد (تسجيل الحضور والانصراف بضغطة زر فوري)
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ color: 'var(--text-3)', fontSize: 11.5 }}>
-                        يتم توثيق إحداثيات GPS تلقائياً للمطابقة الإدارية
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Icon name="wifi" style={{ width: 14, height: 14, color: '#38bdf8' }} />
+                      <span style={{ color: 'var(--text-2)', fontSize: 12 }}>
+                        {isInside ? 'فترة الدوام نشطة ومسجلة' : 'جاهز للبدء من أي مكان'}
                       </span>
-                      <button
-                        type="button"
-                        className="asas-btn sm"
-                        style={{ height: 22, padding: '0 6px', fontSize: 11, border: 'none', background: 'transparent', color: 'var(--accent)', cursor: 'pointer' }}
-                        onClick={triggerLocationCheck}
-                        disabled={checkingGps}
-                        title="إعادة فحص الإحداثيات اللحظية"
-                      >
-                        <Icon name="refresh" className={checkingGps ? 'asas-spin' : ''} style={{ width: 12, height: 12 }} />
-                      </button>
                     </div>
                   </div>
                 );
@@ -5784,94 +5775,145 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             })()}
 
             {/* Action Buttons: Prominent Check-in & Check-out */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-              <button
-                type="button"
-                className={!isInside ? 'asas-action-btn-checkin' : 'asas-btn'}
-                disabled={busy}
-                onClick={() => act('enter')}
-                style={{
-                  height: 52,
-                  fontSize: 15,
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  opacity: isInside ? 0.45 : 1,
-                  cursor: isInside ? 'not-allowed' : 'pointer'
-                }}
-              >
-                <Icon name="logIn" style={{ width: 18, height: 18 }} />
-                <span>{isRemote ? 'تسجيل الحضور (عن بعد)' : 'تسجيل الحضور'}</span>
-              </button>
-
-              <button
-                type="button"
-                className={isInside ? 'asas-action-btn-checkout' : 'asas-btn'}
-                disabled={busy}
-                onClick={() => act('exit')}
-                style={{
-                  height: 52,
-                  fontSize: 15,
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  opacity: !isInside ? 0.45 : 1,
-                  cursor: !isInside ? 'not-allowed' : 'pointer'
-                }}
-              >
-                <Icon name="logOut" style={{ width: 18, height: 18 }} />
-                <span>{isRemote ? 'تسجيل الانصراف (عن بعد)' : 'تسجيل الانصراف'}</span>
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {isRemote ? (
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 160,
-                    height: 46,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    borderRadius: 'var(--radius-pill)',
-                    border: '1px solid rgba(56, 189, 248, 0.35)',
-                    background: 'rgba(56, 189, 248, 0.08)',
-                    color: '#38bdf8',
-                    fontWeight: 600,
-                    fontSize: 13.5
-                  }}
-                >
-                  <Icon name="checkCircle" style={{ width: 17, height: 17, color: '#38bdf8' }} />
-                  <span>أنت مسجل بنظام العمل عن بعد — لا يتطلب منك مسح كود QR الفرع</span>
+            {isRemote ? (
+              <div className="asas-remote-panel">
+                <div className="asas-remote-header">
+                  <div className="asas-remote-header-title">
+                    <Icon name="globe" style={{ width: 18, height: 18, color: '#38bdf8' }} />
+                    <span>لوحة الحضور والانصراف عن بعد</span>
+                  </div>
+                  <span className="asas-remote-header-badge">
+                    <Icon name="wifi" style={{ width: 13, height: 13 }} />
+                    <span>اعتماد إلكتروني فوري</span>
+                  </span>
                 </div>
-              ) : (
-                <button 
-                  type="button"
-                  className="asas-btn" 
-                  onClick={startCamera} 
-                  style={{ 
-                    flex: 1, 
-                    minWidth: 160, 
-                    height: 46, 
-                    justifyContent: 'center',
-                    borderRadius: 'var(--radius-pill)',
-                    border: '1px solid rgba(186, 149, 85, 0.35)',
-                    background: 'var(--glass-tint-strong)',
-                    fontWeight: 600,
-                    fontSize: 14
-                  }}
-                >
-                  <Icon name="camera" style={{ width: 18, height: 18, color: 'var(--accent)' }} />
-                  <span>مسح كود QR بكاميرا الجوال</span>
-                </button>
-              )}
-            </div>
+
+                <div className="asas-remote-grid">
+                  {/* Remote Check-in Card Button */}
+                  <button
+                    type="button"
+                    className={`asas-remote-card-btn checkin ${!isInside ? 'active-ready' : 'inactive'}`}
+                    disabled={busy || isInside}
+                    onClick={() => act('enter')}
+                    title={isInside ? 'أنت مسجل حضور بالفعل ومناوبتك مفتوحة' : 'اضغط لتسجيل الحضور عن بعد'}
+                  >
+                    <div className={`asas-remote-icon-box ${!isInside ? 'checkin-active' : 'inactive'}`}>
+                      <Icon name="remoteIn" style={{ width: 26, height: 26 }} />
+                    </div>
+                    <div className="asas-remote-btn-info">
+                      <div className="asas-remote-btn-title">تسجيل الحضور عن بعد</div>
+                      <div className="asas-remote-btn-desc">بدء فترة وساعات العمل اليومية</div>
+                      <div className={`asas-remote-btn-status ${!isInside ? 'ready-in' : 'done'}`}>
+                        <Icon name={!isInside ? 'sparkle' : 'checkCircle'} style={{ width: 13, height: 13 }} />
+                        <span>{!isInside ? 'جاهز لتسجيل الحضور الآن' : 'تم تسجيل الحضور اليوم'}</span>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Remote Check-out Card Button */}
+                  <button
+                    type="button"
+                    className={`asas-remote-card-btn checkout ${isInside ? 'active-ready' : 'inactive'}`}
+                    disabled={busy || !isInside}
+                    onClick={() => act('exit')}
+                    title={!isInside ? 'يلزم تسجيل الحضور أولاً قبل الانصراف' : 'اضغط لتسجيل الانصراف عن بعد'}
+                  >
+                    <div className={`asas-remote-icon-box ${isInside ? 'checkout-active' : 'inactive'}`}>
+                      <Icon name="remoteOut" style={{ width: 26, height: 26 }} />
+                    </div>
+                    <div className="asas-remote-btn-info">
+                      <div className="asas-remote-btn-title">تسجيل الانصراف عن بعد</div>
+                      <div className="asas-remote-btn-desc">إنهاء فترة الدوام وحفظ السجل</div>
+                      <div className={`asas-remote-btn-status ${isInside ? 'ready-out' : 'disabled'}`}>
+                        <Icon name={isInside ? 'logOut' : 'lock'} style={{ width: 13, height: 13 }} />
+                        <span>{isInside ? 'جاهز لتسجيل الانصراف الآن' : 'يتطلب تسجيل الحضور أولاً'}</span>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                <div className="asas-remote-footer-note">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="shieldCheck" style={{ width: 16, height: 16, color: '#38bdf8' }} />
+                    <span>حسابك معتمد بنظام العمل عن بعد — التحضير فوري بدون الحاجة لمسح كود QR الفرع</span>
+                  </div>
+                  {isInside && (
+                    <span style={{ color: 'var(--paid)', fontWeight: 700, fontSize: 11.5, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span className="asas-pulse-status-dot" style={{ width: 7, height: 7 }} />
+                      <span>على رأس العمل الآن</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                  <button
+                    type="button"
+                    className={!isInside ? 'asas-action-btn-checkin' : 'asas-btn'}
+                    disabled={busy}
+                    onClick={() => act('enter')}
+                    style={{
+                      height: 52,
+                      fontSize: 15,
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      opacity: isInside ? 0.45 : 1,
+                      cursor: isInside ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <Icon name="logIn" style={{ width: 18, height: 18 }} />
+                    <span>تسجيل الحضور</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={isInside ? 'asas-action-btn-checkout' : 'asas-btn'}
+                    disabled={busy}
+                    onClick={() => act('exit')}
+                    style={{
+                      height: 52,
+                      fontSize: 15,
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      opacity: !isInside ? 0.45 : 1,
+                      cursor: !isInside ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <Icon name="logOut" style={{ width: 18, height: 18 }} />
+                    <span>تسجيل الانصراف</span>
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <button 
+                    type="button"
+                    className="asas-btn" 
+                    onClick={startCamera} 
+                    style={{ 
+                      flex: 1, 
+                      minWidth: 160, 
+                      height: 46, 
+                      justifyContent: 'center',
+                      borderRadius: 'var(--radius-pill)',
+                      border: '1px solid rgba(186, 149, 85, 0.35)',
+                      background: 'var(--glass-tint-strong)',
+                      fontWeight: 600,
+                      fontSize: 14
+                    }}
+                  >
+                    <Icon name="camera" style={{ width: 18, height: 18, color: 'var(--accent)' }} />
+                    <span>مسح كود QR بكاميرا الجوال</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </Card>
       )}

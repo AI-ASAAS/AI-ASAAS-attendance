@@ -306,6 +306,31 @@ const paths = {
       <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
     </>
   ),
+  remoteIn: (
+    <>
+      <rect x="2" y="3" width="20" height="13" rx="2" />
+      <path d="M1 19h22M8 16v3M16 16v3" />
+      <path d="m8.5 9.5 2.5 2.5 5-5" />
+    </>
+  ),
+  remoteOut: (
+    <>
+      <rect x="2" y="3" width="20" height="13" rx="2" />
+      <path d="M1 19h22M8 16v3M16 16v3" />
+      <path d="M14 9.5h-5M11.5 7l-2.5 2.5 2.5 2.5" />
+    </>
+  ),
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20" />
+    </>
+  ),
+  wifi: (
+    <>
+      <path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof paths;
