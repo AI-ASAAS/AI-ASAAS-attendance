@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getDeviceId, getDeviceName } from '../../utils/device';
@@ -48,7 +48,7 @@ function UserAvatar({ user, size = 'md', onClick }) {
   );
 }
 
-async function api(path, method = 'GET', body, retries = 1) {
+async function api(path, method = 'GET', body, retries = 2) {
   let attempt = 0;
   while (true) {
     try {
@@ -59,7 +59,7 @@ async function api(path, method = 'GET', body, retries = 1) {
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const r = await fetch(`/api${path}`, {
         method,
@@ -83,7 +83,7 @@ async function api(path, method = 'GET', body, retries = 1) {
       }
 
       if (!r.ok) {
-        if ([502, 503, 504].includes(r.status) && attempt < retries) {
+        if ([500, 502, 503, 504].includes(r.status) && attempt < retries) {
           attempt++;
           await new Promise(res => setTimeout(res, 500 * attempt));
           continue;
@@ -94,7 +94,7 @@ async function api(path, method = 'GET', body, retries = 1) {
 
       return value ? value.data : null;
     } catch (netErr) {
-      if (attempt < retries && (!netErr.status || [502, 503, 504].includes(netErr.status))) {
+      if (attempt < retries && (!netErr.status || [500, 502, 503, 504].includes(netErr.status))) {
         attempt++;
         await new Promise(res => setTimeout(res, 500 * attempt));
         continue;
@@ -1845,7 +1845,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
           {error && (
             <div role="alert" className="asas-notice error" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <span>{error}</span>
-              <button className="asas-btn sm" onClick={load} disabled={busy}>
+              <button className="asas-btn sm" onClick={() => load(false)} disabled={busy}>
                 <Icon name="refresh" />
                 إعادة المحاولة
               </button>
@@ -4881,15 +4881,16 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     return () => clearInterval(id);
   }, []);
 
-  const load = useCallback(() => {
+  const load = useCallback((isSilent = false) => {
     return api('/attendance/me')
       .then(res => {
         setData(res);
         if (res?.branch) branchCoordsRef.current = res.branch;
+        setError('');
       })
       .catch(e => {
         if (e.status === 401) logout();
-        else setError(e.message);
+        else if (!isSilent) setError(e.message);
       });
   }, [logout]);
 
@@ -4922,7 +4923,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
     const poll = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        load();
+        load(true);
       }
     }, 15000);
     const onVisible = () => { if (document.visibilityState === 'visible') load(); };
@@ -5083,7 +5084,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 400]);
           sendSystemNotification('👋 تم تسجيل الانصراف التلقائي', res.message || 'تم رصد مغادرتك لنطاق مقر العمل وتوثيق الانصراف تلقائياً.');
           setMessage(res.message || '⚠️ تم رصد مغادرتك للنطاق بنجاح وتسجيل خروجك تلقائياً.');
-          load();
+          load(true);
           return;
         }
 
@@ -5365,7 +5366,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       {error && (
         <div className="asas-notice error" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <span>{error}</span>
-          <button className="asas-btn sm" onClick={load} disabled={busy}>
+          <button className="asas-btn sm" onClick={() => load(false)} disabled={busy}>
             <Icon name="refresh" />
             إعادة المحاولة
           </button>
@@ -5804,7 +5805,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
               إجمالي الفترات المسجلة: <strong>{(data?.records || []).length}</strong>
             </span>
-            <button className="asas-btn sm" onClick={load} disabled={busy}>
+            <button className="asas-btn sm" onClick={() => load(false)} disabled={busy}>
               <Icon name="refresh" />
               تحديث السجل
             </button>

@@ -16,7 +16,7 @@ const wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
 const error=(code,message,status=400)=>{throw new AppError(code,message,status);};
 const origin=()=>process.env.WEB_ORIGIN||'http://localhost:3000';
 const isAllowedOrigin=(orig)=>{
- if(!orig) return true;
+ if(!orig || orig === 'null') return true;
  const configured=(process.env.WEB_ORIGIN||'').split(',').map(s=>s.trim()).filter(Boolean);
  if(configured.includes('*')||process.env.NODE_ENV!=='production') return true;
  if(configured.includes(orig)||orig===origin()) return true;
@@ -42,7 +42,7 @@ app.use(express.json({limit:'10mb'}));
 app.use(express.urlencoded({extended:true,limit:'10mb'}));
 const path=require('node:path');
 app.use(express.static(path.join(__dirname,'../public')));
-app.use(rateLimit({windowMs:60000,max:300,standardHeaders:true,legacyHeaders:false}));
+app.use(rateLimit({windowMs:60000,max:1500,standardHeaders:true,legacyHeaders:false}));
 app.use((req,res,next)=>{
  res.set('Cache-Control','no-store');
  if(!['GET','HEAD','OPTIONS'].includes(req.method)){
