@@ -1040,7 +1040,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function AsasAppInner({ defaultAction = 'auto' }) {
+function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const [theme, toggleTheme] = useTheme();
   const [user, setUser] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -1676,6 +1676,7 @@ function AsasAppInner({ defaultAction = 'auto' }) {
           onToggleTheme={toggleTheme}
           onOpenInstall={() => setShowInstallModal(true)}
           installPrompt={installPrompt}
+          isRemoteMode={isRemoteMode}
         />
         {showInstallModal && (
           <InstallAppModal
@@ -3909,9 +3910,10 @@ function AsasAppInner({ defaultAction = 'auto' }) {
 }
 
 // LOGIN COMPONENT
-function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenInstall, installPrompt }) {
+function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenInstall, installPrompt, isRemoteMode = false }) {
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
   const [pendingInfo, setPendingInfo] = useState(null);
+  const [regWorkType, setRegWorkType] = useState(() => isRemoteMode ? 'remote' : 'onsite');
   const [identifier, setIdentifier] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('asas_saved_identifier') || '';
@@ -4201,13 +4203,15 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
         branch_id: regBranchId ? Number(regBranchId) : undefined,
         password: regPassword,
         device_id,
-        device_name
+        device_name,
+        is_remote: regWorkType === 'remote'
       });
       setPendingInfo({
         title: 'تم استلام طلب تسجيل حسابك بنجاح!',
         identifier: d.account?.identifier,
         name: d.account?.name,
         email: d.account?.email,
+        work_type: regWorkType === 'remote' ? 'دوام كامل عن بعد 🌐' : 'دوام حضوري بالفرع 🏢',
         message: d.message || 'طلبك قيد المراجعة وبانتظار موافقة واعتماد إدارة النظام في لوحة التحكم.'
       });
     } catch (err) {
@@ -4392,9 +4396,15 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                     </div>
                   )}
                   {pendingInfo.email && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                       <span className="asas-muted" style={{ fontSize: 12 }}>البريد الإلكتروني:</span>
                       <span style={{ fontSize: 12.5 }} dir="ltr">{pendingInfo.email}</span>
+                    </div>
+                  )}
+                  {pendingInfo.work_type && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span className="asas-muted" style={{ fontSize: 12 }}>طبيعة العمل:</span>
+                      <strong style={{ fontSize: 12.5, color: '#38bdf8' }}>{pendingInfo.work_type}</strong>
                     </div>
                   )}
                 </div>
@@ -4592,6 +4602,36 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
                 <div className="asas-modern-field-group">
                   <label className="asas-modern-field-label">
+                    <span className="asas-field-label-icon"><Icon name="briefcase" /></span>
+                    <span>طبيعة ونظام الدوام المطلوب</span>
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
+                    <button
+                      type="button"
+                      className={`asas-btn ${regWorkType === 'onsite' ? 'primary' : ''}`}
+                      style={{ justifyContent: 'center', height: 42, fontSize: 13, borderRadius: 10 }}
+                      onClick={() => setRegWorkType('onsite')}
+                    >
+                      <span>🏢 دوام حضوري بالفرع</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`asas-btn ${regWorkType === 'remote' ? 'primary' : ''}`}
+                      style={{ justifyContent: 'center', height: 42, fontSize: 13, borderRadius: 10 }}
+                      onClick={() => setRegWorkType('remote')}
+                    >
+                      <span>🌐 دوام كامل عن بعد</span>
+                    </button>
+                  </div>
+                  <small style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4, display: 'block', lineHeight: 1.5 }}>
+                    {regWorkType === 'remote'
+                      ? 'نظام العمل عن بعد يتيح لك تسجيل الحضور والانصراف بضغطة زر دون الحاجة لكود QR أو نطاق الفرع.'
+                      : 'الدوام الحضوري يتطلب التواجد داخل نطاق الفرع ومسح كود QR عند الدخول والانصراف.'}
+                  </small>
+                </div>
+
+                <div className="asas-modern-field-group">
+                  <label className="asas-modern-field-label">
                     <span className="asas-field-label-icon"><Icon name="key" /></span>
                     <span>كلمة المرور (6 خانات على الأقل)</span>
                   </label>
@@ -4774,6 +4814,10 @@ function sendSystemNotification(title, body) {
 function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProfile, onOpenInstall, installPrompt, defaultAction = 'auto', theme, onToggleTheme }) {
   const [empPage, setEmpPage] = useState('duty');
   const [data, setData] = useState(null);
+  const activeUser = data?.account || user;
+  const isRemote = Boolean(activeUser?.is_remote);
+  const [showLocationGuide, setShowLocationGuide] = useState(false);
+  const isInAppBrowser = typeof navigator !== 'undefined' && /WhatsApp|Telegram|FBAV|Instagram|Line/i.test(navigator.userAgent || '');
   const [leaves, setLeaves] = useState([]);
   const [loadingLeaves, setLoadingLeaves] = useState(false);
   const [error, setError] = useState('');
@@ -4885,6 +4929,9 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     return api('/attendance/me')
       .then(res => {
         setData(res);
+        if (res?.account && typeof localStorage !== 'undefined') {
+          try { localStorage.setItem('asas_account', JSON.stringify(res.account)); } catch (_) {}
+        }
         if (res?.branch) branchCoordsRef.current = res.branch;
         setError('');
       })
@@ -4937,10 +4984,12 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   async function act(action, customToken = null) {
     setBusy(true);
     setError('');
+    const curUser = data?.account || user;
+    const curRemote = Boolean(curUser?.is_remote);
     try {
       let currentToken = customToken || token;
       if (!currentToken) {
-        if (user?.is_remote) {
+        if (curRemote) {
           currentToken = 'remote_token';
         } else {
           try {
@@ -4949,7 +4998,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           } catch (err) {}
         }
       }
-      if (!currentToken && !user?.is_remote) throw new Error('يرجى مسح رمز QR الخاص بالفرع لتأكيد التواجد');
+      if (!currentToken && !curRemote) throw new Error('يرجى مسح رمز QR الخاص بالفرع لتأكيد التواجد');
 
       // Pre-validation to reject crossed actions immediately on client
       const qrMeta = currentToken !== 'remote_token' ? decodeQrToken(currentToken) : null;
@@ -4962,28 +5011,90 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         }
       }
 
-      // Fast coordinate retrieval: use recently cached fix if < 15 seconds old
+      // Fast coordinate retrieval
       let p;
-      if (lastCoordsRef.current && (Date.now() - lastCoordsTimeRef.current < 15000)) {
-        p = lastCoordsRef.current;
-      } else {
-        p = await new Promise((resolve, reject) => {
-          if (!navigator.geolocation) {
-            if (user?.is_remote) return resolve({ coords: { latitude: 0, longitude: 0, accuracy: 999 }, timestamp: Date.now() });
-            return reject(new Error('الموقع غير متاح'));
+      if (curRemote) {
+        // REMOTE: Never block on GPS. Safe fast attempt with fallback
+        p = await new Promise((resolve) => {
+          if (typeof window === 'undefined' || !navigator.geolocation) {
+            return resolve({ coords: { latitude: 0, longitude: 0, accuracy: 999 }, timestamp: Date.now() });
           }
-          navigator.geolocation.getCurrentPosition(resolve, () => {
-            navigator.geolocation.getCurrentPosition(resolve, (err) => {
-              if (user?.is_remote) return resolve({ coords: { latitude: 0, longitude: 0, accuracy: 999 }, timestamp: Date.now() });
-              reject(err);
-            }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 });
-          }, { enableHighAccuracy: true, timeout: 4000, maximumAge: 6000 });
+          let resolved = false;
+          const timer = setTimeout(() => {
+            if (!resolved) {
+              resolved = true;
+              resolve({ coords: { latitude: 0, longitude: 0, accuracy: 999 }, timestamp: Date.now() });
+            }
+          }, 1200);
+
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timer);
+                resolve(pos);
+              }
+            },
+            () => {
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timer);
+                resolve({ coords: { latitude: 0, longitude: 0, accuracy: 999 }, timestamp: Date.now() });
+              }
+            },
+            { enableHighAccuracy: false, timeout: 1200, maximumAge: 60000 }
+          );
         });
-        lastCoordsRef.current = p;
-        lastCoordsTimeRef.current = Date.now();
+      } else {
+        // ON-SITE: Fast coordinate retrieval: use recently cached fix if < 15 seconds old
+        if (lastCoordsRef.current && (Date.now() - lastCoordsTimeRef.current < 15000)) {
+          p = lastCoordsRef.current;
+        } else {
+          p = await new Promise((resolve, reject) => {
+            if (typeof window === 'undefined' || !navigator.geolocation) {
+              return reject(new Error('خدمة تحديد الموقع (GPS) غير مدعومة في متصفحك.'));
+            }
+            navigator.geolocation.getCurrentPosition(
+              resolve,
+              (err) => {
+                navigator.geolocation.getCurrentPosition(
+                  resolve,
+                  (fallbackErr) => {
+                    const finalErr = fallbackErr || err;
+                    if (finalErr?.code === 1 || /denied|permission/i.test(finalErr?.message || '')) {
+                      const pe = new Error('LOCATION_DENIED');
+                      pe.code = 1;
+                      return reject(pe);
+                    }
+                    if (finalErr?.code === 2) {
+                      const ue = new Error('POSITION_UNAVAILABLE');
+                      ue.code = 2;
+                      return reject(ue);
+                    }
+                    if (finalErr?.code === 3) {
+                      const te = new Error('TIMEOUT');
+                      te.code = 3;
+                      return reject(te);
+                    }
+                    reject(finalErr);
+                  },
+                  { enableHighAccuracy: false, timeout: 6000, maximumAge: 10000 }
+                );
+              },
+              { enableHighAccuracy: true, timeout: 5000, maximumAge: 5000 }
+            );
+          });
+          lastCoordsRef.current = p;
+          lastCoordsTimeRef.current = Date.now();
+        }
       }
 
-      const fix = { latitude: p.coords.latitude, longitude: p.coords.longitude, accuracy: Math.round(p.coords.accuracy), captured_at: new Date(p.timestamp || Date.now()).toISOString() };
+      const fix = {
+        latitude: p.coords.latitude,
+        longitude: p.coords.longitude,
+        accuracy: Math.round(p.coords.accuracy || 0),
+        captured_at: new Date(p.timestamp || Date.now()).toISOString()
+      };
       const device_id = getDeviceId();
       const reqId = generateUUID();
       const r = await api('/attendance/action', 'POST', { action, token: currentToken, request_id: reqId, device_id, fix });
@@ -5001,7 +5112,20 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
       setMessage(r.message || 'تم توثيق الحضور بنجاح');
       await load();
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+    } catch (e) {
+      if (e?.code === 1 || e?.message === 'LOCATION_DENIED' || /denied|Geolocation/i.test(e?.message || '')) {
+        setError('LOCATION_DENIED');
+        setShowLocationGuide(true);
+      } else if (e?.code === 2 || e?.message === 'POSITION_UNAVAILABLE') {
+        setError('⚠️ تعذر تحديد موقعك الحالي. يرجى التأكد من تشغيل الـ GPS في جوالك وإعادة المحاولة.');
+      } else if (e?.code === 3 || e?.message === 'TIMEOUT') {
+        setError('⚠️ استغرق التقاط الموقع وقتاً طويلاً. يرجى الخروج لمكان مفتوح أو الاقتراب من نافذة والمحاولة مجدداً.');
+      } else {
+        setError(e.message || 'حدث خطأ أثناء تسجيل الحضور');
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   const todayRecord = data?.records?.[0];
@@ -5169,6 +5293,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   }, [isInside, load, todayRecord]);
 
   const triggerLocationCheck = useCallback(() => {
+    if (isRemote) return;
     if (typeof window === 'undefined' || !navigator.geolocation) return;
     setCheckingGps(true);
     const onPos = (pos) => {
@@ -5179,16 +5304,21 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       navigator.geolocation.getCurrentPosition(
         onPos,
         finalErr => {
-          setError('تعذر تحديد الموقع: ' + (finalErr?.message || err?.message));
+          if (finalErr?.code === 1 || /denied/i.test(finalErr?.message || '')) {
+            setError('LOCATION_DENIED');
+          } else {
+            setError('تعذر تحديد الموقع: ' + (finalErr?.message || err?.message));
+          }
           setCheckingGps(false);
         },
         { enableHighAccuracy: false, timeout: 8000, maximumAge: 10000 }
       );
     };
     navigator.geolocation.getCurrentPosition(onPos, onFallback, { enableHighAccuracy: true, timeout: 5000, maximumAge: 2000 });
-  }, [sendLocationFix]);
+  }, [sendLocationFix, isRemote]);
 
   useEffect(() => {
+    if (isRemote) return;
     if (typeof window === 'undefined' || !navigator.geolocation) return;
 
     let isCancelled = false;
@@ -5239,7 +5369,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       navigator.geolocation.clearWatch(watchId);
       clearInterval(intervalId);
     };
-  }, [sendLocationFix, geofenceStatus.pending, geofenceStatus.distance, isInside]);
+  }, [sendLocationFix, geofenceStatus.pending, geofenceStatus.distance, isInside, isRemote]);
 
   return (
     <div className="asas-employee-page">
@@ -5363,7 +5493,63 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         </nav>
       </div>
 
-      {error && (
+      {isInAppBrowser && (
+        <div style={{
+          background: 'rgba(245, 158, 11, 0.12)',
+          border: '1px solid rgba(245, 158, 11, 0.35)',
+          color: '#fbbf24',
+          padding: '10px 14px',
+          borderRadius: 12,
+          marginBottom: 14,
+          fontSize: 12.5,
+          lineHeight: 1.6,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10
+        }}>
+          <Icon name="alert" style={{ width: 22, height: 22, flexShrink: 0, color: '#f59e0b' }} />
+          <div>
+            <strong>تنبيه: أنت تتصفح من داخل تطبيق واتساب.</strong><br />
+            متصفح واتساب يقيّد خدمات الموقع والكاميرا. يرجى الضغط على زر الخيارات (⋮) أعلى زاوية الشاشة واختيار <strong>"فتح في Chrome / المتصفح"</strong> لإتمام الحضور والموقع بنجاح.
+          </div>
+        </div>
+      )}
+
+      {error === 'LOCATION_DENIED' ? (
+        <div className="asas-notice error" role="alert" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <Icon name="alert" style={{ width: 22, height: 22, color: 'var(--danger)', flexShrink: 0, marginTop: 2 }} />
+            <div style={{ flex: 1 }}>
+              <strong style={{ fontSize: 14, display: 'block', marginBottom: 4 }}>
+                ⚠️ تم حظر إذن الموقع الجغرافي من المتصفح (User denied Geolocation)
+              </strong>
+              <span style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)' }}>
+                لتسجيل الحضور، يحتاج المتصفح لمعرفة أنك داخل مقر العمل. يرجى السماح للمتصفح بالوصول للموقع وإعادة المحاولة.
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+            <button
+              type="button"
+              className="asas-btn primary sm"
+              onClick={() => setShowLocationGuide(true)}
+              style={{ fontWeight: 700 }}
+            >
+              <Icon name="mapPin" />
+              <span>عرض خطوات تفعيل الموقع 📍</span>
+            </button>
+            <button
+              type="button"
+              className="asas-btn sm"
+              onClick={() => { setError(''); act(isInside ? 'exit' : 'enter'); }}
+              disabled={busy}
+            >
+              <Icon name="refresh" />
+              <span>إعادة المحاولة الآن</span>
+            </button>
+          </div>
+        </div>
+      ) : error ? (
         <div className="asas-notice error" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <span>{error}</span>
           <button className="asas-btn sm" onClick={() => load(false)} disabled={busy}>
@@ -5371,7 +5557,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             إعادة المحاولة
           </button>
         </div>
-      )}
+      ) : null}
       {message && <div className="asas-notice">{message}</div>}
 
       {/* SUBPAGE 1: Attendance & Duty Status */}
@@ -5385,13 +5571,13 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                   <span className="asas-pulse-status-dot" style={{ color: isInside ? 'var(--paid)' : 'var(--accent)' }} />
                   <Icon name={isInside ? 'checkCircle' : 'logOut'} style={{ width: 19, height: 19 }} />
                   {isInside 
-                    ? (user?.is_remote ? 'على رأس العمل (دوام عن بعد - أونلاين)' : 'داخل مقر العمل (على رأس العمل - دوام مفتوح)') 
-                    : (todayRecord?.last_out ? (user?.is_remote ? 'تم تسجيل الانصراف وإنهاء الدوام (عن بعد)' : 'تم تسجيل الانصراف وإنهاء الدوام') : (user?.is_remote ? 'جاهز لتسجيل الحضور عن بعد' : 'جاهز لتسجيل الحضور في المقر'))}
+                    ? (isRemote ? 'على رأس العمل (دوام عن بعد - أونلاين)' : 'داخل مقر العمل (على رأس العمل - دوام مفتوح)') 
+                    : (todayRecord?.last_out ? (isRemote ? 'تم تسجيل الانصراف وإنهاء الدوام (عن بعد)' : 'تم تسجيل الانصراف وإنهاء الدوام') : (isRemote ? 'جاهز لتسجيل الحضور عن بعد' : 'جاهز لتسجيل الحضور في المقر'))}
                 </strong>
               </div>
               <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`} style={{ fontSize: 12, padding: '4px 10px' }}>
                 <Icon name={isInside ? 'logOut' : 'logIn'} style={{ width: 13, height: 13 }} />
-                الإجراء: {isInside ? (user?.is_remote ? 'تسجيل الانصراف عن بعد' : 'تسجيل الانصراف') : (user?.is_remote ? 'تسجيل الحضور عن بعد' : 'تسجيل الحضور')}
+                الإجراء: {isInside ? (isRemote ? 'تسجيل الانصراف عن بعد' : 'تسجيل الانصراف') : (isRemote ? 'تسجيل الحضور عن بعد' : 'تسجيل الحضور')}
               </span>
             </div>
 
@@ -5420,14 +5606,14 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                   <span>سبب الخروج / الحالة</span>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginTop: 2 }}>
-                  {todayRecord?.exit_reason_label || (isInside ? (user?.is_remote ? 'على رأس العمل (عن بعد)' : 'على رأس العمل') : (user?.is_remote ? 'جاهز للدخول عن بعد' : 'جاهز للدخول'))}
+                  {todayRecord?.exit_reason_label || (isInside ? (isRemote ? 'على رأس العمل (عن بعد)' : 'على رأس العمل') : (isRemote ? 'جاهز للدخول عن بعد' : 'جاهز للدخول'))}
                 </div>
               </div>
             </div>
 
             {/* Live Geofence Monitoring Capsule (التصميم الكبسولي السيادي الأصلي) */}
             {(() => {
-              if (user?.is_remote) {
+              if (isRemote) {
                 return (
                   <div
                     style={{
@@ -5617,7 +5803,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 }}
               >
                 <Icon name="logIn" style={{ width: 18, height: 18 }} />
-                <span>{user?.is_remote ? 'تسجيل الحضور (عن بعد)' : 'تسجيل الحضور'}</span>
+                <span>{isRemote ? 'تسجيل الحضور (عن بعد)' : 'تسجيل الحضور'}</span>
               </button>
 
               <button
@@ -5638,12 +5824,12 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 }}
               >
                 <Icon name="logOut" style={{ width: 18, height: 18 }} />
-                <span>{user?.is_remote ? 'تسجيل الانصراف (عن بعد)' : 'تسجيل الانصراف'}</span>
+                <span>{isRemote ? 'تسجيل الانصراف (عن بعد)' : 'تسجيل الانصراف'}</span>
               </button>
             </div>
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {user?.is_remote ? (
+              {isRemote ? (
                 <div
                   style={{
                     flex: 1,
@@ -5813,14 +5999,89 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           <Records rows={(data?.records || []).map(r => ({ ...r, name: user.name, identifier: user.identifier }))} />
         </Card>
       )}
+
+      {/* Location Permission Guide Modal */}
+      {showLocationGuide && (
+        <div className="asas-modal-overlay" onClick={() => setShowLocationGuide(false)}>
+          <div className="asas-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
+            <div className="asas-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 22 }}>📍</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16 }}>كيفية تفعيل إذن الموقع الجغرافي</h3>
+                  <small style={{ color: 'var(--text-3)' }}>خطوات سريعة لحل مشكلة (User denied Geolocation)</small>
+                </div>
+              </div>
+              <button className="asas-modal-close" onClick={() => setShowLocationGuide(false)}>×</button>
+            </div>
+            <div className="asas-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', padding: 12, borderRadius: 10, fontSize: 12.5, lineHeight: 1.6 }}>
+                💡 <strong>لماذا يطلب النظام إذن الموقع؟</strong><br />
+                يتطلب نظام أساس التحقق من تواجدك داخل مقر العمل لتوثيق حضورك بدقة تامة ومنع الأخطاء في سجلات الدوام.
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 10, border: '1px solid var(--hairline)' }}>
+                  <strong style={{ color: 'var(--accent)', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <span>📱</span> في متصفح Google Chrome (أندرويد / كمبيوتر):
+                  </strong>
+                  <ol style={{ margin: 0, paddingRight: 20, fontSize: 12.5, lineHeight: 1.7, color: 'var(--text-2)' }}>
+                    <li>اضغط على أيقونة <strong>القفل 🔒 أو علامة الإعدادات</strong> في شريط الرابط أعلى الشاشة بجوار رابط الموقع.</li>
+                    <li>اضغط على <strong>"الأذونات" (Permissions)</strong> أو <strong>"إعدادات الموقع" (Site Settings)</strong>.</li>
+                    <li>ابحث عن <strong>"الموقع الجغرافي" (Location)</strong> وقم بتغييره إلى <strong>سماح (Allow)</strong>.</li>
+                    <li>اسحب الشاشة للأسفل لتحديث الصفحة، ثم اضغط على زر التحضير مجدداً.</li>
+                  </ol>
+                </div>
+
+                <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 10, border: '1px solid var(--hairline)' }}>
+                  <strong style={{ color: '#38bdf8', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <span>🍎</span> في متصفح Safari (آيفون iPhone / آيباد iPad):
+                  </strong>
+                  <ol style={{ margin: 0, paddingRight: 20, fontSize: 12.5, lineHeight: 1.7, color: 'var(--text-2)' }}>
+                    <li>اضغط على أيقونة <strong>(AA) أو (ع ع)</strong> في شريط العنوان أسفل أو أعلى الشاشة.</li>
+                    <li>اختر <strong>"إعدادات موقع الويب" (Website Settings)</strong>.</li>
+                    <li>اضغط على <strong>"الموقع" (Location)</strong> واختر <strong>سماح (Allow)</strong>.</li>
+                    <li>أعد تحديث الصفحة وحاول مجدداً.</li>
+                  </ol>
+                </div>
+
+                <div style={{ background: 'rgba(245, 158, 11, 0.08)', padding: 12, borderRadius: 10, border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                  <strong style={{ color: '#f59e0b', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <span>💬</span> إذا كنت تتصفح من داخل تطبيق واتساب (WhatsApp):
+                  </strong>
+                  <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-2)' }}>
+                    متصفح واتساب الداخلي يحظر خدمات الموقع تلقائياً. اضغط على <strong>زر الخيارات الثلاث (⋮)</strong> في أعلى زاوية الشاشة، ثم اختر <strong>"فتح في Chrome / المتصفح"</strong> (Open in Browser).
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="asas-btn primary"
+                  onClick={() => {
+                    setShowLocationGuide(false);
+                    setError('');
+                    act(isInside ? 'exit' : 'enter');
+                  }}
+                  style={{ width: '100%', justifyContent: 'center', height: 44, fontWeight: 700 }}
+                >
+                  <Icon name="refresh" />
+                  <span>تم تفعيل الموقع — إعادة المحاولة الآن</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function AsasApp({ defaultAction = 'auto' }) {
+export default function AsasApp({ defaultAction = 'auto', isRemoteMode = false }) {
   return (
     <ErrorBoundary>
-      <AsasAppInner defaultAction={defaultAction} />
+      <AsasAppInner defaultAction={defaultAction} isRemoteMode={isRemoteMode} />
     </ErrorBoundary>
   );
 }

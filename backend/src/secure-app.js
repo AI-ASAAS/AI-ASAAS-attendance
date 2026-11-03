@@ -149,10 +149,11 @@ app.post('/api/auth/register',rateLimit({windowMs:900000,max:15,standardHeaders:
 
   const identifier = await generateNextEmployeeIdentifier(c);
   const hash = await security.hashPassword(password);
+  const isRemote = Boolean(req.body.is_remote);
 
   const insertRes = await c.query(
-   `INSERT INTO accounts(identifier,name,password_hash,role,branch_id,shift_id,email,phone,bound_device_id,bound_device_name,device_bound_at,active)
-    VALUES($1,$2,$3,'employee',$4,$5,$6,$7,$8,$9,$10,FALSE)
+   `INSERT INTO accounts(identifier,name,password_hash,role,branch_id,shift_id,email,phone,bound_device_id,bound_device_name,device_bound_at,active,is_remote)
+    VALUES($1,$2,$3,'employee',$4,$5,$6,$7,$8,$9,$10,FALSE,$11)
     RETURNING *`,
    [
     identifier,
@@ -164,7 +165,8 @@ app.post('/api/auth/register',rateLimit({windowMs:900000,max:15,standardHeaders:
     phone,
     deviceId,
     deviceName||'هاتف ذكي',
-    deviceId ? new Date() : null
+    deviceId ? new Date() : null,
+    isRemote
    ]
   );
   return insertRes.rows[0];
@@ -836,19 +838,22 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    }
   }
 
+  const isRemote = Boolean(req.user.is_remote || b.token === 'remote_token');
   const branchId=record?.state==='inside'?record.branch_id:(req.user.branch_id||1);
   const branch=(await c.query('SELECT * FROM branches WHERE id=$1 FOR SHARE',[branchId])).rows[0];
   if(!branch)error('NO_BRANCH','لم يتم تعيين موقع لك');
   const location=policy.classifyFix(b.fix,branch,now);
   if(b.action!=='location'){
-   policy.verifyQr(b.token,branch,process.env.QR_SECRET,now,b.action);
-   const dist=Math.round(location.distance);
-   const maxAccuracy=Math.max(Number(branch.max_accuracy||200),250);
-   if(b.fix.accuracy>maxAccuracy){
-    error('GPS_LOW_ACCURACY',`إشارة تحديد الموقع ضعيفة (الدقة: ${Math.round(b.fix.accuracy)} متر، والحد الأقصى للدقة المقبولة هو ${maxAccuracy} متر). يرجى تفعيل "الموقع الدقيق Precise Location" في الهاتف والاقتراب من نافذة والمحاولة مجدداً.`,422);
-   }
-   if(b.action==='enter'&&dist>Number(branch.entry_radius)){
-    error('GPS_REJECTED',`أنت خارج نطاق الفرع (${dist} متر). النطاق المسموح للدخول: ${branch.entry_radius} متر. يرجى التواجد في مقر الفرع أو تعديل إحداثيات الفرع في الإدارة لموقعك الحالي.`,422);
+   if(!isRemote){
+    policy.verifyQr(b.token,branch,process.env.QR_SECRET,now,b.action);
+    const dist=Math.round(location.distance);
+    const maxAccuracy=Math.max(Number(branch.max_accuracy||200),250);
+    if(b.fix.accuracy>maxAccuracy){
+     error('GPS_LOW_ACCURACY',`إشارة تحديد الموقع ضعيفة (الدقة: ${Math.round(b.fix.accuracy)} متر، والحد الأقصى للدقة المقبولة هو ${maxAccuracy} متر). يرجى تفعيل "الموقع الدقيق Precise Location" في الهاتف والاقتراب من نافذة والمحاولة مجدداً.`,422);
+    }
+    if(b.action==='enter'&&dist>Number(branch.entry_radius)){
+     error('GPS_REJECTED',`أنت خارج نطاق الفرع (${dist} متر). النطاق المسموح للدخول: ${branch.entry_radius} متر. يرجى التواجد في مقر الفرع أو تعديل إحداثيات الفرع في الإدارة لموقعك الحالي.`,422);
+    }
    }
    location.state='inside';
   }
@@ -877,13 +882,31 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
     notifications.notifyCheckIn(req.user,branch.name,timeStr).catch(err=>console.error('[Notification Error] Check-in email failed:',err.message));
    }
    const resolved = resolveRecordStatus(record);
-   const enterMsg = record.late_minutes > 0
-     ? `تم تسجيل حضورك بنجاح (تأخير ${record.late_minutes} دقيقة عن بداية الدوام)`
-     : (returning ? (isAuto ? 'تم تسجيل عودتك تلقائياً' : 'تم تسجيل عودتك') : (isAuto ? 'تم تسجيل حضورك تلقائياً بحسب حالتك' : 'تم تسجيل حضورك'));
+   const enterMsg = isRemote
+     ? 'تم تسجيل حضورك بنجاح (العمل عن بعد 🌐)'
+     : (record.late_minutes > 0
+       ? `تم تسجيل حضورك بنجاح (تأخير ${record.late_minutes} دقيقة عن بداية الدوام)`
+       : (returning ? (isAuto ? 'تم تسجيل عودتك تلقائياً' : 'تم تسجيل عودتك') : (isAuto ? 'تم تسجيل حضورك تلقائياً بحسب حالتك' : 'تم تسجيل حضورك')));
    return {record:{...record,...resolved},action:'enter',automatic:isAuto,message:enterMsg,status_label:resolved.status_label,exit_reason_label:resolved.exit_reason_label};
   }
   let automatic=false,candidate=null;
   if(b.action==='location'){
+   if(isRemote){
+    if(record && record.state==='inside'){
+     await c.query("UPDATE duty_records SET last_seen=$1, gps_state='inside' WHERE id=$2",[now,record.id]);
+    }
+    return {
+      action:'location',
+      duty_state:record?.state||'outside',
+      state:'inside',
+      inside_geofence:true,
+      distance:null,
+      accuracy:Math.round(b.fix?.accuracy||0),
+      branch:{id:branch.id,name:branch.name,latitude:branch.latitude,longitude:branch.longitude,entry_radius:branch.entry_radius,exit_radius:branch.exit_radius},
+      branch_radius:{entry:branch.entry_radius,exit:branch.exit_radius},
+      message:'دوام عن بعد نشط'
+    };
+   }
    const dist=Math.round(location.distance);
    const maxAcc=Math.max(Number(branch.max_accuracy||200),250);
    const entryRadius=Number(branch.entry_radius||120);
@@ -944,7 +967,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    error('NOT_INSIDE','لا يوجد حضور مفتوح لتسجيل الخروج منه. يرجى تسجيل الدخول أولاً.',409);
   }
   if(b.action==='exit'||automatic){
-   let reason = automatic ? 'مغادرة نطاق الموقع تلقائياً (GPS)' : 'انتهاء ساعات الدوام الرسمي في الموعد';
+   let reason = isRemote ? 'انصراف العمل عن بعد' : (automatic ? 'مغادرة نطاق الموقع تلقائياً (GPS)' : 'انتهاء ساعات الدوام الرسمي في الموعد');
    let earlyMins = 0;
    if(record.shift_end){
     const shiftEnd = new Date(record.shift_end);
