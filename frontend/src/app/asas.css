@@ -114,64 +114,82 @@ html, body {
   background-image: url('/logo-light.png');
 }
 
-/* Sovereign Harmonized Sidebar */
+/* Sovereign Harmonized Sidebar (Asas Design System) */
 .asas-sidebar {
   width: 280px;
   height: 100vh;
   height: 100dvh;
   flex-shrink: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(246, 239, 227, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.90) 0%, rgba(246, 239, 227, 0.84) 100%);
   -webkit-backdrop-filter: blur(24px) saturate(170%);
   backdrop-filter: blur(24px) saturate(170%);
-  border-left: 1px solid rgba(186, 149, 85, 0.20);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.40), var(--glass-shadow);
-  padding: 20px 14px 16px;
+  border-left: 1px solid var(--glass-rim);
+  box-shadow: inset -1px 0 0 var(--glass-sheen), var(--glass-shadow);
+  padding: 16px 14px;
   display: flex;
   flex-direction: column;
   z-index: 30;
-  overflow-y: auto;
-  overflow-x: hidden;
-  transition: transform 0.3s var(--ease-out);
+  overflow: hidden;
+  transition: transform 0.35s var(--ease-spring);
   transform: translateZ(0);
+  box-sizing: border-box;
 }
 
-.asas-sidebar .asas-logo {
+.asas-sidebar-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 8px 18px;
-  border-bottom: 1px solid rgba(186, 149, 85, 0.18);
-  margin-bottom: 12px;
+  justify-content: space-between;
+  padding: 0 4px 14px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 10px;
 }
 
-.asas-sidebar .asas-logo strong {
-  font-family: var(--font-display, 'Thmanyah Serif Display', serif);
-  font-size: 22px;
-  line-height: 1.2;
+.asas-sidebar-close-btn {
+  display: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--glass-rim);
+  background: var(--glass-inset);
+  color: var(--text-2);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.asas-sidebar-close-btn:hover {
   color: var(--text);
-  font-weight: 700;
-  letter-spacing: 0.2px;
+  background: rgba(186, 149, 85, 0.15);
+  border-color: var(--accent);
 }
 
-.asas-sidebar .asas-logo small {
-  display: block;
-  font-size: 11px;
-  letter-spacing: 0.8px;
-  color: var(--brand-gold);
-  font-weight: 700;
-  margin-top: 2px;
+.asas-sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-inline-end: 2px;
+  scrollbar-width: thin;
+}
+.asas-sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.asas-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(186, 149, 85, 0.2);
+  border-radius: 4px;
 }
 
 .asas-nav-label {
+  font-family: var(--font, 'Thmanyah Sans', sans-serif);
   font-size: 11px;
-  color: var(--brand-gold);
-  letter-spacing: 0.8px;
-  padding: 4px 10px 8px;
+  color: var(--accent);
+  letter-spacing: 0.6px;
+  padding: 4px 8px 8px;
   font-weight: 700;
   text-transform: uppercase;
   display: flex;
   align-items: center;
   gap: 8px;
+  margin: 0 0 4px;
 }
 .asas-nav-label::after {
   content: '';
@@ -183,95 +201,104 @@ html, body {
 .asas-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
-.asas-nav button {
+.asas-nav button,
+.asas-nav-item {
   border: 1px solid transparent;
   background: transparent;
   text-align: right;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
+  gap: 10px;
+  height: 44px;
+  padding: 0 10px;
   border-radius: 12px;
   color: var(--text-2);
+  font-family: var(--font, 'Thmanyah Sans', sans-serif);
   font-size: 13.5px;
-  font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-weight: 600;
+  transition: all 0.22s var(--ease-spring);
   position: relative;
   width: 100%;
   box-sizing: border-box;
+  cursor: pointer;
 }
 
-/* Inactive Icon Capsule: Harmonious, quiet, elegant */
 .asas-nav-icon {
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
   border-radius: 9px;
   display: grid;
   place-items: center;
   background: rgba(186, 149, 85, 0.08);
   border: 1px solid rgba(186, 149, 85, 0.16);
   color: var(--text-2);
-  transition: all 0.25s var(--ease-spring);
+  transition: all 0.22s var(--ease-spring);
   flex-shrink: 0;
 }
-
 .asas-nav-icon svg {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
   color: currentColor;
-  transition: all 0.25s var(--ease-spring);
+  transition: all 0.22s var(--ease-spring);
   flex-shrink: 0;
 }
 
-/* Hover: Smooth gliding pill with gentle gold warm glow */
-.asas-nav button:hover {
+.asas-nav-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asas-nav button:hover,
+.asas-nav-item:hover {
   background: rgba(186, 149, 85, 0.09);
   color: var(--text);
   border-color: rgba(186, 149, 85, 0.22);
-  transform: translateX(-3px);
+  transform: translateX(-2px);
 }
-
-.asas-nav button:hover .asas-nav-icon {
+.asas-nav button:hover .asas-nav-icon,
+.asas-nav-item:hover .asas-nav-icon {
   background: rgba(186, 149, 85, 0.18);
   border-color: rgba(186, 149, 85, 0.45);
-  color: var(--brand-gold);
+  color: var(--accent);
   transform: scale(1.05);
-  box-shadow: 0 2px 8px -1px rgba(186, 149, 85, 0.30);
 }
 
-/* Active State: Authoritative, Sovereign Gold Accent */
-.asas-nav button.active {
-  background: linear-gradient(270deg, rgba(186, 149, 85, 0.18) 0%, rgba(186, 149, 85, 0.04) 100%);
-  color: var(--brand-gold);
-  font-weight: 700;
-  border: 1px solid rgba(186, 149, 85, 0.38);
-  border-right: 4px solid var(--brand-gold);
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
-  box-shadow: 0 4px 16px -2px rgba(186, 149, 85, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.50);
+.asas-nav button.active,
+.asas-nav-item.active {
+  background: linear-gradient(270deg, rgba(186, 149, 85, 0.18) 0%, rgba(186, 149, 85, 0.04) 100%) !important;
+  color: var(--accent) !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(186, 149, 85, 0.38) !important;
+  border-right: 4px solid var(--accent) !important;
+  border-top-right-radius: 4px !important;
+  border-bottom-right-radius: 4px !important;
+  box-shadow: 0 4px 16px -2px rgba(186, 149, 85, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.50) !important;
 }
 
-.asas-nav button.active .asas-nav-icon {
-  background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%);
-  border: 1px solid rgba(255, 255, 255, 0.50);
-  color: #ffffff;
-  transform: scale(1.06);
-  box-shadow: 0 4px 14px -2px rgba(186, 149, 85, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.60);
+.asas-nav button.active .asas-nav-icon,
+.asas-nav-item.active .asas-nav-icon {
+  background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.50) !important;
+  color: #ffffff !important;
+  transform: scale(1.06) !important;
+  box-shadow: 0 4px 14px -2px rgba(186, 149, 85, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.60) !important;
 }
-
-.asas-nav button.active .asas-nav-icon svg {
+.asas-nav button.active .asas-nav-icon svg,
+.asas-nav-item.active .asas-nav-icon svg {
   color: #ffffff !important;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
 }
 
 /* Dark mode for sidebar & navigation */
 :root[data-theme='dark'] .asas-sidebar {
-  background: linear-gradient(180deg, rgba(28, 24, 25, 0.94) 0%, rgba(22, 19, 20, 0.96) 100%) !important;
-  border-left: 1px solid rgba(186, 149, 85, 0.25) !important;
+  background: linear-gradient(180deg, rgba(28, 24, 25, 0.94) 0%, rgba(20, 17, 18, 0.96) 100%) !important;
+  border-left: 1px solid var(--glass-rim) !important;
   box-shadow: inset -1px 0 0 rgba(186, 149, 85, 0.12), 0 8px 30px rgba(0, 0, 0, 0.50) !important;
 }
 
@@ -282,43 +309,48 @@ html, body {
   box-shadow: none;
 }
 
-:root[data-theme='dark'] .asas-nav button:hover {
+:root[data-theme='dark'] .asas-nav button:hover,
+:root[data-theme='dark'] .asas-nav-item:hover {
   background: rgba(186, 149, 85, 0.12);
   color: #efe9d8;
   border-color: rgba(186, 149, 85, 0.32);
 }
 
-:root[data-theme='dark'] .asas-nav button:hover .asas-nav-icon {
+:root[data-theme='dark'] .asas-nav button:hover .asas-nav-icon,
+:root[data-theme='dark'] .asas-nav-item:hover .asas-nav-icon {
   background: rgba(186, 149, 85, 0.24);
   border-color: rgba(186, 149, 85, 0.55);
   color: #dfc289;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.40);
 }
 
-:root[data-theme='dark'] .asas-nav button.active {
-  background: linear-gradient(270deg, rgba(186, 149, 85, 0.26) 0%, rgba(186, 149, 85, 0.06) 100%);
+:root[data-theme='dark'] .asas-nav button.active,
+:root[data-theme='dark'] .asas-nav-item.active {
+  background: linear-gradient(270deg, rgba(186, 149, 85, 0.26) 0%, rgba(186, 149, 85, 0.06) 100%) !important;
   color: #dfc289;
   border: 1px solid rgba(186, 149, 85, 0.45);
   border-right: 4px solid #dfc289;
   box-shadow: 0 4px 18px -4px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
-:root[data-theme='dark'] .asas-nav button.active .asas-nav-icon {
+:root[data-theme='dark'] .asas-nav button.active .asas-nav-icon,
+:root[data-theme='dark'] .asas-nav-item.active .asas-nav-icon {
   background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%);
   color: #231f20 !important;
   border-color: rgba(255, 255, 255, 0.35);
   box-shadow: 0 4px 16px -2px rgba(186, 149, 85, 0.60), inset 0 1px 0 rgba(255, 255, 255, 0.50);
 }
 
-:root[data-theme='dark'] .asas-nav button.active .asas-nav-icon svg {
+:root[data-theme='dark'] .asas-nav button.active .asas-nav-icon svg,
+:root[data-theme='dark'] .asas-nav-item.active .asas-nav-icon svg {
   color: #231f20 !important;
   filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.30));
 }
 
 .asas-sidebar-foot {
   margin-top: auto;
-  padding-top: 14px;
-  border-top: 1px solid rgba(186, 149, 85, 0.18);
+  padding-top: 10px;
+  border-top: 1px solid var(--hairline);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -327,11 +359,11 @@ html, body {
 .asas-profile {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 8px 10px;
   border-radius: 12px;
-  background: rgba(186, 149, 85, 0.06);
-  border: 1px solid rgba(186, 149, 85, 0.15);
+  background: var(--glass-inset);
+  border: 1px solid var(--hairline);
   transition: all 0.2s ease;
 }
 .asas-profile:hover {
@@ -339,8 +371,13 @@ html, body {
   border-color: rgba(186, 149, 85, 0.32);
   transform: translateY(-1px);
 }
+.asas-profile-info {
+  min-width: 0;
+  flex: 1;
+}
 .asas-profile strong {
   display: block;
+  font-family: var(--font, 'Thmanyah Sans', sans-serif);
   font-size: 13.5px;
   color: var(--text);
   font-weight: 700;
@@ -351,7 +388,7 @@ html, body {
 .asas-profile p {
   margin: 0;
   font-size: 11px;
-  color: var(--brand-gold);
+  color: var(--accent);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -367,24 +404,68 @@ html, body {
   border-color: rgba(186, 149, 85, 0.40);
 }
 
+.asas-sidebar-actions-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.asas-sidebar-theme-btn {
+  flex: 1;
+  justify-content: center;
+  height: 38px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  background: var(--glass-inset) !important;
+  border: 1px solid var(--hairline) !important;
+  color: var(--text-2) !important;
+  gap: 6px !important;
+}
+.asas-sidebar-theme-btn:hover {
+  color: var(--accent) !important;
+  border-color: rgba(186, 149, 85, 0.35) !important;
+}
+
 .asas-sidebar-logout {
+  flex: 1;
+  justify-content: center;
   height: 38px !important;
   border-radius: 10px !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 600 !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  border: 1px solid rgba(186, 149, 85, 0.22) !important;
-  background: rgba(186, 149, 85, 0.06) !important;
-  color: var(--text-2) !important;
+  gap: 6px !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: var(--danger, #ef4444) !important;
   transition: all 0.2s ease !important;
 }
 .asas-sidebar-logout:hover {
-  background: rgba(239, 68, 68, 0.10) !important;
-  color: #ef4444 !important;
-  border-color: rgba(239, 68, 68, 0.35) !important;
+  background: rgba(239, 68, 68, 0.16) !important;
+  border-color: rgba(239, 68, 68, 0.45) !important;
+  color: #dc2626 !important;
+}
+
+@media (max-width: 1024px) {
+  .asas-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: min(310px, 86vw) !important;
+    transform: translateX(100%) !important;
+    z-index: 95 !important;
+    box-shadow: -10px 0 35px rgba(0, 0, 0, 0.45) !important;
+    background: var(--glass-card) !important;
+  }
+  .asas-sidebar.open {
+    transform: translateX(0) !important;
+  }
+  .asas-sidebar-close-btn {
+    display: flex !important;
+  }
 }
 
 /* Main Workspace */

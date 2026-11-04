@@ -1736,46 +1736,90 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
     <div className="asas-app">
       <Ambient />
 
-      {open && <div className="asas-modal-backdrop" style={{ zIndex: 25 }} onClick={() => setOpen(false)} />}
+      {open && <div className="asas-modal-backdrop" style={{ zIndex: 90 }} onClick={() => setOpen(false)} />}
 
-      {/* Sidebar with Liquid Glass and Unique Icons */}
+      {/* Sidebar with Liquid Glass and Asaas Skills Design */}
       <aside className={`asas-sidebar ${open ? 'open' : ''}`}>
-        <Brand />
-        <p className="asas-nav-label">مساحة الإدارة والقيادة</p>
-        <nav className="asas-nav">
-          {tabs.filter(([key]) => key !== 'accounts' || can('employees.read')).filter(([key]) => key !== 'audit' || can('audit.read')).map(([key, label, iconName]) => {
-            const pendingAccountsCount = (key === 'accounts' && Array.isArray(data) && tab === 'accounts')
-              ? data.filter(a => !a.active).length
-              : 0;
-            return (
-              <button className={tab === key ? 'active' : ''} key={key} onClick={() => { setTab(key); setOpen(false); setData(null); setNotice(''); setSearch(''); setAccountFilter('all'); setRecordFilter('all'); }}>
-                <span className="asas-nav-icon">
-                  <Icon name={iconName} />
-                </span>
-                <span>{label}</span>
-                {key === 'announcements' && announcements.length > 0 && (
-                  <span className="asas-badge urgent" style={{ marginInlineStart: 'auto', fontSize: 10, padding: '2px 8px', borderRadius: 999 }}>{announcements.length}</span>
-                )}
-                {key === 'accounts' && pendingAccountsCount > 0 && (
-                  <span className="asas-badge pending" style={{ marginInlineStart: 'auto', fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(186, 149, 85, 0.2)', color: 'var(--brand-gold)', border: '1px solid rgba(186, 149, 85, 0.4)' }}>{pendingAccountsCount}</span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        <div className="asas-sidebar-head">
+          <Brand />
+          <button
+            type="button"
+            className="asas-sidebar-close-btn"
+            onClick={() => setOpen(false)}
+            aria-label="إغلاق القائمة"
+            title="إغلاق القائمة"
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+
+        <div className="asas-sidebar-scroll">
+          <p className="asas-nav-label">مساحة الإدارة والقيادة</p>
+          <nav className="asas-nav">
+            {tabs.filter(([key]) => key !== 'accounts' || can('employees.read')).filter(([key]) => key !== 'audit' || can('audit.read')).map(([key, label, iconName]) => {
+              const pendingAccountsCount = (key === 'accounts' && Array.isArray(data) && tab === 'accounts')
+                ? data.filter(a => !a.active).length
+                : 0;
+              return (
+                <button
+                  type="button"
+                  className={`asas-nav-item ${tab === key ? 'active' : ''}`}
+                  key={key}
+                  onClick={() => {
+                    setTab(key);
+                    setOpen(false);
+                    setData(null);
+                    setNotice('');
+                    setSearch('');
+                    setAccountFilter('all');
+                    setRecordFilter('all');
+                  }}
+                >
+                  <span className="asas-nav-icon">
+                    <Icon name={iconName} />
+                  </span>
+                  <span className="asas-nav-text">{label}</span>
+                  {key === 'announcements' && announcements.length > 0 && (
+                    <span className="asas-tab-badge urgent">{announcements.length}</span>
+                  )}
+                  {key === 'accounts' && pendingAccountsCount > 0 && (
+                    <span className="asas-tab-badge pending">{pendingAccountsCount}</span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
         <div className="asas-sidebar-foot">
           <div className="asas-profile" onClick={() => setShowProfileModal(true)} style={{ cursor: 'pointer' }} title="انقر لتعديل ملفك الشخصي">
             <UserAvatar user={user} size="md" />
-            <div>
+            <div className="asas-profile-info">
               <strong>{user.name}</strong>
               <p>{roles[user.role]}</p>
             </div>
           </div>
-          <button className="asas-btn sm asas-sidebar-logout" onClick={logout} style={{ width: '100%', justifyContent: 'center' }}>
-            <Icon name="logout" />
-            تسجيل الخروج
-          </button>
+          <div className="asas-sidebar-actions-row">
+            <button
+              type="button"
+              className="asas-btn sm asas-sidebar-theme-btn"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'التحويل للمظهر الفاتح' : 'التحويل للمظهر الداكن'}
+              aria-label="تبديل مظهر النظام"
+            >
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+              <span>{theme === 'dark' ? 'فاتح' : 'داكن'}</span>
+            </button>
+            <button
+              type="button"
+              className="asas-btn sm asas-sidebar-logout"
+              onClick={logout}
+              title="تسجيل الخروج"
+            >
+              <Icon name="logout" />
+              <span>خروج</span>
+            </button>
+          </div>
         </div>
       </aside>
 
