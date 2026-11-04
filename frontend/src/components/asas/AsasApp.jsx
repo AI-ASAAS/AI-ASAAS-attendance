@@ -5444,11 +5444,9 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             <Icon name="clock" />
             <span className="asas-tab-text-full">حالة وتسجيل الحضور</span>
             <span className="asas-tab-text-short">تسجيل الحضور</span>
+            <span className="asas-tab-text-micro">الحضور</span>
             {isInside && (
-              <>
-                <span className="asas-tab-duty-dot" title="على رأس العمل" />
-                <span className="asas-tab-badge inside desktop-only">على رأس العمل</span>
-              </>
+              <span className="asas-tab-duty-dot" title="على رأس العمل" />
             )}
           </button>
 
@@ -5460,8 +5458,9 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             onClick={() => { setEmpPage('leave'); loadLeaves(); }}
           >
             <Icon name="receipt" />
-            <span className="asas-tab-text-full">تقديم طلب إجازة</span>
-            <span className="asas-tab-text-short">طلب إجازة</span>
+            <span className="asas-tab-text-full">طلب إجازة واستئذان</span>
+            <span className="asas-tab-text-short">إجازة واستئذان</span>
+            <span className="asas-tab-text-micro">إجازة</span>
             {leaves.filter(l => l.status === 'pending').length > 0 && (
               <span className="asas-tab-badge urgent">
                 {leaves.filter(l => l.status === 'pending').length}
@@ -5477,8 +5476,9 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             onClick={() => setEmpPage('history')}
           >
             <Icon name="calendar" />
-            <span className="asas-tab-text-full">السجل الحظوري</span>
-            <span className="asas-tab-text-short">السجل</span>
+            <span className="asas-tab-text-full">سجل الحضور والدوام</span>
+            <span className="asas-tab-text-short">السجل الحظوري</span>
+            <span className="asas-tab-text-micro">السجل</span>
             {(data?.records || []).length > 0 && (
               <span className="asas-tab-badge">
                 {(data?.records || []).length}
@@ -5557,191 +5557,88 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
       {/* SUBPAGE 1: Attendance & Duty Status */}
       {empPage === 'duty' && (
-        <Card title="حالة وسجل حضور اليوم" icon="calendar">
-          <div style={{ padding: 12 }}>
+        <Card title="حالة وتسجيل دوام اليوم" icon="clock">
+          <div className="asas-duty-inner-content">
+            {/* 1. Status Banner: Clean, single status line without redundant badges or double icons */}
             <div className={`asas-hero-duty-banner ${isInside ? 'inside' : 'outside'}`}>
-              <div>
-                <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', fontWeight: 600 }}>حالة الدوام اللحظية:</span>
-                <strong style={{ fontSize: 16.5, color: isInside ? 'var(--paid)' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+              <div className="asas-duty-banner-info">
+                <span className="asas-duty-banner-eyebrow">حالة الدوام الحالية</span>
+                <div className="asas-duty-banner-heading">
                   <span className="asas-pulse-status-dot" style={{ color: isInside ? 'var(--paid)' : (isRemote ? '#38bdf8' : 'var(--accent)') }} />
-                  <Icon name={isInside ? 'checkCircle' : (isRemote ? 'globe' : 'logOut')} style={{ width: 19, height: 19, color: isInside ? 'var(--paid)' : (isRemote ? '#38bdf8' : 'var(--accent)') }} />
-                  {isInside 
-                    ? (isRemote ? 'على رأس العمل (دوام عن بعد - أونلاين)' : 'داخل مقر العمل (على رأس العمل - دوام مفتوح)') 
-                    : (todayRecord?.last_out ? (isRemote ? 'تم تسجيل الانصراف وإنهاء الدوام (عن بعد)' : 'تم تسجيل الانصراف وإنهاء الدوام') : (isRemote ? 'جاهز لتسجيل الحضور عن بعد' : 'جاهز لتسجيل الحضور في المقر'))}
-                </strong>
+                  <span>
+                    {isInside 
+                      ? (isRemote ? 'على رأس العمل (دوام عن بعد)' : 'داخل مقر العمل (على رأس العمل)') 
+                      : (todayRecord?.last_out 
+                          ? (isRemote ? 'تم إنهاء الدوام عن بعد' : 'تم تسجيل الانصراف وإنهاء الدوام') 
+                          : (isRemote ? 'جاهز لتسجيل الحضور عن بعد' : 'جاهز لتسجيل الحضور بالمقر'))}
+                  </span>
+                </div>
               </div>
-              <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`} style={{ fontSize: 12, padding: '4px 10px' }}>
-                <Icon name={isInside ? (isRemote ? 'remoteOut' : 'logOut') : (isRemote ? 'remoteIn' : 'logIn')} style={{ width: 14, height: 14 }} />
-                الإجراء: {isInside ? (isRemote ? 'تسجيل الانصراف عن بعد' : 'تسجيل الانصراف') : (isRemote ? 'تسجيل الحضور عن بعد' : 'تسجيل الحضور')}
-              </span>
+              <div className="asas-duty-banner-meta">
+                <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`}>
+                  {isRemote ? 'دوام عن بعد' : (todayRecord?.branch_name || 'الفرع الرئيسي')}
+                </span>
+              </div>
             </div>
 
-            <div className="asas-employee-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 16 }}>
+            {/* 2. Key Metrics: 3 Equal Minimalist Cards */}
+            <div className="asas-employee-stats">
               <div className="asas-stat-card">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
-                  <Icon name="logIn" style={{ width: 14, height: 14, color: 'var(--paid)' }} />
-                  <span>أول دخول (حضور)</span>
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: todayRecord?.first_in ? 'var(--paid)' : 'var(--text)' }}>
+                <div className="asas-stat-caption">أول حضور (دخول)</div>
+                <div className="asas-stat-value" style={{ color: todayRecord?.first_in ? 'var(--paid)' : 'var(--text)' }}>
                   {todayRecord?.first_in ? time(todayRecord.first_in) : '—'}
                 </div>
               </div>
+
               <div className="asas-stat-card">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
-                  <Icon name="logOut" style={{ width: 14, height: 14, color: isInside ? 'var(--accent)' : 'var(--text)' }} />
-                  <span>آخر خروج (انصراف)</span>
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
-                  {todayRecord?.last_out ? time(todayRecord.last_out) : (isInside ? 'قيد الدوام' : '—')}
+                <div className="asas-stat-caption">آخر انصراف (خروج)</div>
+                <div className="asas-stat-value">
+                  {todayRecord?.last_out ? time(todayRecord.last_out) : (isInside ? 'قيد العمل' : '—')}
                 </div>
               </div>
+
               <div className="asas-stat-card">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
-                  <Icon name="clock" style={{ width: 14, height: 14, color: 'var(--accent)' }} />
-                  <span>سبب الخروج / الحالة</span>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginTop: 2 }}>
-                  {todayRecord?.exit_reason_label || (isInside ? (isRemote ? 'على رأس العمل (عن بعد)' : 'على رأس العمل') : (isRemote ? 'جاهز للدخول عن بعد' : 'جاهز للدخول'))}
+                <div className="asas-stat-caption">ساعات اليوم</div>
+                <div className="asas-stat-value" style={{ color: 'var(--accent)' }}>
+                  {todayRecord?.counted_minutes != null 
+                    ? `${Math.floor(todayRecord.counted_minutes / 60)}س ${todayRecord.counted_minutes % 60}د` 
+                    : (isInside ? 'تحت الاحتساب' : '0 دقيقة')}
                 </div>
               </div>
             </div>
 
-            {/* Live Geofence Monitoring Capsule (التصميم الكبسولي السيادي الأصلي) */}
-            {(() => {
-              if (isRemote) {
-                return (
-                  <div
-                    style={{
-                      background: 'rgba(56, 189, 248, 0.08)',
-                      border: '1px solid rgba(56, 189, 248, 0.25)',
-                      padding: '10px 14px',
-                      borderRadius: 12,
-                      marginBottom: 14,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 10,
-                      fontSize: 12.5,
-                      flexWrap: 'wrap'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span
-                        style={{
-                          width: 9,
-                          height: 9,
-                          borderRadius: '50%',
-                          background: '#38bdf8',
-                          boxShadow: '0 0 10px #38bdf8',
-                          display: 'inline-block',
-                          flexShrink: 0
-                        }}
-                      />
-                      <strong style={{ color: 'var(--text)' }}>طبيعة العمل:</strong>
-                      <span style={{ color: '#38bdf8', fontWeight: 700 }}>
-                        🌐 نظام الدوام عن بعد معتمد (تسجيل الحضور والانصراف بضغطة زر فوري)
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Icon name="wifi" style={{ width: 14, height: 14, color: '#38bdf8' }} />
-                      <span style={{ color: 'var(--text-2)', fontSize: 12 }}>
-                        {isInside ? 'فترة الدوام نشطة ومسجلة' : 'جاهز للبدء من أي مكان'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              }
-
-              const dist = geofenceStatus.distance;
-              const isInsidePerimeter = Boolean(
-                geofenceStatus.state === 'inside' ||
-                (dist != null && dist <= (isInside ? 180 : 120))
-              );
-              const isPendingExit = Boolean(
-                geofenceStatus.pending > 0 || geofenceStatus.state === 'pending'
-              );
-              const isIdle = geofenceStatus.state === 'idle' && dist == null;
-
-              // Visual Status: 'inside' (green) | 'pending' / 'idle' (amber) | 'outside' (red)
-              const visualStatus = isInsidePerimeter
-                ? 'inside'
-                : (isPendingExit ? 'pending' : (isIdle ? 'idle' : 'outside'));
-
-              const dotColor = visualStatus === 'inside'
-                ? 'var(--paid)'
-                : (visualStatus === 'pending' || visualStatus === 'idle' ? 'var(--accent)' : 'var(--unpaid)');
-
-              const dotGlow = visualStatus === 'inside'
-                ? '0 0 10px var(--paid)'
-                : (visualStatus === 'pending' || visualStatus === 'idle' ? '0 0 10px var(--accent)' : '0 0 10px var(--unpaid)');
-
-              let labelText = '';
-              if (visualStatus === 'idle') {
-                labelText = 'جاري فحص الإحداثيات والتواجد...';
-              } else if (visualStatus === 'pending') {
-                labelText = `قيد فحص وتأكيد المغادرة (${geofenceStatus.remaining_seconds || 15} ث)`;
-              } else if (visualStatus === 'inside') {
-                labelText = isInside
-                  ? 'متواجد داخل مقر العمل (على رأس العمل)'
-                  : 'متواجد داخل مقر العمل (جاهز للدخول)';
-              } else {
-                labelText = isInside
-                  ? 'خارج نطاق مقر العمل'
-                  : 'خارج نطاق مقر العمل';
-              }
-
-              return (
-                <div
-                  style={{
-                    background: 'var(--glass-inset)',
-                    border: '1px solid var(--hairline)',
-                    padding: '10px 14px',
-                    borderRadius: 12,
-                    marginBottom: 14,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                    fontSize: 12.5,
-                    flexWrap: 'wrap'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span
-                      style={{
-                        width: 9,
-                        height: 9,
-                        borderRadius: '50%',
-                        background: dotColor,
-                        boxShadow: dotGlow,
-                        display: 'inline-block',
-                        flexShrink: 0,
-                        transition: 'background 0.3s ease, box-shadow 0.3s ease'
-                      }}
-                    />
-                    <strong style={{ color: 'var(--text)' }}>مراقبة النطاق الجغرافي:</strong>
-                    <span style={{ color: dotColor, fontWeight: 700, transition: 'color 0.3s ease' }}>
-                      {labelText}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ color: 'var(--text-3)', fontSize: 11.5 }}>
-                      {dist != null ? `المسافة الحالية: ${dist} م` : 'جاري فحص المسافة...'}
-                    </span>
-                    <button
-                      type="button"
-                      className="asas-btn sm"
-                      style={{ height: 22, padding: '0 6px', fontSize: 11, border: 'none', background: 'transparent', color: 'var(--accent)', cursor: 'pointer' }}
-                      onClick={triggerLocationCheck}
-                      disabled={checkingGps}
-                      title="إعادة فحص الإحداثيات اللحظية"
-                    >
-                      <Icon name="refresh" className={checkingGps ? 'asas-spin' : ''} style={{ width: 12, height: 12 }} />
-                    </button>
-                  </div>
+            {/* 3. Verification Bar */}
+            {isRemote ? (
+              <div className="asas-duty-capsule remote">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Icon name="shieldCheck" style={{ width: 16, height: 16, color: '#38bdf8', flexShrink: 0 }} />
+                  <span>نظام العمل عن بعد معتمد لجهازك • التحضير فوري بدون الحاجة لمسح كود QR</span>
                 </div>
-              );
-            })()}
+              </div>
+            ) : (
+              <div className={`asas-duty-capsule ${geofenceStatus.inside ? 'inside' : 'outside'}`}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Icon name={geofenceStatus.inside ? 'checkCircle' : 'mapPin'} style={{ width: 16, height: 16, flexShrink: 0 }} />
+                  <span>
+                    {geofenceStatus.inside 
+                      ? `داخل نطاق المقر المعتمد (${todayRecord?.branch_name || 'المقر الرئيسي'})` 
+                      : (geofenceStatus.distance != null ? `المسافة عن المقر: ${Math.round(geofenceStatus.distance)} م` : 'جاري فحص النطاق الجغرافي')}
+                  </span>
+                </div>
+                {!geofenceStatus.inside && (
+                  <button
+                    type="button"
+                    className="asas-btn-inline"
+                    onClick={triggerLocationCheck}
+                    disabled={checkingGps}
+                    title="إعادة فحص الإحداثيات اللحظية"
+                  >
+                    <Icon name="refresh" className={checkingGps ? 'asas-spin' : ''} style={{ width: 12, height: 12 }} />
+                    <span>تحديث</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {token && (() => {
               const meta = decodeQrToken(token);
@@ -5769,96 +5666,57 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               );
             })()}
 
-            {/* Action Buttons: Prominent Check-in & Check-out */}
+            {/* 4. Action Section */}
             {isRemote ? (
-              <div className="asas-remote-panel">
-                <div className="asas-remote-header">
-                  <div className="asas-remote-header-title">
-                    <Icon name="globe" style={{ width: 18, height: 18, color: '#38bdf8' }} />
-                    <span>لوحة الحضور والانصراف عن بعد</span>
+              <div className="asas-remote-grid">
+                {/* Remote Check-in Card Button */}
+                <button
+                  type="button"
+                  className={`asas-remote-card-btn checkin ${!isInside ? 'active-ready' : 'inactive'}`}
+                  disabled={busy || isInside}
+                  onClick={() => act('enter')}
+                  title={isInside ? 'أنت مسجل حضور بالفعل ومناوبتك مفتوحة' : 'اضغط لتسجيل الحضور عن بعد'}
+                >
+                  <div className={`asas-remote-icon-box ${!isInside ? 'checkin-active' : 'inactive'}`}>
+                    <Icon name="remoteIn" style={{ width: 24, height: 24 }} />
                   </div>
-                  <span className="asas-remote-header-badge">
-                    <Icon name="wifi" style={{ width: 13, height: 13 }} />
-                    <span>اعتماد إلكتروني فوري</span>
-                  </span>
-                </div>
-
-                <div className="asas-remote-grid">
-                  {/* Remote Check-in Card Button */}
-                  <button
-                    type="button"
-                    className={`asas-remote-card-btn checkin ${!isInside ? 'active-ready' : 'inactive'}`}
-                    disabled={busy || isInside}
-                    onClick={() => act('enter')}
-                    title={isInside ? 'أنت مسجل حضور بالفعل ومناوبتك مفتوحة' : 'اضغط لتسجيل الحضور عن بعد'}
-                  >
-                    <div className={`asas-remote-icon-box ${!isInside ? 'checkin-active' : 'inactive'}`}>
-                      <Icon name="remoteIn" style={{ width: 26, height: 26 }} />
+                  <div className="asas-remote-btn-info">
+                    <div className="asas-remote-btn-title">تسجيل الحضور عن بعد</div>
+                    <div className="asas-remote-btn-desc">بدء فترة وساعات العمل اليومية</div>
+                    <div className={`asas-remote-btn-status ${!isInside ? 'ready-in' : 'done'}`}>
+                      <span>{!isInside ? '● جاهز لتسجيل الحضور الآن' : '✓ تم تسجيل الحضور اليوم'}</span>
                     </div>
-                    <div className="asas-remote-btn-info">
-                      <div className="asas-remote-btn-title">تسجيل الحضور عن بعد</div>
-                      <div className="asas-remote-btn-desc">بدء فترة وساعات العمل اليومية</div>
-                      <div className={`asas-remote-btn-status ${!isInside ? 'ready-in' : 'done'}`}>
-                        <span className="asas-pulse-status-dot" style={{ width: 7, height: 7, background: !isInside ? "#10b981" : "#38bdf8", flexShrink: 0 }} />
-                        <span>{!isInside ? 'جاهز لتسجيل الحضور الآن' : 'تم تسجيل الحضور اليوم'}</span>
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Remote Check-out Card Button */}
-                  <button
-                    type="button"
-                    className={`asas-remote-card-btn checkout ${isInside ? 'active-ready' : 'inactive'}`}
-                    disabled={busy || !isInside}
-                    onClick={() => act('exit')}
-                    title={!isInside ? 'يلزم تسجيل الحضور أولاً قبل الانصراف' : 'اضغط لتسجيل الانصراف عن بعد'}
-                  >
-                    <div className={`asas-remote-icon-box ${isInside ? 'checkout-active' : 'inactive'}`}>
-                      <Icon name="remoteOut" style={{ width: 26, height: 26 }} />
-                    </div>
-                    <div className="asas-remote-btn-info">
-                      <div className="asas-remote-btn-title">تسجيل الانصراف عن بعد</div>
-                      <div className="asas-remote-btn-desc">إنهاء فترة الدوام وحفظ السجل</div>
-                      <div className={`asas-remote-btn-status ${isInside ? 'ready-out' : 'disabled'}`}>
-                        <span className="asas-pulse-status-dot" style={{ width: 7, height: 7, background: isInside ? "#ef4444" : "var(--text-3)", flexShrink: 0 }} />
-                        <span>{isInside ? 'جاهز لتسجيل الانصراف الآن' : 'يتطلب تسجيل الحضور أولاً'}</span>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-
-                <div className="asas-remote-footer-note">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Icon name="shieldCheck" style={{ width: 16, height: 16, color: '#38bdf8' }} />
-                    <span>حسابك معتمد بنظام العمل عن بعد — التحضير فوري بدون الحاجة لمسح كود QR الفرع</span>
                   </div>
-                  {isInside && (
-                    <span style={{ color: 'var(--paid)', fontWeight: 700, fontSize: 11.5, display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span className="asas-pulse-status-dot" style={{ width: 7, height: 7 }} />
-                      <span>على رأس العمل الآن</span>
-                    </span>
-                  )}
-                </div>
+                </button>
+
+                {/* Remote Check-out Card Button */}
+                <button
+                  type="button"
+                  className={`asas-remote-card-btn checkout ${isInside ? 'active-ready' : 'inactive'}`}
+                  disabled={busy || !isInside}
+                  onClick={() => act('exit')}
+                  title={!isInside ? 'يلزم تسجيل الحضور أولاً قبل الانصراف' : 'اضغط لتسجيل الانصراف عن بعد'}
+                >
+                  <div className={`asas-remote-icon-box ${isInside ? 'checkout-active' : 'inactive'}`}>
+                    <Icon name="remoteOut" style={{ width: 24, height: 24 }} />
+                  </div>
+                  <div className="asas-remote-btn-info">
+                    <div className="asas-remote-btn-title">تسجيل الانصراف عن بعد</div>
+                    <div className="asas-remote-btn-desc">إنهاء فترة الدوام وحفظ السجل</div>
+                    <div className={`asas-remote-btn-status ${isInside ? 'ready-out' : 'disabled'}`}>
+                      <span>{isInside ? '● جاهز لتسجيل الانصراف الآن' : 'يتطلب تسجيل الحضور أولاً'}</span>
+                    </div>
+                  </div>
+                </button>
               </div>
             ) : (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+              <div className="asas-office-action-wrap">
+                <div className="asas-office-buttons-row">
                   <button
                     type="button"
-                    className={!isInside ? 'asas-action-btn-checkin' : 'asas-btn'}
-                    disabled={busy}
+                    className={`asas-duty-action-btn checkin ${!isInside ? 'active' : 'disabled'}`}
+                    disabled={busy || isInside}
                     onClick={() => act('enter')}
-                    style={{
-                      height: 52,
-                      fontSize: 15,
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      opacity: isInside ? 0.45 : 1,
-                      cursor: isInside ? 'not-allowed' : 'pointer'
-                    }}
                   >
                     <Icon name="logIn" style={{ width: 18, height: 18 }} />
                     <span>تسجيل الحضور</span>
@@ -5866,48 +5724,24 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
                   <button
                     type="button"
-                    className={isInside ? 'asas-action-btn-checkout' : 'asas-btn'}
-                    disabled={busy}
+                    className={`asas-duty-action-btn checkout ${isInside ? 'active' : 'disabled'}`}
+                    disabled={busy || !isInside}
                     onClick={() => act('exit')}
-                    style={{
-                      height: 52,
-                      fontSize: 15,
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      opacity: !isInside ? 0.45 : 1,
-                      cursor: !isInside ? 'not-allowed' : 'pointer'
-                    }}
                   >
                     <Icon name="logOut" style={{ width: 18, height: 18 }} />
                     <span>تسجيل الانصراف</span>
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button 
-                    type="button"
-                    className="asas-btn" 
-                    onClick={startCamera} 
-                    style={{ 
-                      flex: 1, 
-                      minWidth: 160, 
-                      height: 46, 
-                      justifyContent: 'center',
-                      borderRadius: 'var(--radius-pill)',
-                      border: '1px solid rgba(186, 149, 85, 0.35)',
-                      background: 'var(--glass-tint-strong)',
-                      fontWeight: 600,
-                      fontSize: 14
-                    }}
-                  >
-                    <Icon name="camera" style={{ width: 18, height: 18, color: 'var(--accent)' }} />
-                    <span>مسح كود QR بكاميرا الجوال</span>
-                  </button>
-                </div>
-              </>
+                <button
+                  type="button"
+                  className="asas-btn asas-qr-camera-btn"
+                  onClick={startCamera}
+                >
+                  <Icon name="camera" style={{ width: 18, height: 18, color: 'var(--accent)' }} />
+                  <span>مسح كود QR بكاميرا الجوال</span>
+                </button>
+              </div>
             )}
           </div>
         </Card>
@@ -5937,7 +5771,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       {/* SUBPAGE 2: Leave Request Submission & History */}
       {empPage === 'leave' && (
         <>
-          <Card title="تقديم طلب إجازة أو عذر جديد" icon="receipt">
+          <Card title="تقديم طلب إجازة واستئذان" icon="receipt">
             <div style={{ padding: 14 }}>
               <p className="asas-muted" style={{ fontSize: 12.5, margin: '0 0 16px' }}>
                 سيتم إرسال طلبك فورياً للموارد البشرية وإدارة المقر لمراجعته واعتماده، وستظهر النتيجة في جدول طلباتك أدناه.
@@ -5948,7 +5782,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 setError('');
                 try {
                   await api('/leave', 'POST', leave);
-                  setMessage('تم إرسال طلب الإجازة للمراجعة بنجاح');
+                  setMessage('تم إرسال الطلب للاعتماد للمراجعة بنجاح');
                   setLeave({ from_date: today(), to_date: today(), reason: '' });
                   await loadLeaves();
                 } catch (e) { setError(e.message); } finally { setBusy(false); }
@@ -5966,7 +5800,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             </div>
           </Card>
 
-          <Card title="سجل طلبات الإجازة السابقة" icon="calendar">
+          <Card title="سجل طلبات الإجازة والاستئذان" icon="calendar">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid var(--hairline)' }}>
               <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
                 إجمالي الطلبات المقدمة: <strong>{leaves.length}</strong>

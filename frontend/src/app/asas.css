@@ -1805,12 +1805,15 @@ select.asas-input option {
   50% { opacity: 0.5; transform: scale(0.85); }
 }
 
-/* Responsive label switching between full and short */
+/* Responsive label switching between full, short and micro */
+.asas-tab-text-micro {
+  display: none !important;
+}
 .asas-tab-text-short {
-  display: none;
+  display: none !important;
 }
 .asas-tab-text-full {
-  display: inline;
+  display: inline !important;
 }
 
 @media (max-width: 640px) {
@@ -1839,6 +1842,9 @@ select.asas-input option {
   .asas-tab-text-short {
     display: inline !important;
   }
+  .asas-tab-text-micro {
+    display: none !important;
+  }
   .asas-tab-badge {
     font-size: 10px;
     padding: 0 5px;
@@ -1850,14 +1856,28 @@ select.asas-input option {
 }
 
 @media (max-width: 380px) {
+  .asas-employee-tabs {
+    gap: 2px !important;
+    padding: 3px !important;
+  }
   .asas-employee-tab {
-    font-size: 11px;
-    padding: 0 2px;
-    gap: 3.5px;
+    font-size: 10.5px !important;
+    padding: 0 2px !important;
+    gap: 3px !important;
+    height: 38px !important;
   }
   .asas-employee-tab svg {
-    width: 14px;
-    height: 14px;
+    width: 13px !important;
+    height: 13px !important;
+  }
+  .asas-tab-text-full {
+    display: none !important;
+  }
+  .asas-tab-text-short {
+    display: none !important;
+  }
+  .asas-tab-text-micro {
+    display: inline !important;
   }
 }
 
@@ -3826,22 +3846,27 @@ p, .prose, .asas-muted, .asas-hero-banner p, .asas-remote-btn-desc {
   }
   .asas-employee-nav-wrap {
     width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
-    padding-bottom: 2px !important;
-  }
-  .asas-employee-nav-wrap::-webkit-scrollbar {
-    display: none !important;
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 10px !important;
   }
   .asas-employee-tabs {
-    min-width: max-content !important;
-    display: flex !important;
-    gap: 6px !important;
-    padding: 4px 2px !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    box-sizing: border-box !important;
   }
   .asas-employee-tab {
-    flex-shrink: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 0% !important;
+    padding: 0 4px !important;
+    height: 42px !important;
+    font-size: 11.5px !important;
+    gap: 4px !important;
     white-space: nowrap !important;
   }
 }
@@ -3990,4 +4015,143 @@ p, .prose, .asas-muted, .asas-hero-banner p, .asas-remote-btn-desc {
     padding: 3px 6px !important;
     font-size: 10.5px !important;
   }
+}
+
+
+/* ───────── Unified Asas Duty & Attendance Layout ───────── */
+.asas-duty-unified-wrap {
+  width: 100%;
+}
+.asas-duty-inner-content {
+  padding: 14px;
+}
+.asas-duty-banner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.asas-duty-banner-eyebrow {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+.asas-duty-banner-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.asas-duty-banner-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.asas-duty-capsule {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  font-weight: 500;
+  margin-bottom: 14px;
+  border: 1px solid var(--hairline);
+  background: var(--glass-inset);
+  color: var(--text-2);
+}
+.asas-duty-capsule.remote {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.25);
+  color: #38bdf8;
+}
+.asas-duty-capsule.inside {
+  background: rgba(35, 116, 74, 0.08);
+  border-color: rgba(35, 116, 74, 0.25);
+  color: var(--paid);
+}
+.asas-duty-capsule.outside {
+  background: rgba(186, 149, 85, 0.08);
+  border-color: rgba(186, 149, 85, 0.25);
+  color: var(--text-2);
+}
+.asas-btn-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(186, 149, 85, 0.35);
+  background: var(--glass-card);
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.asas-btn-inline:hover {
+  background: var(--accent);
+  color: #ffffff;
+}
+.asas-office-action-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.asas-office-buttons-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+@media (max-width: 480px) {
+  .asas-office-buttons-row {
+    grid-template-columns: 1fr;
+  }
+}
+.asas-duty-action-btn {
+  height: 48px;
+  font-size: 14.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.25s var(--ease-spring);
+  border: none;
+}
+.asas-duty-action-btn.checkin.active {
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #2ea366 0%, #23744a 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 6px 18px -4px rgba(35, 116, 74, 0.45);
+}
+.asas-duty-action-btn.checkout.active {
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #dc4c40 0%, #b0342c 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 6px 18px -4px rgba(176, 52, 44, 0.45);
+}
+.asas-duty-action-btn.disabled {
+  background: var(--glass-inset) !important;
+  color: var(--text-3) !important;
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  border: 1px solid var(--hairline) !important;
+}
+.asas-qr-camera-btn {
+  width: 100%;
+  height: 44px;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(186, 149, 85, 0.35);
+  background: var(--glass-card);
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--text);
 }
