@@ -2009,7 +2009,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
             return (
               <>
                 {/* Mode Switcher Tabs */}
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+                <div className="asas-records-mode-tabs" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
                   <button
                     className={`asas-btn ${recordsTabMode === 'collective' ? 'primary' : ''}`}
                     onClick={() => setRecordsTabMode('collective')}
@@ -2044,7 +2044,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   borderRadius: 12,
                   marginBottom: 16
                 }}>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+                  <div className="asas-presets-bar" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
                     <span style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 600 }}>فترات سريعة:</span>
                     {[
                       ['today', 'اليوم'],
@@ -2131,13 +2131,13 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   )}
 
                   {/* Date Range Inputs & Filters */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+                  <div className="asas-filter-container" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                    <div className="asas-filter-fields" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
                       <Field label="من تاريخ" type="date" value={from} onChange={e => setFrom(e.target.value)} />
                       <Field label="إلى تاريخ" type="date" value={to} onChange={e => setTo(e.target.value)} />
 
                       {recordsTabMode === 'individual' && (
-                        <div style={{ minWidth: 260 }}>
+                        <div className="asas-filter-emp-select" style={{ minWidth: 260 }}>
                           <Field label="اختر الموظف لعرض سجله الفردي">
                             <select
                               className="asas-input"
@@ -2158,7 +2158,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                       )}
 
                       {recordsTabMode !== 'individual' && (
-                        <div style={{ width: 220 }}>
+                        <div className="asas-filter-search-wrap" style={{ width: 220 }}>
                           <Field label="بحث بالاسم أو الرقم">
                             <div style={{ position: 'relative' }}>
                               <input
@@ -2177,7 +2177,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     </div>
 
                     {can('reports.export') && (
-                      <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
+                      <div className="asas-filter-export-actions" style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
                         <button className="asas-btn sm" disabled={busy} onClick={exportCsv} title="تصدير إلى جدول Excel">
                           <Icon name="fileSpreadsheet" />
                           Excel / CSV
@@ -2751,8 +2751,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 12 }}>
-                <div style={{ position: 'relative', flex: 1, maxWidth: 420 }}>
+              <div className="asas-accounts-toolbar" style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 12 }}>
+                <div className="asas-accounts-search" style={{ position: 'relative', flex: 1, maxWidth: 420 }}>
                   <input
                     className="asas-input"
                     placeholder="ابحث بالاسم، الرقم الوظيفي، البريد أو الهاتف…"
@@ -2766,7 +2766,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 </div>
 
                 {/* Filter buttons */}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <div className="asas-accounts-filters" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <button
                     className={`asas-btn sm ${accountFilter === 'all' ? 'primary' : ''}`}
                     onClick={() => setAccountFilter('all')}
@@ -4605,7 +4605,7 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                     <span className="asas-field-label-icon"><Icon name="briefcase" /></span>
                     <span>طبيعة ونظام الدوام المطلوب</span>
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
+                  <div className="asas-work-type-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
                     <button
                       type="button"
                       className={`asas-btn ${regWorkType === 'onsite' ? 'primary' : ''}`}

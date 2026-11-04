@@ -3715,3 +3715,256 @@ select.asas-input option {
   font-size: 12px;
   color: var(--text-2);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FULL-SYSTEM RESPONSIVE ENGINE (MOBILE, TABLET & DESKTOP PRECISION)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 1. Global Viewport & Horizontal Overflow Lock */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+  -webkit-text-size-adjust: 100% !important;
+}
+
+.asas-app,
+.asas-main,
+.asas-content,
+.asas-employee-page,
+.asas-login {
+  max-width: 100vw !important;
+  box-sizing: border-box !important;
+}
+
+/* 2. Tables: Touch Momentum Scroll & Precision Minimums */
+.asas-table-wrap {
+  position: relative !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  max-width: 100% !important;
+  border-radius: var(--radius-md) !important;
+  margin-bottom: 12px !important;
+}
+
+.asas-table {
+  min-width: 780px !important;
+  width: 100% !important;
+}
+
+.asas-table-wrap::-webkit-scrollbar {
+  height: 6px !important;
+}
+
+.asas-table-wrap::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-radius: 4px !important;
+}
+
+.asas-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(186, 149, 85, 0.35) !important;
+  border-radius: 4px !important;
+}
+
+:root[data-theme='dark'] .asas-table-wrap::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+:root[data-theme='dark'] .asas-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(186, 149, 85, 0.45) !important;
+}
+
+/* 3. Safe Dock & Bottom Margin Guarantee for Mobile */
+@media (max-width: 768px) {
+  .asas-content {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 14px)) !important;
+  }
+  .asas-employee-page {
+    padding-bottom: calc(52px + env(safe-area-inset-bottom, 12px)) !important;
+  }
+}
+
+/* 4. Employee Portal Header & Responsive Nav Tabs */
+@media (max-width: 640px) {
+  .asas-employee-header {
+    padding: 10px 14px !important;
+    border-radius: var(--radius-lg) !important;
+    gap: 8px !important;
+  }
+  .asas-employee-header .asas-logo strong {
+    font-size: 18px !important;
+  }
+  .asas-employee-header .asas-logo span {
+    font-size: 9px !important;
+  }
+  .asas-employee-header .asas-mark {
+    width: 34px !important;
+    height: 38px !important;
+  }
+  .asas-employee-nav-wrap {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding-bottom: 2px !important;
+  }
+  .asas-employee-nav-wrap::-webkit-scrollbar {
+    display: none !important;
+  }
+  .asas-employee-tabs {
+    min-width: max-content !important;
+    display: flex !important;
+    gap: 6px !important;
+    padding: 4px 2px !important;
+  }
+  .asas-employee-tab {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* 5. Records Tab: Filters, Search, Presets & Mode Switcher */
+@media (max-width: 640px) {
+  .asas-records-mode-tabs {
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .asas-records-mode-tabs .asas-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .asas-presets-bar {
+    gap: 6px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+  }
+  .asas-presets-bar .asas-btn.sm {
+    flex: 1 1 calc(33.333% - 6px) !important;
+    justify-content: center !important;
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+    text-align: center !important;
+  }
+  .asas-filter-container {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+  .asas-filter-fields {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+  .asas-filter-fields > * {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .asas-filter-emp-select,
+  .asas-filter-search-wrap {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .asas-filter-export-actions {
+    width: 100% !important;
+    display: flex !important;
+    gap: 6px !important;
+    justify-content: stretch !important;
+  }
+  .asas-filter-export-actions .asas-btn {
+    flex: 1 !important;
+    justify-content: center !important;
+    font-size: 11.5px !important;
+    padding: 6px 4px !important;
+  }
+}
+
+/* 6. Accounts Tab Toolbar & Filters */
+@media (max-width: 640px) {
+  .asas-accounts-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+  .asas-accounts-search {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .asas-accounts-filters {
+    width: 100% !important;
+    display: flex !important;
+    gap: 6px !important;
+  }
+  .asas-accounts-filters .asas-btn {
+    flex: 1 !important;
+    justify-content: center !important;
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* 7. Remote Attendance Suite Mobile Refinement */
+@media (max-width: 640px) {
+  .asas-remote-panel {
+    padding: 14px 12px !important;
+    border-radius: 14px !important;
+  }
+  .asas-remote-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+  .asas-remote-card-btn {
+    padding: 14px 12px !important;
+    gap: 10px !important;
+  }
+  .asas-remote-icon-box {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .asas-remote-btn-title {
+    font-size: 14px !important;
+  }
+  .asas-remote-btn-desc {
+    font-size: 11px !important;
+  }
+  .asas-remote-footer-note {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+  }
+}
+
+/* 8. Registration Form Work-Type & Fields on Narrow Phones */
+@media (max-width: 400px) {
+  .asas-work-type-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* 9. Small Devices Micro-Adjustments (iPhone SE & Android <= 380px) */
+@media (max-width: 380px) {
+  .asas-stat-card {
+    padding: 10px 8px !important;
+  }
+  .asas-stat-value {
+    font-size: 18px !important;
+  }
+  .asas-stat-caption {
+    font-size: 10px !important;
+  }
+  .asas-employee-header .asas-btn.sm {
+    padding: 4px 6px !important;
+    font-size: 11px !important;
+  }
+  .asas-login-box {
+    padding: 18px 12px !important;
+  }
+  .asas-clock-pill {
+    padding: 3px 6px !important;
+    font-size: 10.5px !important;
+  }
+}

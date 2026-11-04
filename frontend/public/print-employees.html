@@ -459,6 +459,89 @@
       font-weight: 600;
     }
 
+    /* Screen Responsiveness (Mobile & Tablet Preview) */
+    @media screen and (max-width: 768px) {
+      body {
+        padding: 8px 6px;
+      }
+
+      .page-wrapper {
+        border-radius: 6px;
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .document-body {
+        padding: 10px 8px;
+      }
+
+      .screen-toolbar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+      }
+
+      .toolbar-left, .toolbar-right {
+        justify-content: center;
+        text-align: center;
+        width: 100%;
+      }
+
+      .toolbar-right .btn {
+        flex: 1;
+        justify-content: center;
+      }
+
+      .header-block {
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+        text-align: center;
+      }
+
+      .logo-container {
+        justify-content: center;
+      }
+
+      .doc-meta-box {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .summary-ribbon {
+        flex-direction: column;
+        gap: 6px;
+        align-items: stretch;
+        padding: 8px 10px;
+      }
+
+      .summary-divider {
+        display: none;
+      }
+
+      .table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 6px;
+        position: relative;
+      }
+
+      table {
+        min-width: 650px;
+      }
+
+      .signatures-section {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .doc-footer {
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+      }
+    }
+
     /* Strict 1-Page A4 Print Optimization */
     @media print {
       @page {
