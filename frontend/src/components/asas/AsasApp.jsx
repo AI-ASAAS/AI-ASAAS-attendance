@@ -2016,7 +2016,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     style={{ fontWeight: 700 }}
                   >
                     <Icon name="users" />
-                    👥 التقرير الجماعي لجميع الموظفين
+                    <span>التقرير الجماعي لجميع الموظفين</span>
                   </button>
                   <button
                     className={`asas-btn ${recordsTabMode === 'individual' ? 'primary' : ''}`}
@@ -2024,7 +2024,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     style={{ fontWeight: 700 }}
                   >
                     <Icon name="user" />
-                    👤 سجل الموظف الفردي
+                    <span>سجل الموظف الفردي</span>
                   </button>
                   <button
                     className={`asas-btn ${recordsTabMode === 'live' ? 'primary' : ''}`}
@@ -2032,7 +2032,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     style={{ fontWeight: 500 }}
                   >
                     <Icon name="list" />
-                    📋 سجل الحركات اليومية المباشرة
+                    <span>سجل الحركات اليومية المباشرة</span>
                   </button>
                 </div>
 
@@ -2068,7 +2068,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                       style={{ fontSize: 12, padding: '4px 10px' }}
                     >
                       <Icon name="calendar" style={{ width: 12, height: 12 }} />
-                      📅 تحديد شهر وسنة
+                      <span>تحديد شهر وسنة</span>
                     </button>
                   </div>
 
@@ -2291,8 +2291,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <strong>{emp.name}</strong>
                                     {emp.is_remote && (
-                                      <span className="asas-badge" style={{ fontSize: 10, padding: '1px 5px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}>
-                                        🌐 عن بعد
+                                      <span className="asas-badge" style={{ fontSize: 10, padding: '1px 6px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                        <Icon name="globe" style={{ width: 10, height: 10 }} />
+                                        <span>عن بعد</span>
                                       </span>
                                     )}
                                   </div>
@@ -2411,7 +2412,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6, fontSize: 13, color: 'var(--text-2)' }}>
                                 <span>📍 الفرع: <strong>{individualData.employee.branch_name || 'الفرع الرئيسي'}</strong></span>
                                 <span>⏰ الوردية: <strong>{individualData.employee.shift_name || 'دوام رسمي'}</strong></span>
-                                <span>طبيعة العمل: <strong style={{ color: individualData.employee.is_remote ? '#60a5fa' : 'inherit' }}>{individualData.employee.is_remote ? '🌐 دوام عن بعد (أونلاين)' : '🏢 دوام حضوري بالمقر'}</strong></span>
+                                <span>طبيعة العمل: <strong style={{ color: individualData.employee.is_remote ? '#60a5fa' : 'inherit' }}>{individualData.employee.is_remote ? 'دوام عن بعد (أونلاين)' : 'دوام حضوري بالمقر'}</strong></span>
                                 {individualData.employee.shift_start_time && (
                                   <span>مواعيد الدوام: <strong>{String(individualData.employee.shift_start_time).slice(0, 5)} إلى {String(individualData.employee.shift_end_time).slice(0, 5)}</strong> (سماح {individualData.employee.grace_minutes || 10} د)</span>
                                 )}
@@ -2784,7 +2785,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     style={rows.some(a => !a.active) ? { borderColor: '#f59e0b', color: accountFilter === 'pending' ? '#fff' : '#f59e0b' } : {}}
                     onClick={() => setAccountFilter('pending')}
                   >
-                    ⏳ بانتظار الموافقة ({rows.filter(a => !a.active).length})
+                    <Icon name="clock" style={{ width: 12, height: 12 }} />
+                    <span>بانتظار الموافقة ({rows.filter(a => !a.active).length})</span>
                   </button>
                 </div>
               </div>
@@ -2821,11 +2823,11 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                   <strong>{a.name}</strong>
                                   {a.is_remote ? (
                                     <span className="asas-badge" style={{ fontSize: 10.5, padding: '1px 6px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-                                      🌐 عن بعد
+                                      عن بعد
                                     </span>
                                   ) : (
                                     <span className="asas-badge" style={{ fontSize: 10.5, padding: '1px 6px', background: 'rgba(156, 163, 175, 0.1)', color: 'var(--text-3)' }}>
-                                      🏢 حضوري
+                                      حضوري
                                     </span>
                                   )}
                                 </div>
@@ -4450,7 +4452,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
                 <div className="asas-modern-field-group">
                   <label className="asas-modern-field-label">
-                    <span className="asas-field-label-icon"><Icon name="user" /></span>
                     <span>البريد الإلكتروني أو الرقم الوظيفي</span>
                   </label>
                   <div className="asas-modern-input-wrapper">
@@ -4471,7 +4472,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
                 <div className="asas-modern-field-group">
                   <label className="asas-modern-field-label">
-                    <span className="asas-field-label-icon"><Icon name="key" /></span>
                     <span>كلمة المرور</span>
                   </label>
                   <div className="asas-modern-input-wrapper">
@@ -4526,7 +4526,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
                 <div className="asas-modern-field-group">
                   <label className="asas-modern-field-label">
-                    <span className="asas-field-label-icon"><Icon name="user" /></span>
                     <span>الاسم الكامل الرباعي</span>
                   </label>
                   <div className="asas-modern-input-wrapper">
@@ -4544,7 +4543,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
                 <div className="asas-modern-field-group">
                   <label className="asas-modern-field-label">
-                    <span className="asas-field-label-icon"><Icon name="mail" /></span>
                     <span>البريد الإلكتروني المعتمد</span>
                   </label>
                   <div className="asas-modern-input-wrapper">
@@ -4563,7 +4561,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
                 <div className="asas-modern-field-group">
                   <label className="asas-modern-field-label">
-                    <span className="asas-field-label-icon"><Icon name="phone" /></span>
                     <span>رقم الهاتف أو الجوال (اختياري)</span>
                   </label>
                   <div className="asas-modern-input-wrapper">
@@ -4582,7 +4579,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                 {availableBranches.length > 0 && (
                   <div className="asas-modern-field-group">
                     <label className="asas-modern-field-label">
-                      <span className="asas-field-label-icon"><Icon name="building" /></span>
                       <span>الفرع أو مقر العمل المفضل</span>
                     </label>
                     <div className="asas-modern-input-wrapper">
@@ -4602,7 +4598,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
                 <div className="asas-modern-field-group">
                   <label className="asas-modern-field-label">
-                    <span className="asas-field-label-icon"><Icon name="briefcase" /></span>
                     <span>طبيعة ونظام الدوام المطلوب</span>
                   </label>
                   <div className="asas-work-type-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
@@ -4612,7 +4607,8 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                       style={{ justifyContent: 'center', height: 42, fontSize: 13, borderRadius: 10 }}
                       onClick={() => setRegWorkType('onsite')}
                     >
-                      <span>🏢 دوام حضوري بالفرع</span>
+                      <Icon name="building" />
+                      <span>دوام حضوري بالمقر</span>
                     </button>
                     <button
                       type="button"
@@ -4620,7 +4616,8 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                       style={{ justifyContent: 'center', height: 42, fontSize: 13, borderRadius: 10 }}
                       onClick={() => setRegWorkType('remote')}
                     >
-                      <span>🌐 دوام كامل عن بعد</span>
+                      <Icon name="globe" />
+                      <span>دوام كامل عن بعد</span>
                     </button>
                   </div>
                   <small style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4, display: 'block', lineHeight: 1.5 }}>
@@ -4632,7 +4629,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
                 <div className="asas-modern-field-group">
                   <label className="asas-modern-field-label">
-                    <span className="asas-field-label-icon"><Icon name="key" /></span>
                     <span>كلمة المرور (6 خانات على الأقل)</span>
                   </label>
                   <div className="asas-modern-input-wrapper">
@@ -4659,7 +4655,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
 
                 <div className="asas-modern-field-group">
                   <label className="asas-modern-field-label">
-                    <span className="asas-field-label-icon"><Icon name="shieldCheck" /></span>
                     <span>تأكيد كلمة المرور</span>
                   </label>
                   <div className="asas-modern-input-wrapper">
@@ -5412,11 +5407,11 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               <span className="asas-badge inside" style={{ fontSize: 11 }}>موظف معتمد</span>
               {user.is_remote ? (
                 <span className="asas-badge" style={{ fontSize: 11, background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-                  🌐 دوام عن بعد (أونلاين)
+                  دوام عن بعد (أونلاين)
                 </span>
               ) : (
                 <span className="asas-badge outside" style={{ fontSize: 11 }}>
-                  🏢 دوام حضوري بالمقر
+                  دوام حضوري بالمقر
                 </span>
               )}
               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{user.email || '—'}</span>
@@ -5804,7 +5799,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                       <div className="asas-remote-btn-title">تسجيل الحضور عن بعد</div>
                       <div className="asas-remote-btn-desc">بدء فترة وساعات العمل اليومية</div>
                       <div className={`asas-remote-btn-status ${!isInside ? 'ready-in' : 'done'}`}>
-                        <Icon name={!isInside ? 'sparkle' : 'checkCircle'} style={{ width: 13, height: 13 }} />
+                        <span className="asas-pulse-status-dot" style={{ width: 7, height: 7, background: !isInside ? "#10b981" : "#38bdf8", flexShrink: 0 }} />
                         <span>{!isInside ? 'جاهز لتسجيل الحضور الآن' : 'تم تسجيل الحضور اليوم'}</span>
                       </div>
                     </div>
@@ -5825,7 +5820,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                       <div className="asas-remote-btn-title">تسجيل الانصراف عن بعد</div>
                       <div className="asas-remote-btn-desc">إنهاء فترة الدوام وحفظ السجل</div>
                       <div className={`asas-remote-btn-status ${isInside ? 'ready-out' : 'disabled'}`}>
-                        <Icon name={isInside ? 'logOut' : 'lock'} style={{ width: 13, height: 13 }} />
+                        <span className="asas-pulse-status-dot" style={{ width: 7, height: 7, background: isInside ? "#ef4444" : "var(--text-3)", flexShrink: 0 }} />
                         <span>{isInside ? 'جاهز لتسجيل الانصراف الآن' : 'يتطلب تسجيل الحضور أولاً'}</span>
                       </div>
                     </div>
@@ -6048,7 +6043,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           <div className="asas-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
             <div className="asas-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 22 }}>📍</span>
+                <Icon name="mapPin" style={{ width: 24, height: 24, color: "var(--accent)" }} />
                 <div>
                   <h3 style={{ margin: 0, fontSize: 16 }}>كيفية تفعيل إذن الموقع الجغرافي</h3>
                   <small style={{ color: 'var(--text-3)' }}>خطوات سريعة لحل مشكلة (User denied Geolocation)</small>
