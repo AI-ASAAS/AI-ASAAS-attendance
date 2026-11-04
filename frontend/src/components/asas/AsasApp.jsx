@@ -1825,16 +1825,24 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
 
       {/* Main Workspace */}
       <div className="asas-main">
-                <header className="asas-topbar">
+        <header className="asas-topbar">
           <div className="asas-topbar-title">
-            <button className="asas-menu-btn" onClick={() => setOpen(!open)} aria-label="القائمة">
+            <button className="asas-menu-btn" onClick={() => setOpen(!open)} aria-label="القائمة" title="فتح القائمة">
               <Icon name="grid" />
             </button>
+            <div className="asas-topbar-brand" title="أساس - نظام الحضور والدوام السيادي">
+              <div className="asas-topbar-mark" />
+              <div className="asas-topbar-brand-text">
+                <strong className="asas-topbar-brand-name">أساس</strong>
+                <small className="asas-topbar-brand-sub">لوحة القيادة</small>
+              </div>
+            </div>
+            <div className="asas-topbar-divider" />
             <div className="asas-topbar-icon-capsule" title={title}>
               <Icon name={currentTabInfo?.[2] || 'dashboard'} />
             </div>
             <div className="asas-topbar-title-text">
-              <span className="asas-topbar-breadcrumb">لوحة القيادة / </span>
+              <span className="asas-topbar-breadcrumb">القسم: </span>
               <strong><Swash>{title}</Swash></strong>
             </div>
           </div>

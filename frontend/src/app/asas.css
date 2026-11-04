@@ -85,10 +85,11 @@ html, body {
   align-items: center;
   gap: 12px;
   text-decoration: none;
+  min-width: 0;
 }
 .asas-logo strong {
   font-family: var(--font-display, 'Thmanyah Serif Display', serif);
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1.2;
   color: var(--text);
   display: block;
@@ -97,36 +98,41 @@ html, body {
 .asas-logo small {
   display: block;
   font-size: 11px;
-  letter-spacing: 1.2px;
+  letter-spacing: 1px;
   color: var(--accent);
   font-weight: 700;
+  white-space: nowrap;
 }
+.brand__mark,
 .asas-mark {
-  width: 50px;
-  height: 55px;
+  width: 40px;
+  height: 48px;
+  aspect-ratio: 331 / 400;
   flex-shrink: 0;
-  border-radius: var(--radius-md);
   background: url('/logo-dark.png') center / contain no-repeat;
-  filter: drop-shadow(0 6px 16px rgba(186, 149, 85, 0.40));
+  filter: drop-shadow(0 4px 10px rgba(186, 149, 85, 0.35));
   transition: filter 0.3s ease, transform 0.25s var(--ease-spring);
 }
+:root[data-theme='dark'] .brand__mark,
 :root[data-theme='dark'] .asas-mark {
   background-image: url('/logo-light.png');
 }
 
 /* Sovereign Harmonized Sidebar, Topbar & Bottom Dock (Asas Skills Design System) */
 
-/* ───────── 1. ASAS SOVEREIGN SIDEBAR ───────── */
+/* ───────── 1. ASAS SOVEREIGN FLOATING ROUNDED SIDEBAR ───────── */
 .asas-sidebar {
-  width: 280px;
-  height: 100vh;
-  height: 100dvh;
+  width: 275px;
+  height: calc(100vh - 28px);
+  height: calc(100dvh - 28px);
+  margin: 14px 14px 14px 0;
+  border-radius: var(--radius-xl, 24px);
   flex-shrink: 0;
-  background: linear-gradient(180deg, rgba(252, 249, 245, 0.92) 0%, rgba(244, 237, 225, 0.88) 100%);
+  background: linear-gradient(180deg, rgba(252, 249, 245, 0.94) 0%, rgba(244, 237, 225, 0.90) 100%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
   backdrop-filter: blur(28px) saturate(180%);
-  border-left: 1px solid rgba(186, 149, 85, 0.22);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.60), 0 4px 24px -4px rgba(74, 54, 22, 0.12);
+  border: 1px solid var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow);
   padding: 16px 14px;
   display: flex;
   flex-direction: column;
@@ -299,9 +305,9 @@ html, body {
 
 /* Dark mode sidebar */
 :root[data-theme='dark'] .asas-sidebar {
-  background: linear-gradient(180deg, rgba(22, 18, 19, 0.94) 0%, rgba(16, 13, 14, 0.97) 100%) !important;
-  border-left: 1px solid rgba(186, 149, 85, 0.25) !important;
-  box-shadow: inset -1px 0 0 rgba(255, 244, 222, 0.08), 0 8px 35px rgba(0, 0, 0, 0.65) !important;
+  background: linear-gradient(180deg, rgba(22, 18, 19, 0.95) 0%, rgba(16, 13, 14, 0.98) 100%) !important;
+  border: 1px solid rgba(186, 149, 85, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.10), 0 12px 40px rgba(0, 0, 0, 0.70) !important;
 }
 
 :root[data-theme='dark'] .asas-nav-icon {
@@ -448,21 +454,21 @@ html, body {
   height: 64px;
   min-height: 64px;
   max-height: 64px;
-  margin: 14px 24px 0;
+  margin: 14px 14px 0 14px;
   padding: 0 18px;
   box-sizing: border-box;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(255, 253, 249, 0.92) 0%, rgba(246, 239, 227, 0.88) 100%);
+  border-radius: var(--radius-lg, 20px);
+  background: linear-gradient(135deg, rgba(255, 253, 249, 0.94) 0%, rgba(246, 239, 227, 0.90) 100%);
   -webkit-backdrop-filter: blur(24px) saturate(175%);
   backdrop-filter: blur(24px) saturate(175%);
-  border: 1px solid rgba(186, 149, 85, 0.25);
+  border: 1px solid var(--glass-rim);
   box-shadow: 0 10px 30px -8px rgba(35, 31, 32, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
   transition: all 0.25s var(--ease-spring);
   transform: translateZ(0);
 }
 
 :root[data-theme='dark'] .asas-topbar {
-  background: linear-gradient(135deg, rgba(26, 22, 23, 0.95) 0%, rgba(18, 15, 16, 0.97) 100%) !important;
+  background: linear-gradient(135deg, rgba(26, 22, 23, 0.96) 0%, rgba(18, 15, 16, 0.98) 100%) !important;
   border: 1px solid rgba(186, 149, 85, 0.28) !important;
   box-shadow: 0 10px 30px -6px rgba(0, 0, 0, 0.70), inset 0 1px 0 rgba(255, 244, 222, 0.12) !important;
 }
@@ -470,8 +476,57 @@ html, body {
 .asas-topbar-title {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
+  flex: 1;
+}
+
+/* App Bar Brand (Official Sovereign Emblem in Topbar) */
+.asas-topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  text-decoration: none;
+  cursor: default;
+}
+.asas-topbar-mark {
+  width: 32px;
+  height: 38px;
+  aspect-ratio: 331 / 400;
+  background: url('/logo-dark.png') center / contain no-repeat;
+  filter: drop-shadow(0 3px 8px rgba(186, 149, 85, 0.35));
+  flex-shrink: 0;
+  transition: transform 0.2s var(--ease-spring);
+}
+:root[data-theme='dark'] .asas-topbar-mark {
+  background-image: url('/logo-light.png');
+}
+.asas-topbar-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.asas-topbar-brand-name {
+  font-family: var(--font-display, 'Thmanyah Serif Display', serif);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.2px;
+}
+.asas-topbar-brand-sub {
+  font-family: var(--font, 'Thmanyah Sans', sans-serif);
+  font-size: 9.5px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.asas-topbar-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--hairline);
+  margin: 0 2px;
+  flex-shrink: 0;
 }
 
 .asas-topbar-icon-capsule {
@@ -514,6 +569,9 @@ html, body {
   color: var(--text);
   font-weight: 700;
   letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .asas-topbar-controls {
@@ -759,13 +817,17 @@ html, body {
 @media (max-width: 1024px) {
   .asas-sidebar {
     position: fixed !important;
-    top: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: min(300px, 85vw) !important;
-    transform: translateX(100%) !important;
+    top: 10px !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    height: calc(100dvh - 20px) !important;
+    width: min(300px, calc(100vw - 20px)) !important;
+    margin: 0 !important;
+    border-radius: 24px !important;
+    border: 1px solid var(--glass-rim) !important;
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.50) !important;
+    transform: translateX(calc(100% + 25px)) !important;
     z-index: 95 !important;
-    box-shadow: -10px 0 35px rgba(0, 0, 0, 0.45) !important;
   }
   .asas-sidebar.open {
     transform: translateX(0) !important;
@@ -777,12 +839,15 @@ html, body {
     display: inline-flex !important;
   }
   .asas-topbar {
-    margin: 10px 14px 0 !important;
+    margin: 10px 10px 0 !important;
     height: 56px !important;
     min-height: 56px !important;
     max-height: 56px !important;
-    padding: 0 14px !important;
+    padding: 0 12px !important;
     border-radius: 16px !important;
+  }
+  .asas-topbar-brand-sub {
+    display: none !important;
   }
 }
 
@@ -802,26 +867,30 @@ html, body {
   .asas-clock-pill {
     display: none !important;
   }
+  .asas-topbar-divider {
+    display: none !important;
+  }
+  .asas-topbar-icon-capsule {
+    display: none !important;
+  }
   .asas-topbar {
-    margin: 8px 10px 0 !important;
+    margin: 8px 8px 0 !important;
     height: 52px !important;
     min-height: 52px !important;
     max-height: 52px !important;
-    padding: 0 10px !important;
+    padding: 0 8px !important;
     border-radius: 14px !important;
     gap: 6px !important;
   }
-  .asas-topbar-icon-capsule {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
+  .asas-topbar-mark {
+    width: 26px !important;
+    height: 31px !important;
   }
-  .asas-topbar-icon-capsule svg {
-    width: 16px !important;
-    height: 16px !important;
+  .asas-topbar-brand-name {
+    font-size: 14px !important;
   }
   .asas-topbar-title strong {
-    font-size: 14px !important;
+    font-size: 13.5px !important;
   }
   .asas-topbar-controls {
     gap: 6px !important;
@@ -867,192 +936,6 @@ html, body {
   flex-direction: column;
   overflow-y: auto;
   position: relative;
-}
-
-/* Sovereign Floating Fixed Topbar Capsule */
-.asas-topbar {
-  position: sticky;
-  top: 14px;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 64px;
-  min-height: 64px;
-  max-height: 64px;
-  margin: 14px 24px 0;
-  padding: 0 20px;
-  box-sizing: border-box;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(246, 240, 230, 0.88) 50%, rgba(239, 233, 216, 0.92) 100%);
-  -webkit-backdrop-filter: blur(24px) saturate(170%);
-  backdrop-filter: blur(24px) saturate(170%);
-  border: 1px solid rgba(186, 149, 85, 0.28);
-  box-shadow: 0 10px 30px -8px rgba(35, 31, 32, 0.08), 0 2px 6px -1px rgba(186, 149, 85, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  transition: all 0.25s var(--ease-spring);
-  transform: translateZ(0);
-}
-
-/* Title Section & Icon Capsule */
-.asas-topbar-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.asas-topbar-icon-capsule {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%);
-  border: 1px solid rgba(255, 255, 255, 0.50);
-  color: #ffffff;
-  box-shadow: 0 4px 14px -2px rgba(186, 149, 85, 0.50), inset 0 1px 0 rgba(255, 255, 255, 0.60);
-  flex-shrink: 0;
-  transition: all 0.25s var(--ease-spring);
-}
-.asas-topbar-icon-capsule svg {
-  width: 19px;
-  height: 19px;
-  color: #ffffff !important;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
-}
-
-.asas-topbar-title-text {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.asas-topbar-breadcrumb {
-  font-size: 13.5px;
-  color: var(--text-3);
-  font-weight: 500;
-}
-.asas-topbar-title strong {
-  font-size: 15px;
-  color: var(--text);
-  font-weight: 700;
-  letter-spacing: 0.2px;
-}
-
-.asas-topbar-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-/* Symmetrical Capsules: Unified 38px height across all topbar controls */
-.asas-clock-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 14px;
-  box-sizing: border-box;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(239, 233, 216, 0.65) 100%);
-  border-radius: 9999px;
-  border: 1px solid rgba(186, 149, 85, 0.25);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 6px -1px rgba(35, 31, 32, 0.04);
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-2);
-}
-.asas-clock-pill strong {
-  color: var(--brand-gold);
-  font-family: var(--font);
-}
-
-/* Bell Notification Button */
-.asas-bell-btn {
-  position: relative;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 1px solid rgba(186, 149, 85, 0.25);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(239, 233, 216, 0.65) 100%);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  color: var(--text-2);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 6px -1px rgba(35, 31, 32, 0.04);
-  transition: all 0.25s var(--ease-spring);
-  padding: 0;
-  margin: 0;
-  flex-shrink: 0;
-}
-.asas-bell-btn:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(211, 198, 180, 0.55) 100%);
-  color: var(--brand-gold);
-  border-color: rgba(186, 149, 85, 0.50);
-  transform: scale(1.06);
-  box-shadow: 0 4px 14px -2px rgba(186, 149, 85, 0.30);
-}
-.asas-bell-badge {
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  background: var(--unpaid);
-  color: #fff;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border: 2px solid var(--bg);
-}
-
-/* Theme Toggle Button (Matching 38px Capsule) */
-.asas-theme-btn {
-  position: relative;
-  width: 38px !important;
-  height: 38px !important;
-  border-radius: 50% !important;
-  border: 1px solid rgba(186, 149, 85, 0.25) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(239, 233, 216, 0.65) 100%) !important;
-  display: grid !important;
-  place-items: center !important;
-  cursor: pointer !important;
-  color: var(--brand-gold) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 6px -1px rgba(35, 31, 32, 0.04) !important;
-  transition: all 0.25s var(--ease-spring) !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  flex-shrink: 0 !important;
-}
-.asas-theme-btn:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(211, 198, 180, 0.55) 100%) !important;
-  border-color: rgba(186, 149, 85, 0.50) !important;
-  transform: rotate(20deg) scale(1.08) !important;
-  box-shadow: 0 4px 14px -2px rgba(186, 149, 85, 0.30) !important;
-}
-
-/* User Capsule in Topbar */
-.asas-topbar-user {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 1.5px solid rgba(186, 149, 85, 0.30);
-  background: rgba(186, 149, 85, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.90), 0 2px 6px -1px rgba(35, 31, 32, 0.04);
-  transition: all 0.25s var(--ease-spring);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.asas-topbar-user:hover {
-  border-color: var(--brand-gold);
-  transform: scale(1.06);
-  box-shadow: 0 0 12px rgba(186, 149, 85, 0.40);
 }
 
 /* Content Container */
@@ -1753,8 +1636,9 @@ select.asas-input option {
   gap: 24px;
 }
 .asas-login-hero .asas-mark {
-  width: 130px;
-  height: 142px;
+  width: 120px;
+  height: 145px;
+  aspect-ratio: 331 / 400;
   filter: drop-shadow(0 12px 32px rgba(186, 149, 85, 0.65));
 }
 .asas-login-hero .asas-logo strong {
@@ -1855,8 +1739,9 @@ select.asas-input option {
   gap: 20px;
 }
 .asas-login-mobile-brand .asas-mark {
-  width: 104px;
-  height: 114px;
+  width: 95px;
+  height: 115px;
+  aspect-ratio: 331 / 400;
   filter: drop-shadow(0 8px 24px rgba(186, 149, 85, 0.55));
 }
 .asas-login-mobile-brand .asas-logo strong {
@@ -4141,8 +4026,9 @@ p, .prose, .asas-muted, .asas-hero-banner p, .asas-remote-btn-desc {
     font-size: 9px !important;
   }
   .asas-employee-header .asas-mark {
-    width: 34px !important;
+    width: 32px !important;
     height: 38px !important;
+    aspect-ratio: 331 / 400 !important;
   }
   .asas-employee-nav-wrap {
     width: 100% !important;
