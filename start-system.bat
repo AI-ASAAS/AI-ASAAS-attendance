@@ -1,9 +1,6 @@
 @echo off
 chcp 65001 >nul
-title ASAS Attendance System - Smart Failover Launcher
-cd /d "%~dp0"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0start-asas.ps1"
-if %errorlevel% neq 0 (
-    echo [خطأ] حدث خطأ أثناء تشغيل النظام.
-    pause
-)
+title ASAS Attendance System - Silent Launcher
+set BASE_DIR=C:\Users\Anoos.alaghbari\attendance
+wscript.exe "%BASE_DIR%\scripts\windows\run-watchdog-hidden.vbs"
+timeout /t 2 >nul
