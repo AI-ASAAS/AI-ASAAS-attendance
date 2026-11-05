@@ -48,6 +48,29 @@ function UserAvatar({ user, size = 'md', onClick }) {
   );
 }
 
+// ─── Live Isolated Clock Component (Prevents whole-page re-renders) ──
+const LiveClock = React.memo(function LiveClock({ iconColor = 'var(--accent)', iconSize = 14, label = 'صنعاء: ' }) {
+  const [time, setTime] = useState('');
+  useEffect(() => {
+    const update = () => {
+      try {
+        setTime(new Intl.DateTimeFormat('ar-YE', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Aden' }).format(new Date()));
+      } catch (_) {
+        setTime(new Date().toLocaleTimeString('ar-YE'));
+      }
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="asas-clock-pill">
+      <Icon name="clock" style={{ width: iconSize, height: iconSize, color: iconColor }} />
+      <span><span className="asas-clock-label">{label}</span><strong>{time || '—'}</strong></span>
+    </div>
+  );
+});
+
 async function api(path, method = 'GET', body, retries = 2) {
   let attempt = 0;
   while (true) {
@@ -1092,7 +1115,6 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       return Number(d.split('-')[0]);
     } catch (_) { return new Date().getFullYear(); }
   });
-  const [liveTime, setLiveTime] = useState('');
   const [announcements, setAnnouncements] = useState([]);
   const [showAnnouncementsModal, setShowAnnouncementsModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -1116,13 +1138,6 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
     email_notifications: false,
     support_contact: '+967 770000000'
   });
-
-  useEffect(() => {
-    const update = () => setLiveTime(new Intl.DateTimeFormat('ar-YE', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Aden' }).format(new Date()));
-    update();
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
-  }, []);
 
   const can = p => user?.role === 'super_admin' || user?.permissions?.includes(p);
 
@@ -1848,10 +1863,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           </div>
 
           <div className="asas-topbar-controls">
-            <div className="asas-clock-pill">
-              <Icon name="clock" style={{ width: 15, height: 15, color: 'var(--brand-gold)' }} />
-              <span><span className="asas-clock-label">صنعاء: </span><strong>{liveTime || '—'}</strong></span>
-            </div>
+            <LiveClock iconSize={15} iconColor="var(--brand-gold)" />
 
             <button className="asas-bell-btn" onClick={() => setShowAnnouncementsModal(true)} aria-label="التعميمات" title="التعميمات الرسمية">
               <Icon name="bell" />
@@ -4872,7 +4884,6 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   const [busy, setBusy] = useState(false);
   const [token, setToken] = useState('');
   const [leave, setLeave] = useState({ from_date: today(), to_date: today(), reason: '' });
-  const [liveTime, setLiveTime] = useState('');
   const [cameraModal, setCameraModal] = useState(false);
   const [autoCheckIn, setAutoCheckIn] = useState(() => {
     if (typeof localStorage !== 'undefined') {
@@ -4965,13 +4976,6 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     setCameraModal(false);
   }
 
-  useEffect(() => {
-    const update = () => setLiveTime(new Intl.DateTimeFormat('ar-YE', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Aden' }).format(new Date()));
-    update();
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
-  }, []);
-
   const load = useCallback((isSilent = false) => {
     return api('/attendance/me')
       .then(res => {
@@ -5019,7 +5023,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         load(true);
       }
-    }, 15000);
+    }, 60000);
     const onVisible = () => { if (document.visibilityState === 'visible') load(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
@@ -5189,6 +5193,15 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     lastChecked: null
   });
 
+  const isInsideRef = useRef(isInside);
+  isInsideRef.current = isInside;
+  const todayRecordRef = useRef(todayRecord);
+  todayRecordRef.current = todayRecord;
+  const loadRef = useRef(load);
+  loadRef.current = load;
+  const geofenceStatusRef = useRef(geofenceStatus);
+  geofenceStatusRef.current = geofenceStatus;
+
   const sendLocationFix = useCallback(async (coords, timestamp, force = false) => {
     if (!coords || typeof window === 'undefined') return;
     if (isSendingRef.current) return;
@@ -5216,7 +5229,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         Number(branchCoordsRef.current.latitude),
         Number(branchCoordsRef.current.longitude)
       );
-      const effectiveRad = isInside
+      const effectiveRad = isInsideRef.current
         ? Number(branchCoordsRef.current.exit_radius || 180)
         : Number(branchCoordsRef.current.entry_radius || 120);
       if (localDist != null) {
@@ -5255,14 +5268,14 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 400]);
           sendSystemNotification('👋 تم تسجيل الانصراف التلقائي', res.message || 'تم رصد مغادرتك لنطاق مقر العمل وتوثيق الانصراف تلقائياً.');
           setMessage(res.message || '⚠️ تم رصد مغادرتك للنطاق بنجاح وتسجيل خروجك تلقائياً.');
-          load(true);
+          if (loadRef.current) loadRef.current(true);
           return;
         }
 
         const dist = res.distance != null ? Math.round(res.distance) : localDist;
         const entryRadius = Number(res.branch_radius?.entry || res.branch?.entry_radius || 120);
         const exitRadius = Number(res.branch_radius?.exit || res.branch?.exit_radius || 180);
-        const effectiveRadius = isInside ? exitRadius : entryRadius;
+        const effectiveRadius = isInsideRef.current ? exitRadius : entryRadius;
 
         // Comprehensive inside check: server inside flag, inside_geofence flag, or distance within radius
         const isCurrentlyInside = Boolean(
@@ -5272,7 +5285,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         );
 
         // Auto-exit acceleration: when employee is on duty and outside the exit perimeter
-        if (isInside && !isCurrentlyInside && dist != null && dist > exitRadius) {
+        if (isInsideRef.current && !isCurrentlyInside && dist != null && dist > exitRadius) {
           if (!hasWarnedExitRef.current) {
             hasWarnedExitRef.current = true;
             playChime('warning');
@@ -5297,7 +5310,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         }
 
         // Auto check-in if arrived at branch while off duty
-        if (!isInside && isCurrentlyInside && autoCheckInRef.current && !hasAutoEnteredRef.current && (!todayRecord || todayRecord.state !== 'inside')) {
+        if (!isInsideRef.current && isCurrentlyInside && autoCheckInRef.current && !hasAutoEnteredRef.current && (!todayRecordRef.current || todayRecordRef.current.state !== 'inside')) {
           hasAutoEnteredRef.current = true;
           setMessage('🎯 تم رصد تواجدك داخل مقر العمل! جاري تسجيل الحضور التلقائي...');
           try {
@@ -5315,7 +5328,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
               sendSystemNotification('✅ تم تسجيل الحضور التلقائي', enterRes.message || 'مرحباً بك! تم تسجيل حضورك تلقائياً.');
               setMessage(enterRes.message || 'تم توثيق حضورك التلقائي بنجاح!');
-              await load();
+              if (loadRef.current) await loadRef.current();
               return;
             }
           } catch (autoErr) {
@@ -5337,7 +5350,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     } finally {
       isSendingRef.current = false;
     }
-  }, [isInside, load, todayRecord]);
+  }, [user?.is_remote]);
 
   const triggerLocationCheck = useCallback(() => {
     if (isRemote) return;
@@ -5398,7 +5411,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 }
     );
 
-    // 3. Heartbeat (8s if visible, accelerated to 5s if pending exit)
+    // 3. Heartbeat (20s normal, accelerated to 6s if pending exit)
     const intervalId = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         navigator.geolocation.getCurrentPosition(
@@ -5409,14 +5422,14 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           { enableHighAccuracy: true, timeout: 5000, maximumAge: 4000 }
         );
       }
-    }, (geofenceStatus.pending > 0 || (isInside && geofenceStatus.distance > 180)) ? 3000 : 8000);
+    }, (geofenceStatusRef.current?.pending > 0 || (isInsideRef.current && (geofenceStatusRef.current?.distance || 0) > 180)) ? 6000 : 20000);
 
     return () => {
       isCancelled = true;
       navigator.geolocation.clearWatch(watchId);
       clearInterval(intervalId);
     };
-  }, [sendLocationFix, geofenceStatus.pending, geofenceStatus.distance, isInside, isRemote]);
+  }, [isRemote, isInside]);
 
   return (
     <div className="asas-employee-page">
@@ -5476,10 +5489,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             <Icon name="key" />
             الملف الشخصي والأمان
           </button>
-          <div className="asas-clock-pill">
-            <Icon name="clock" style={{ width: 14, height: 14, color: 'var(--accent)' }} />
-            <span><span className="asas-clock-label">صنعاء: </span><strong>{liveTime || '—'}</strong></span>
-          </div>
+          <LiveClock iconSize={14} iconColor="var(--accent)" />
         </div>
       </Glass>
 
