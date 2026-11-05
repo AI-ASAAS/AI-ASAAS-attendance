@@ -876,7 +876,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
     const late=Math.max(0,Math.floor((now-window.start)/60000)-shift.grace_minutes);
     record=(await c.query("INSERT INTO duty_records(employee_id,branch_id,shift_id,shift_start,shift_end,first_in,state,close_policy,deduct_away,late_minutes,last_seen) VALUES($1,$2,$3,$4,$5,$6,'inside',$7,$8,$9,$6) RETURNING *",[req.user.id,branch.id,shift.id,window.start,window.end,now,shift.close_policy,shift.deduct_away,late])).rows[0];
    }
-   await event(c,req.user,record,returning?'return':'enter',b,{location,fix:b.fix,branch_snapshot:branch,is_auto:isAuto});
+   await event(c,req.user,record,returning?'return':'enter',b,{location,fix:b.fix,branch_snapshot:branch,is_auto:isAuto,biometric:b.biometric});
    if(!returning&&req.user.email){
     const timeStr=new Date(now).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'});
     notifications.notifyCheckIn(req.user,branch.name,timeStr).catch(err=>console.error('[Notification Error] Check-in email failed:',err.message));
@@ -982,7 +982,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
     }
    }
    record=(await c.query("UPDATE duty_records SET state='outside',last_out=$1,away_started=$1,exit_reason=$2,exit_candidate=NULL,last_seen=$1,gps_state=$3 WHERE id=$4 RETURNING *",[now,reason,location.state,record.id])).rows[0];
-   await event(c,req.user,record,automatic?'auto_exit':'exit',b,{location,fix:b.fix,branch_snapshot:branch,is_auto:isAuto,exit_reason:reason});
+   await event(c,req.user,record,automatic?'auto_exit':'exit',b,{location,fix:b.fix,branch_snapshot:branch,is_auto:isAuto,exit_reason:reason,biometric:b.biometric});
    if(req.user.email){
     const timeStr=new Date(now).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'});
     const workingMinutes=countedMinutes(record);

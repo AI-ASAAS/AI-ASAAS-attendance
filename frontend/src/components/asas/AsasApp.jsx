@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getDeviceId, getDeviceName } from '../../utils/device';
+import { promptBiometricVerification } from '../../utils/biometric';
 import {
   Ambient,
   Glass,
@@ -5038,6 +5039,14 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     const curUser = data?.account || user;
     const curRemote = Boolean(curUser?.is_remote);
     try {
+      // 1. Native Phone Biometric Verification (Touch ID / Face ID / Android Fingerprint)
+      let bioResult = null;
+      if (action === 'enter' || action === 'exit') {
+        setMessage('🔐 يرجى لمس مستشعر بصمة الهاتف للمتابعة...');
+        bioResult = await promptBiometricVerification(curUser, action);
+        setMessage('📡 جاري التحقق من الموقع وتوثيق العملية...');
+      }
+
       let currentToken = customToken || token;
       if (!currentToken) {
         if (curRemote) {
@@ -5148,7 +5157,14 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       };
       const device_id = getDeviceId();
       const reqId = generateUUID();
-      const r = await api('/attendance/action', 'POST', { action, token: currentToken, request_id: reqId, device_id, fix });
+      const r = await api('/attendance/action', 'POST', {
+        action,
+        token: currentToken,
+        request_id: reqId,
+        device_id,
+        fix,
+        biometric: bioResult
+      });
 
       const isEnterAction = r.action === 'enter' || action === 'enter';
       if (isEnterAction) {
@@ -5164,7 +5180,9 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       setMessage(r.message || 'تم توثيق الحضور بنجاح');
       await load();
     } catch (e) {
-      if (e?.code === 1 || e?.message === 'LOCATION_DENIED' || /denied|Geolocation/i.test(e?.message || '')) {
+      if (e?.isBiometric || e?.message?.includes('البصمة')) {
+        setError(e.message);
+      } else if (e?.code === 1 || e?.message === 'LOCATION_DENIED' || /denied|Geolocation/i.test(e?.message || '')) {
         setError('LOCATION_DENIED');
         setShowLocationGuide(true);
       } else if (e?.code === 2 || e?.message === 'POSITION_UNAVAILABLE') {
@@ -5779,9 +5797,10 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                     className={`asas-duty-action-btn checkin ${!isInside ? 'active' : 'disabled'}`}
                     disabled={busy || isInside}
                     onClick={() => act('enter')}
+                    title="تسجيل الحضور عبر بصمة الهاتف"
                   >
                     <Icon name="logIn" style={{ width: 18, height: 18 }} />
-                    <span>تسجيل الحضور</span>
+                    <span>تسجيل الحضور (بصمة 👆)</span>
                   </button>
 
                   <button
@@ -5789,9 +5808,10 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                     className={`asas-duty-action-btn checkout ${isInside ? 'active' : 'disabled'}`}
                     disabled={busy || !isInside}
                     onClick={() => act('exit')}
+                    title="تسجيل الانصراف عبر بصمة الهاتف"
                   >
                     <Icon name="logOut" style={{ width: 18, height: 18 }} />
-                    <span>تسجيل الانصراف</span>
+                    <span>تسجيل الانصراف (بصمة 👆)</span>
                   </button>
                 </div>
 
