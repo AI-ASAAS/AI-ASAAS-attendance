@@ -62,6 +62,10 @@ if errorlevel 1 (
     echo [OK] Cloudflare Tunnel is already running.
 )
 
+:: 6. 24/7 Automated Watchdog
+echo [Starting] 24/7 Watchdog in background...
+start "" /b wscript.exe "%BASE_DIR%\scripts\windows\run-watchdog-hidden.vbs"
+
 echo ========================================================
 echo All Attendance services verified and running!
 echo Access URL: https://attendance.ai-asaas.com:8443

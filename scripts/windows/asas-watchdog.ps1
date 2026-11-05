@@ -1,29 +1,54 @@
 # =============================================================================
 # ASAS Attendance System - 24/7 Automated Watchdog & Self-Healing Service
-# Ensures PostgreSQL (6543), Backend (6500), Frontend (7443), and Caddy (443)
-# are ALWAYS online, self-recovering automatically upon Windows reboot or crash.
+# Monitors & Auto-Recovers:
+# 1. PostgreSQL Database (Port 6543) + Postmaster Stale PID Cleanser
+# 2. Backend API Service (Port 6500)
+# 3. Next.js Frontend Server (Port 7442)
+# 4. Smart Dual Proxy (Ports 7443 & 8443)
+# 5. Cloudflare Tunnel (cloudflared.exe)
 # =============================================================================
 
 param (
     [switch]$Continuous = $false,
-    [int]$IntervalSeconds = 30
+    [int]$IntervalSeconds = 20
 )
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Continue"
 
-$ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-$LogDir = Join-Path $ProjectRoot "logs"
+# Base directory (use attendance junction to avoid Arabic path issues)
+$BaseDir = "C:\Users\Anoos.alaghbari\attendance"
+if (-not (Test-Path $BaseDir)) {
+    $BaseDir = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+}
+
+$LogDir = Join-Path $BaseDir "logs"
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
 $WatchdogLog = Join-Path $LogDir "watchdog.log"
+
+# Prevent multiple continuous instances using Named Mutex
+$mutex = $null
+if ($Continuous) {
+    $createdNew = $false
+    $mutex = New-Object System.Threading.Mutex($true, "Local\AsasAttendanceWatchdogMutex", [ref]$createdNew)
+    if (-not $createdNew) {
+        exit 0
+    }
+}
 
 function Log-Message {
     param([string]$Message, [string]$Level = "INFO")
     $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
     $entry = "[$timestamp] [$Level] $Message"
     try {
+        # Rotate log if > 5MB
+        if ((Test-Path $WatchdogLog) -and ((Get-Item $WatchdogLog).Length -gt 5MB)) {
+            $oldLog = Join-Path $LogDir "watchdog.log.old"
+            Move-Item -Path $WatchdogLog -Destination $oldLog -Force -ErrorAction SilentlyContinue
+        }
         Add-Content -Path $WatchdogLog -Value $entry -Encoding UTF8 -ErrorAction SilentlyContinue
     } catch {}
+    
     if ($Level -eq "ERROR") {
         Write-Host $entry -ForegroundColor Red
     } elseif ($Level -eq "WARN") {
@@ -62,9 +87,9 @@ function Ensure-Postgres {
         return $true
     }
 
-    Log-Message "PostgreSQL on port $dbPort is DOWN. Initiating recovery..." "WARN"
+    Log-Message "PostgreSQL on port $dbPort is DOWN. Checking stale PID..." "WARN"
     
-    # Clean stale postmaster.pid if postgres terminated abnormally
+    # 1. Clean stale postmaster.pid if postgres terminated abnormally
     $pidFile = Join-Path $pgData "postmaster.pid"
     if (Test-Path $pidFile) {
         try {
@@ -79,22 +104,22 @@ function Ensure-Postgres {
         }
     }
 
-    $pgCtl = "C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe"
-    if (-not (Test-Path $pgCtl)) {
-        $pgCtl = "C:\Program Files\PostgreSQL\17\bin\pg_ctl.exe"
+    # 2. Launch PostgreSQL
+    $pgExe = "C:\Program Files\PostgreSQL\18\bin\postgres.exe"
+    if (-not (Test-Path $pgExe)) {
+        $pgExe = "C:\Program Files\PostgreSQL\17\bin\postgres.exe"
     }
 
-    if (Test-Path $pgCtl) {
-        $serverLog = Join-Path $pgData "server.log"
-        & $pgCtl start -D "$pgData" -l "$serverLog" -s -w -t 20 | Out-Null
-    } else {
-        $pgExe = "C:\Program Files\PostgreSQL\18\bin\postgres.exe"
+    if (Test-Path $pgExe) {
         Start-Process -FilePath $pgExe -ArgumentList "-D `"$pgData`" -p $dbPort" -WindowStyle Hidden
+    } else {
+        Log-Message "postgres.exe not found at standard path!" "ERROR"
+        return $false
     }
 
-    # Verify recovery
+    # 3. Wait up to 15 seconds for DB to become ready
     for ($i = 0; $i -lt 15; $i++) {
-        Start-Sleep -Milliseconds 800
+        Start-Sleep -Seconds 1
         if (Test-TcpPort -Port $dbPort) {
             Log-Message "PostgreSQL on port $dbPort recovered successfully!" "SUCCESS"
             return $true
@@ -107,9 +132,9 @@ function Ensure-Postgres {
 
 function Ensure-Backend {
     $backendPort = 6500
-    $backendDir = Join-Path $ProjectRoot "backend"
+    $backendDir = Join-Path $BaseDir "backend"
     
-    # Fast HTTP Health Check
+    # Health check
     $isHealthy = $false
     if (Test-TcpPort -Port $backendPort) {
         try {
@@ -128,7 +153,7 @@ function Ensure-Backend {
 
     Log-Message "Backend API on port $backendPort is UNHEALTHY or DOWN. Recovering..." "WARN"
 
-    # Stop any hung process on port 6500
+    # Stop hung process on port 6500
     $conn = Get-NetTCPConnection -LocalPort $backendPort -State Listen -ErrorAction SilentlyContinue
     if ($conn) {
         try { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue } catch {}
@@ -140,7 +165,7 @@ function Ensure-Backend {
     Start-Process -FilePath "node.exe" -ArgumentList "src/asas-server.js" -WorkingDirectory $backendDir -WindowStyle Hidden -RedirectStandardOutput $backendOut -RedirectStandardError $backendErr
 
     for ($i = 0; $i -lt 15; $i++) {
-        Start-Sleep -Milliseconds 600
+        Start-Sleep -Seconds 1
         try {
             $res = Invoke-RestMethod -Uri "http://127.0.0.1:$backendPort/health" -TimeoutSec 1 -ErrorAction Stop
             if ($res -and ($res.status -eq 'ready' -or $res.data.status -eq 'ready')) {
@@ -150,122 +175,115 @@ function Ensure-Backend {
         } catch {}
     }
 
-    Log-Message "Backend API failed to become healthy on port $backendPort" "ERROR"
+    Log-Message "Backend API failed to recover on port $backendPort" "ERROR"
     return $false
 }
 
 function Ensure-Frontend {
-    $candidates = @(7443, 7777, 3001)
-    $activePort = $null
-
-    foreach ($p in $candidates) {
-        if (Test-TcpPort -Port $p) {
-            try {
-                $res = Invoke-WebRequest -Uri "http://127.0.0.1:$p/" -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
-                if ($res.StatusCode -eq 200) {
-                    $activePort = $p
-                    break
-                }
-            } catch {}
-        }
+    $targetPort = 7442
+    
+    if (Test-TcpPort -Port $targetPort) {
+        return $true
     }
 
-    if ($activePort) {
-        return $activePort
+    Log-Message "Next.js Frontend on port $targetPort is DOWN. Launching..." "WARN"
+
+    # Clean hung processes on 7442
+    $conn = Get-NetTCPConnection -LocalPort $targetPort -State Listen -ErrorAction SilentlyContinue
+    if ($conn) {
+        try { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue } catch {}
     }
 
-    # Find free candidate port
-    $targetPort = 7443
-    foreach ($p in $candidates) {
-        if (-not (Test-TcpPort -Port $p)) {
-            $targetPort = $p
-            break
-        }
-    }
-
-    Log-Message "Frontend is DOWN. Launching Next.js on port $targetPort..." "WARN"
-
-    $frontendDir = Join-Path $ProjectRoot "frontend"
+    $frontendDir = Join-Path $BaseDir "frontend"
     $frontOut = Join-Path $LogDir "frontend.log"
     $frontErr = Join-Path $LogDir "frontend_error.log"
 
     Start-Process -FilePath "cmd.exe" -ArgumentList "/c node node_modules\next\dist\bin\next start -p $targetPort" -WorkingDirectory $frontendDir -WindowStyle Hidden -RedirectStandardOutput $frontOut -RedirectStandardError $frontErr
 
     for ($i = 0; $i -lt 20; $i++) {
-        Start-Sleep -Milliseconds 700
+        Start-Sleep -Seconds 1
         if (Test-TcpPort -Port $targetPort) {
-            Log-Message "Frontend is UP and running on port $targetPort" "SUCCESS"
-            return $targetPort
+            Log-Message "Frontend Next.js on port $targetPort is UP!" "SUCCESS"
+            return $true
         }
     }
 
-    Log-Message "Frontend failed to start on port $targetPort" "ERROR"
-    return $null
+    Log-Message "Frontend Next.js failed to start on port $targetPort" "ERROR"
+    return $false
 }
 
-function Ensure-DockerAndCaddy {
-    $caddyPorts = @(443, 5000, 5080)
-    $allPortsUp = $true
-    foreach ($cp in $caddyPorts) {
-        if (-not (Test-TcpPort -Port $cp)) {
-            $allPortsUp = $false
-            break
+function Ensure-SmartProxy {
+    $proxyPort = 8443
+    $proxyPortAlt = 7443
+    
+    if ((Test-TcpPort -Port $proxyPort) -and (Test-TcpPort -Port $proxyPortAlt)) {
+        return $true
+    }
+
+    Log-Message "Smart Dual Proxy on ports $proxyPort / $proxyPortAlt is DOWN. Recovering..." "WARN"
+
+    foreach ($p in @($proxyPort, $proxyPortAlt)) {
+        $conn = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue
+        if ($conn) {
+            try { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue } catch {}
         }
     }
 
-    if ($allPortsUp) {
+    $proxyOut = Join-Path $LogDir "smart-proxy.log"
+    $proxyErr = Join-Path $LogDir "smart-proxy_error.log"
+
+    Start-Process -FilePath "node.exe" -ArgumentList "smart-proxy-7443.js" -WorkingDirectory $BaseDir -WindowStyle Hidden -RedirectStandardOutput $proxyOut -RedirectStandardError $proxyErr
+
+    for ($i = 0; $i -lt 10; $i++) {
+        Start-Sleep -Seconds 1
+        if ((Test-TcpPort -Port $proxyPort) -and (Test-TcpPort -Port $proxyPortAlt)) {
+            Log-Message "Smart Dual Proxy recovered on ports $proxyPort & $proxyPortAlt!" "SUCCESS"
+            return $true
+        }
+    }
+
+    Log-Message "Smart Dual Proxy failed to recover" "ERROR"
+    return $false
+}
+
+function Ensure-CloudflareTunnel {
+    $cfProc = Get-Process "cloudflared" -ErrorAction SilentlyContinue
+    if ($cfProc) {
         return $true
     }
 
-    Log-Message "Caddy Gateway (Ports 443, 5000, 5080) is partially or fully DOWN. Checking Docker..." "WARN"
+    Log-Message "Cloudflare Tunnel (cloudflared.exe) is DOWN. Recovering..." "WARN"
 
-    # Check Docker Desktop
-    $dockerProc = Get-Process "Docker Desktop" -ErrorAction SilentlyContinue
-    if (-not $dockerProc) {
-        Log-Message "Starting Docker Desktop..." "INFO"
-        Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe" -WindowStyle Hidden
+    $cfExe = Join-Path $BaseDir ".local\cloudflared.exe"
+    if (-not (Test-Path $cfExe)) {
+        Log-Message "cloudflared.exe not found at $cfExe" "ERROR"
+        return $false
     }
 
-    # Wait for Docker engine
-    for ($i = 0; $i -lt 30; $i++) {
-        & docker info 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) { break }
-        Start-Sleep -Seconds 2
+    $cfToken = "eyJhIjoiNWYyMGJmZWM5ZTNkZDIwNDA4ZWYxYjI4YjI4ZmRkYmEiLCJ0IjoiY2MwZTA3MTQtNjJmMS00ZTJhLWJlZGEtYjQ3ZWE1NDY1MDk2IiwicyI6ImMzVndaWEp6WldOeVpYUndZWE56ZDI5eVpHWnZjbUZ6WVdGellYUjBaVzVrWVc1alpUSXdNalk9In0="
+    Start-Process -FilePath $cfExe -ArgumentList "tunnel run --token `"$cfToken`"" -WindowStyle Hidden
+
+    for ($i = 0; $i -lt 10; $i++) {
+        Start-Sleep -Seconds 1
+        $check = Get-Process "cloudflared" -ErrorAction SilentlyContinue
+        if ($check) {
+            Log-Message "Cloudflare Tunnel recovered successfully!" "SUCCESS"
+            return $true
+        }
     }
 
-    # Start Caddy container
-    Set-Location $ProjectRoot
-    & docker compose up -d caddy | Out-Null
-    Start-Sleep -Seconds 3
-
-    if (Test-TcpPort -Port 5000 -or Test-TcpPort -Port 5080 -or Test-TcpPort -Port 443) {
-        Log-Message "Caddy Gateway recovered successfully on public ports (443, 5000, 5080)!" "SUCCESS"
-        return $true
-    }
-
-    Log-Message "Failed to recover Caddy Gateway" "ERROR"
+    Log-Message "Failed to start Cloudflare Tunnel" "ERROR"
     return $false
 }
 
 function Run-HealthCycle {
     $dbOk = Ensure-Postgres
     $beOk = Ensure-Backend
-    $fePort = Ensure-Frontend
-    $cadOk = Ensure-DockerAndCaddy
+    $feOk = Ensure-Frontend
+    $prOk = Ensure-SmartProxy
+    $cfOk = Ensure-CloudflareTunnel
 
-    $allHealthy = $dbOk -and $beOk -and ($null -ne $fePort) -and $cadOk
-    if ($allHealthy) {
-        # Check domain end-to-end (local or via Cloudflare proxy)
-        try {
-            $domRes = Invoke-WebRequest -Uri "https://attendance.ai-asaas.com/" -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue
-            if ($domRes -and $domRes.StatusCode -eq 200) {
-                return $true
-            }
-        } catch {}
-        # Port 8443 is healthy
-        return $true
-    }
-    return $allHealthy
+    return ($dbOk -and $beOk -and $feOk -and $prOk -and $cfOk)
 }
 
 # Main Execution Flow
@@ -273,9 +291,18 @@ Log-Message "=== ASAS 24/7 Watchdog initialized ===" "INFO"
 
 if ($Continuous) {
     Log-Message "Entering continuous watchdog mode (checking every $IntervalSeconds seconds)..." "INFO"
+    $cycleCount = 0
     while ($true) {
         try {
-            Run-HealthCycle | Out-Null
+            $allOk = Run-HealthCycle
+            $cycleCount++
+            # Log periodic heartbeat every 30 minutes (90 cycles of 20s)
+            if ($cycleCount -ge 90) {
+                if ($allOk) {
+                    Log-Message "Heartbeat: All 5 core services running healthy." "INFO"
+                }
+                $cycleCount = 0
+            }
         } catch {
             Log-Message "Watchdog loop exception: $($_.Exception.Message)" "ERROR"
         }
@@ -284,7 +311,7 @@ if ($Continuous) {
 } else {
     $result = Run-HealthCycle
     if ($result) {
-        Log-Message "Single health check completed: ALL SERVICES 100% HEALTHY." "SUCCESS"
+        Log-Message "Single health check completed: ALL 5 SERVICES 100% HEALTHY." "SUCCESS"
     } else {
         Log-Message "Single health check completed: Some services encountered issues." "WARN"
     }

@@ -1,3 +1,2 @@
 @echo off
-cd /d "%~dp0"
-wscript.exe "%~dp0run-watchdog-hidden.vbs"
+wscript.exe "C:\Users\Anoos.alaghbari\attendance\scripts\windows\run-watchdog-hidden.vbs"
