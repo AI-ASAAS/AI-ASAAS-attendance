@@ -10,7 +10,6 @@ import {
   Card,
   Icon,
   ProgressBar,
-  ProgressRing,
   Swash,
   Stretch,
   useTheme,
@@ -1979,13 +1978,6 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                       تحميل التطبيق على الجوال
                     </button>
                   </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <ProgressRing value={data.present} max={Math.max(data.total, 1)} size={82}>
-                    <strong className="num" style={{ fontSize: 16 }}>
-                      {data.total ? Math.round((data.present / data.total) * 100) : 0}%
-                    </strong>
-                  </ProgressRing>
                 </div>
               </Glass>
 
