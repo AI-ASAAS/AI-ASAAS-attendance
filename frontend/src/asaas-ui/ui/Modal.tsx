@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useId, useRef } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cx } from '../lib/cx';
 import { kitText } from '../lib/i18n';
@@ -24,13 +24,18 @@ const FOCUSABLE =
 export function Modal({ title, onClose, children, footer, wide }: ModalProps) {
   const titleId = useId();
   const dialogId = useId();
+  const [mounted, setMounted] = useState(false);
   // Keep the latest onClose without re-running the effect (inline arrows change every render).
   const closeRef = useRef(onClose);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   useEffect(() => {
     closeRef.current = onClose;
   });
 
   useEffect(() => {
+    if (!mounted) return;
     const dialog = document.getElementById(dialogId);
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusables = () => Array.from(dialog?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
@@ -74,7 +79,9 @@ export function Modal({ title, onClose, children, footer, wide }: ModalProps) {
       document.body.style.overflow = previousOverflow;
       if (opener?.isConnected) opener.focus();
     };
-  }, [dialogId]);
+  }, [dialogId, mounted]);
+
+  if (!mounted) return null;
 
   return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>

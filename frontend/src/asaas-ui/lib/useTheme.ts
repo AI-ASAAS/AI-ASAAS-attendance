@@ -13,12 +13,21 @@ function savedTheme(): Theme | null {
 }
 
 export function useTheme(): [Theme, () => void] {
-  const [theme, setTheme] = useState<Theme>(() => savedTheme() ?? 'light');
+  const [theme, setTheme] = useState<Theme>('light');
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const initial = savedTheme()
+      ?? (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+    setTheme(initial);
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
     document.documentElement.dataset.theme = theme;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#141111' : '#ece5d7');
-  }, [theme]);
+  }, [theme, ready]);
 
   const toggle = () =>
     setTheme((current) => {

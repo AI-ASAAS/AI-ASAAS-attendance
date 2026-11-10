@@ -6,12 +6,17 @@ import { promptBiometricVerification } from '../../utils/biometric';
 import {
   Ambient,
   AssistantWidget,
-  Glass,
+  Button,
   Card,
+  EmptyState,
+  Glass,
   Icon,
   ProgressBar,
-  Swash,
+  Segmented,
+  SiteHeader,
   Stretch,
+  Swash,
+  TabBar,
   useTheme,
   firstName,
   formatNumber
@@ -51,11 +56,11 @@ function AsasAssistant({ user, isAdmin }) {
   );
 }
 
-// Avatar Presets: Man, Woman, or Admin
+// Avatar Presets using official ASAAS tokens and stroke icons
 const AVATAR_PRESETS = [
-  { id: 'man', name: 'موظف (رجل)', bg: 'linear-gradient(135deg, #1d3557, #457b9d)', icon: '👨‍💼' },
-  { id: 'woman', name: 'موظفة (امرأة)', bg: 'linear-gradient(135deg, #ba9555, #8c6928)', icon: '👩‍💼' },
-  { id: 'admin', name: 'مسؤول نظام', bg: 'linear-gradient(135deg, #2b2d42, #4a4e69)', icon: '🛡️' }
+  { id: 'man', name: 'موظف (رجل)', bg: 'var(--accent-fill)', fg: 'var(--on-accent)', icon: 'user' },
+  { id: 'woman', name: 'موظفة (امرأة)', bg: 'var(--partial-bg)', fg: 'var(--partial)', icon: 'award' },
+  { id: 'admin', name: 'مسؤول نظام', bg: 'var(--paid-bg)', fg: 'var(--paid)', icon: 'shieldCheck' }
 ];
 
 function UserAvatar({ user, size = 'md', onClick }) {
@@ -63,12 +68,14 @@ function UserAvatar({ user, size = 'md', onClick }) {
   const preset = AVATAR_PRESETS.find(p => p.id === avatarKey);
   const isImage = avatarKey && (avatarKey.startsWith('http') || avatarKey.startsWith('/') || avatarKey.startsWith('data:image/'));
   const letter = (user?.name || user?.identifier || 'م')[0] || 'م';
+  const iconSize = size === 'lg' ? 30 : size === 'sm' ? 16 : 20;
 
   return (
     <div
       className={`asas-avatar ${size === 'lg' ? 'lg' : size === 'sm' ? 'sm' : ''}`}
       style={{
-        background: isImage ? '#1a1818' : (preset ? preset.bg : 'linear-gradient(135deg, #1d3557, #457b9d)'),
+        background: isImage ? 'var(--brand-ink)' : (preset ? preset.bg : 'var(--accent-fill)'),
+        color: isImage ? undefined : (preset ? preset.fg : 'var(--on-accent)'),
         cursor: onClick ? 'pointer' : 'default',
         padding: 0
       }}
@@ -78,7 +85,7 @@ function UserAvatar({ user, size = 'md', onClick }) {
       {isImage ? (
         <img src={avatarKey} alt={user?.name || 'صورة الموظف'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : preset ? (
-        <span style={{ fontSize: size === 'lg' ? 36 : size === 'sm' ? 16 : 22, lineHeight: 1 }}>{preset.icon}</span>
+        <Icon name={preset.icon} style={{ width: iconSize, height: iconSize }} />
       ) : (
         <span>{letter}</span>
       )}
@@ -228,25 +235,20 @@ const defaults = {
   announcements: { title: '', content: '', priority: 'normal', send_email: false }
 };
 
-function Brand() {
+function Brand({ compact = false }) {
   return (
-    <div className="asas-logo">
-      <div className="asas-mark" />
+    <div className="brand">
+      <span className="brand__mark" aria-hidden="true" />
       <div>
-        <strong><Swash>أساس</Swash></strong>
-        <small>نظام الحضور والدوام</small>
+        <div className="brand__name"><Swash>أساس</Swash></div>
+        {!compact && <div className="brand__tag">نظام الحضور والدوام</div>}
       </div>
     </div>
   );
 }
 
 function Empty({ children = 'لا توجد سجلات بعد' }) {
-  return (
-    <div className="asas-empty">
-      <Icon name="file" />
-      <p>{children}</p>
-    </div>
-  );
+  return <EmptyState icon="file" title={children} />;
 }
 
 function Field({ label, children, ...props }) {
@@ -747,7 +749,7 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
                 {/* Official Footer */}
                 <div className="asas-a4-footer">
                   <div className="asas-a4-security-notice">
-                    ⚠️ تنبيه أمني: هذا الرمز محمي بتشفير HMAC-SHA256 السيادي ومقيد بالنطاق الجغرافي المصرح به وبأجهزة الموظفين المسجلة. أي محاولة لمشاركة الرمز أو تصويره من خارج المقر سيتم رصدها وإلغاؤها تلقائياً.
+                    تنبيه أمني: هذا الرمز محمي بتشفير HMAC-SHA256 السيادي ومقيد بالنطاق الجغرافي المصرح به وبأجهزة الموظفين المسجلة. أي محاولة لمشاركة الرمز أو تصويره من خارج المقر سيتم رصدها وإلغاؤها تلقائياً.
                   </div>
                   <div className="asas-a4-footer-bottom">
                     <span>منظومة أساس لإدارة وحوكمة الموارد البشرية</span>
@@ -900,16 +902,17 @@ function ProfileModal({ user, onClose, onUpdated }) {
                 borderRadius: '50%',
                 overflow: 'hidden',
                 border: '2px solid var(--accent)',
-                boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                boxShadow: 'var(--glass-shadow)',
                 display: 'grid',
                 placeItems: 'center',
-                background: customImage ? undefined : (AVATAR_PRESETS.find(p => p.id === avatar)?.bg || 'linear-gradient(135deg, #1d3557, #457b9d)'),
+                background: customImage ? undefined : (AVATAR_PRESETS.find(p => p.id === avatar)?.bg || 'var(--accent-fill)'),
+                color: customImage ? undefined : (AVATAR_PRESETS.find(p => p.id === avatar)?.fg || 'var(--on-accent)'),
                 flexShrink: 0
               }}>
                 {customImage ? (
                   <img src={customImage} alt="معاينة الصورة" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <span style={{ fontSize: 34 }}>{AVATAR_PRESETS.find(p => p.id === avatar)?.icon || '👨‍💼'}</span>
+                  <Icon name={AVATAR_PRESETS.find(p => p.id === avatar)?.icon || 'user'} style={{ width: 32, height: 32 }} />
                 )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -963,7 +966,7 @@ function ProfileModal({ user, onClose, onUpdated }) {
                     }}
                     onClick={() => { setAvatar(p.id); setCustomImage(''); }}
                   >
-                    <span style={{ fontSize: 24 }}>{p.icon}</span>
+                    <Icon name={p.icon} style={{ width: 20, height: 20, color: 'var(--accent)' }} />
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{p.name}</span>
                   </button>
                 ))}
@@ -1123,7 +1126,6 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [open, setOpen] = useState(false);
   const [notice, setNotice] = useState('');
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
@@ -1785,63 +1787,54 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
     );
   }
 
+  const visibleTabs = tabs
+    .filter(([key]) => key !== 'accounts' || can('employees.read'))
+    .filter(([key]) => key !== 'audit' || can('audit.read'));
   const currentTabInfo = tabs.find(t => t[0] === tab);
   const title = currentTabInfo?.[1] || '';
   const rows = Array.isArray(data) ? data : [];
   const set = (k, value) => setForm(f => ({ ...f, [k]: value }));
+  const selectAdminTab = (key) => {
+    setTab(key);
+    setData(null);
+    setNotice('');
+    setSearch('');
+    setAccountFilter('all');
+    setRecordFilter('all');
+  };
 
   return (
     <div className="asas-app">
       <Ambient />
 
-      {open && <div className="asas-modal-backdrop" style={{ zIndex: 90 }} onClick={() => setOpen(false)} />}
-
-      {/* Sidebar with Liquid Glass and Asaas Skills Design */}
-      <aside className={`asas-sidebar ${open ? 'open' : ''}`}>
+      {/* Desktop Sidebar (hidden below 900px in favor of TabBar + SiteHeader menu) */}
+      <Glass as="aside" thick className="asas-sidebar">
         <div className="asas-sidebar-head">
           <Brand />
-          <button
-            type="button"
-            className="asas-sidebar-close-btn"
-            onClick={() => setOpen(false)}
-            aria-label="إغلاق القائمة"
-            title="إغلاق القائمة"
-          >
-            <Icon name="close" />
-          </button>
         </div>
 
         <div className="asas-sidebar-scroll">
           <p className="asas-nav-label">مساحة الإدارة والقيادة</p>
-          <nav className="asas-nav">
-            {tabs.filter(([key]) => key !== 'accounts' || can('employees.read')).filter(([key]) => key !== 'audit' || can('audit.read')).map(([key, label, iconName]) => {
+          <nav className="asas-nav" aria-label="أقسام لوحة التحكم">
+            {visibleTabs.map(([key, label, iconName]) => {
               const pendingAccountsCount = (key === 'accounts' && Array.isArray(data) && tab === 'accounts')
                 ? data.filter(a => !a.active).length
                 : 0;
               return (
                 <button
                   type="button"
-                  className={`asas-nav-item ${tab === key ? 'active' : ''}`}
+                  className="asas-nav-item"
+                  aria-current={tab === key ? 'page' : undefined}
                   key={key}
-                  onClick={() => {
-                    setTab(key);
-                    setOpen(false);
-                    setData(null);
-                    setNotice('');
-                    setSearch('');
-                    setAccountFilter('all');
-                    setRecordFilter('all');
-                  }}
+                  onClick={() => selectAdminTab(key)}
                 >
-                  <span className="asas-nav-icon">
-                    <Icon name={iconName} />
-                  </span>
+                  <Icon name={iconName} />
                   <span className="asas-nav-text">{label}</span>
                   {key === 'announcements' && announcements.length > 0 && (
-                    <span className="asas-tab-badge urgent">{announcements.length}</span>
+                    <span className="asas-tab-badge urgent num">{announcements.length}</span>
                   )}
                   {key === 'accounts' && pendingAccountsCount > 0 && (
-                    <span className="asas-tab-badge pending">{pendingAccountsCount}</span>
+                    <span className="asas-tab-badge pending num">{pendingAccountsCount}</span>
                   )}
                 </button>
               );
@@ -1857,60 +1850,77 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
               <p>{roles[user.role]}</p>
             </div>
           </div>
-          <button
-            type="button"
-            className="asas-btn sm asas-sidebar-logout"
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="logout"
             style={{ width: '100%' }}
             onClick={logout}
             title="تسجيل الخروج"
           >
-            <Icon name="logout" />
-            <span>خروج</span>
-          </button>
+            خروج
+          </Button>
         </div>
-      </aside>
+      </Glass>
 
       {/* Main Workspace */}
       <div className="asas-main">
-        <header className="asas-topbar">
-          <div className="asas-topbar-title">
-            <button className="asas-menu-btn" onClick={() => setOpen(!open)} aria-label="القائمة" title="فتح القائمة">
-              <Icon name="menu" />
-            </button>
-            <div className="asas-topbar-brand" title="أساس - نظام الحضور والدوام السيادي">
-              <div className="asas-topbar-mark" />
-              <div className="asas-topbar-brand-text">
-                <strong className="asas-topbar-brand-name">أساس</strong>
-                <small className="asas-topbar-brand-sub">لوحة القيادة</small>
-              </div>
-            </div>
-            <div className="asas-topbar-divider" />
-            <div className="asas-topbar-icon-capsule" title={title}>
-              <Icon name={currentTabInfo?.[2] || 'dashboard'} />
-            </div>
-            <div className="asas-topbar-title-text">
-              <span className="asas-topbar-breadcrumb">القسم: </span>
-              <strong><Swash>{title}</Swash></strong>
-            </div>
-          </div>
-
-          <div className="asas-topbar-controls">
-            <LiveClock iconSize={15} iconColor="var(--brand-gold)" />
-
-            <button className="asas-bell-btn" onClick={() => setShowAnnouncementsModal(true)} aria-label="التعميمات" title="التعميمات الرسمية">
-              <Icon name="bell" />
-              {announcements.length > 0 && <span className="asas-bell-badge">{announcements.length}</span>}
-            </button>
-
-            <button className="asas-theme-btn" onClick={toggleTheme} aria-label="تبديل مظهر النظام" title={theme === 'dark' ? 'التحويل للمظهر الفاتح' : 'التحويل للمظهر الداكن'}>
-              <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
-            </button>
-
-            <div className="asas-topbar-user" onClick={() => setShowProfileModal(true)} title="الملف الشخصي">
-              <UserAvatar user={user} size="sm" />
-            </div>
-          </div>
-        </header>
+        <SiteHeader
+          brand={
+            <>
+              <a
+                href="#dashboard"
+                className="brand asas-header-mobile-brand"
+                onClick={(e) => { e.preventDefault(); selectAdminTab('dashboard'); }}
+              >
+                <span className="brand__mark" aria-hidden="true" />
+                <span className="brand__name"><Swash>أساس</Swash></span>
+              </a>
+              <span className="asas-header-section"><Swash>{title}</Swash></span>
+            </>
+          }
+          nav={visibleTabs.map(([key, label]) => (
+            <a
+              key={key}
+              href={`#${key}`}
+              aria-current={tab === key ? 'page' : undefined}
+              onClick={(e) => { e.preventDefault(); selectAdminTab(key); }}
+            >
+              {label}
+            </a>
+          ))}
+          actions={
+            <>
+              <LiveClock iconSize={14} iconColor="var(--accent)" />
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm btn--icon asas-bell-btn"
+                onClick={() => setShowAnnouncementsModal(true)}
+                aria-label="التعميمات الرسمية"
+                title="التعميمات الرسمية"
+              >
+                <Icon name="bell" />
+                {announcements.length > 0 && <span className="asas-bell-badge num">{announcements.length}</span>}
+              </button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={theme === 'dark' ? 'sun' : 'moon'}
+                label={theme === 'dark' ? 'التحويل للمظهر الفاتح' : 'التحويل للمظهر الداكن'}
+                onClick={toggleTheme}
+              />
+              <button
+                type="button"
+                className="asas-topbar-user"
+                onClick={() => setShowProfileModal(true)}
+                title="الملف الشخصي"
+                aria-label="الملف الشخصي"
+              >
+                <UserAvatar user={user} size="sm" />
+              </button>
+            </>
+          }
+        />
 
         <main className="asas-content">
           <div className="asas-heading">
@@ -1955,28 +1965,22 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
             <>
               <Glass className="asas-hero-banner">
                 <div>
-                  <div className="asas-hero-company">
-                    <span className="asas-mark" aria-hidden="true" />
-                    <span>شركة أساس الذكاء الاصطناعي</span>
-                  </div>
                   <h2><AsasGreeting name={user.name} /></h2>
                   <p className="prose">حضور مؤكد جغرافياً ومقيد بالأجهزة المعتمدة مع مزامنة لحظية.</p>
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
-                    <button className="asas-btn primary" onClick={() => setTab('qr')}>
-                      <Icon name="qrCode" />
+                  <div className="cluster" style={{ marginTop: 14 }}>
+                    <Button variant="primary" icon="qrCode" onClick={() => selectAdminTab('qr')}>
                       عرض الرموز المعتمدة
-                    </button>
-                    <button
-                      className="asas-btn"
+                    </Button>
+                    <Button
+                      variant="glass"
+                      icon="download"
                       onClick={() => {
                         if (installPrompt) installPrompt.prompt();
                         else setShowInstallModal(true);
                       }}
-                      style={{ borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 600 }}
                     >
-                      <Icon name="download" />
                       تحميل التطبيق على الجوال
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </Glass>
@@ -2101,32 +2105,18 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
 
             return (
               <>
-                {/* Mode Switcher Tabs */}
-                <div className="asas-records-mode-tabs" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-                  <button
-                    className={`asas-btn ${recordsTabMode === 'collective' ? 'primary' : ''}`}
-                    onClick={() => setRecordsTabMode('collective')}
-                    style={{ fontWeight: 700 }}
-                  >
-                    <Icon name="users" />
-                    <span>التقرير الجماعي لجميع الموظفين</span>
-                  </button>
-                  <button
-                    className={`asas-btn ${recordsTabMode === 'individual' ? 'primary' : ''}`}
-                    onClick={() => setRecordsTabMode('individual')}
-                    style={{ fontWeight: 700 }}
-                  >
-                    <Icon name="user" />
-                    <span>سجل الموظف الفردي</span>
-                  </button>
-                  <button
-                    className={`asas-btn ${recordsTabMode === 'live' ? 'primary' : ''}`}
-                    onClick={() => setRecordsTabMode('live')}
-                    style={{ fontWeight: 500 }}
-                  >
-                    <Icon name="list" />
-                    <span>سجل الحركات اليومية المباشرة</span>
-                  </button>
+                {/* Mode Switcher Tabs (Kit Segmented Pill) */}
+                <div className="asas-records-mode-tabs">
+                  <Segmented
+                    label="عرض سجلات الحضور"
+                    value={recordsTabMode}
+                    onChange={setRecordsTabMode}
+                    options={[
+                      { value: 'collective', label: 'التقرير الجماعي' },
+                      { value: 'individual', label: 'سجل الموظف الفردي' },
+                      { value: 'live', label: 'الحركات المباشرة' }
+                    ]}
+                  />
                 </div>
 
                 {/* Period Controls & Quick Presets */}
@@ -2704,8 +2694,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                       </td>
                                       <td>
                                         {day.needs_review ? (
-                                          <span style={{ color: 'var(--unpaid)', fontWeight: 700, fontSize: 12 }}>
-                                            ⚠️ سجل ناقص بحاجة لمراجعة
+                                          <span style={{ color: 'var(--unpaid)', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                            <Icon name="alert" style={{ width: 14, height: 14 }} />
+                                            سجل ناقص بحاجة لمراجعة
                                           </span>
                                         ) : (
                                           <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
@@ -3531,64 +3522,50 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           )}
         </main>
 
-        {/* Mobile Fixed Floating Navigation Dock */}
-        <nav className="asas-mobile-dock" aria-label="التنقل السريع للهاتف">
-          <button
-            type="button"
-            className={`asas-mobile-dock-item ${tab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => { setTab('dashboard'); setOpen(false); setNotice(''); }}
+        <TabBar label="التنقل الرئيسي">
+          <a
+            href="#dashboard"
+            aria-current={tab === 'dashboard' ? 'page' : undefined}
+            onClick={(e) => { e.preventDefault(); selectAdminTab('dashboard'); }}
           >
-            <span className="asas-mobile-dock-icon"><Icon name="dashboard" /></span>
-            <span className="asas-mobile-dock-label">الرئيسية</span>
-          </button>
-
-          <button
-            type="button"
-            className={`asas-mobile-dock-item ${tab === 'records' ? 'active' : ''}`}
-            onClick={() => { setTab('records'); setOpen(false); setNotice(''); }}
+            <Icon name="dashboard" />
+            نظرة عامة
+          </a>
+          <a
+            href="#records"
+            aria-current={tab === 'records' ? 'page' : undefined}
+            onClick={(e) => { e.preventDefault(); selectAdminTab('records'); }}
           >
-            <span className="asas-mobile-dock-icon"><Icon name="calendar" /></span>
-            <span className="asas-mobile-dock-label">الحضور</span>
-          </button>
-
+            <Icon name="calendar" />
+            الحضور
+          </a>
           {can('employees.read') && (
-            <button
-              type="button"
-              className={`asas-mobile-dock-item ${tab === 'accounts' ? 'active' : ''}`}
-              onClick={() => { setTab('accounts'); setOpen(false); setNotice(''); }}
+            <a
+              href="#accounts"
+              aria-current={tab === 'accounts' ? 'page' : undefined}
+              onClick={(e) => { e.preventDefault(); selectAdminTab('accounts'); }}
             >
-              <span className="asas-mobile-dock-icon">
-                <Icon name="users" />
-                {Array.isArray(data) && tab === 'accounts' && data.filter(a => !a.active).length > 0 && (
-                  <span className="asas-dock-badge-dot" />
-                )}
-              </span>
-              <span className="asas-mobile-dock-label">الموظفون</span>
-            </button>
+              <Icon name="users" />
+              الموظفون
+            </a>
           )}
-
-          <button
-            type="button"
-            className={`asas-mobile-dock-item ${tab === 'announcements' ? 'active' : ''}`}
-            onClick={() => { setTab('announcements'); setOpen(false); setNotice(''); }}
+          <a
+            href="#qr"
+            aria-current={tab === 'qr' ? 'page' : undefined}
+            onClick={(e) => { e.preventDefault(); selectAdminTab('qr'); }}
           >
-            <span className="asas-mobile-dock-icon">
-              <Icon name="bell" />
-              {announcements.length > 0 && <span className="asas-dock-badge-dot" />}
-            </span>
-            <span className="asas-mobile-dock-label">التعميمات</span>
-          </button>
-
-          <button
-            type="button"
-            className="asas-mobile-dock-item"
-            onClick={() => setOpen(true)}
-            aria-label="المزيد من التبويبات"
+            <Icon name="qrCode" />
+            الرموز
+          </a>
+          <a
+            href="#settings"
+            aria-current={tab === 'settings' ? 'page' : undefined}
+            onClick={(e) => { e.preventDefault(); selectAdminTab('settings'); }}
           >
-            <span className="asas-mobile-dock-icon"><Icon name="grid" /></span>
-            <span className="asas-mobile-dock-label">المزيد</span>
-          </button>
-        </nav>
+            <Icon name="settings" />
+            الإعدادات
+          </a>
+        </TabBar>
       </div>
 
       <AsasAssistant user={user} isAdmin />
@@ -3979,8 +3956,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                         value={form.is_remote ? 'remote' : 'onsite'}
                         onChange={e => set('is_remote', e.target.value === 'remote')}
                       >
-                        <option value="onsite">🏢 دوام حضوري (مكتبي داخل مقر الشركة)</option>
-                        <option value="remote">🌐 دوام عن بعد (أونلاين / من المنزل - بدون تقييد جغرافي)</option>
+                        <option value="onsite">دوام حضوري (مكتبي داخل مقر الشركة)</option>
+                        <option value="remote">دوام عن بعد (أونلاين / من المنزل - بدون تقييد جغرافي)</option>
                       </select>
                     </Field>
                   </div>
@@ -4310,7 +4287,7 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
         identifier: d.account?.identifier,
         name: d.account?.name,
         email: d.account?.email,
-        work_type: regWorkType === 'remote' ? 'دوام كامل عن بعد 🌐' : 'دوام حضوري بالفرع 🏢',
+        work_type: regWorkType === 'remote' ? 'دوام كامل عن بعد' : 'دوام حضوري بالفرع',
         message: d.message || 'طلبك قيد المراجعة وبانتظار موافقة واعتماد إدارة النظام في لوحة التحكم.'
       });
     } catch (err) {
@@ -4324,17 +4301,13 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
     <>
       <div className="asas-login-top-bar">
         {onToggleTheme && (
-          <button
-            type="button"
-            className="asas-theme-btn"
+          <Button
+            variant="glass"
+            size="sm"
+            icon={theme === 'dark' ? 'sun' : 'moon'}
+            label={theme === 'dark' ? 'التبديل إلى المظهر الفاتح' : 'التبديل إلى المظهر الداكن'}
             onClick={onToggleTheme}
-            aria-label="تبديل مظهر النظام"
-            title={theme === 'dark' ? 'التبديل إلى المظهر الفاتح' : 'التبديل إلى المظهر الداكن'}
-          >
-            <span className="asas-theme-btn-inner">
-              <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
-            </span>
-          </button>
+          />
         )}
       </div>
 
@@ -4361,14 +4334,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                 <span>حماية سيادية مشفرة متوافقة مع ضوابط الأمن السيبراني</span>
               </div>
             </div>
-
-            <div className="asas-login-robot-card">
-              <img className="asas-login-robot-img" src="/brand/mascot/welcome.webp" alt="مساعد أساس" width={58} height={58} />
-              <div className="asas-login-robot-copy">
-                <strong>مساعد أساس للحضور الذكي</strong>
-                <span>هوية أساس الذكاء الاصطناعي — لذكاء أكثر سيادة.</span>
-              </div>
-            </div>
           </div>
           <footer>
             <span>أساس الذكاء الاصطناعي · ASAAS</span>
@@ -4389,29 +4354,18 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                 : 'سجل بياناتك المعتمدة لتقديم طلب إنشاء حساب جديد لاعتماده من قِبل الإدارة.'}
             </p>
 
-            {/* Mode Switcher Tabs with Asaas Skills Aesthetic */}
+            {/* Mode Switcher Tabs (Kit Segmented Pill) */}
             {!pendingInfo && (
               <div className="asas-auth-tabs">
-                <button
-                  type="button"
-                  className={`asas-auth-tab-btn ${authMode === 'login' ? 'active' : ''}`}
-                  onClick={() => { setAuthMode('login'); setError(''); }}
-                >
-                  <span className="asas-auth-tab-icon">
-                    <Icon name="logIn" />
-                  </span>
-                  <span>تسجيل الدخول</span>
-                </button>
-                <button
-                  type="button"
-                  className={`asas-auth-tab-btn ${authMode === 'register' ? 'active' : ''}`}
-                  onClick={() => { setAuthMode('register'); setError(''); }}
-                >
-                  <span className="asas-auth-tab-icon">
-                    <Icon name="plus" />
-                  </span>
-                  <span>طلب حساب جديد</span>
-                </button>
+                <Segmented
+                  label="وضع البوابة"
+                  value={authMode}
+                  onChange={(mode) => { setAuthMode(mode); setError(''); }}
+                  options={[
+                    { value: 'login', label: 'تسجيل الدخول' },
+                    { value: 'register', label: 'طلب حساب جديد' }
+                  ]}
+                />
               </div>
             )}
 
@@ -4442,7 +4396,7 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                     </span>
                     <span>{authMode === 'login' ? 'المتابعة باستخدام Google' : 'التسجيل باستخدام Google'}</span>
                     <span className="asas-google-pill-badge">
-                      <span className="asas-install-pulse-dot" style={{ background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
+                      <span className="asas-install-pulse-dot" />
                       بصمة سريعة
                     </span>
                   </button>
@@ -4959,7 +4913,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         const perm = await Notification.requestPermission();
         setNotifPermission(perm);
         if (perm === 'granted') {
-          sendSystemNotification('🔔 تم تفعيل إشعارات أساس الذكية', 'ستصلك تنبيهات فورية عند تسجيل الحضور والانصراف ومراقبة النطاق.');
+          sendSystemNotification('تم تفعيل إشعارات أساس الذكية', 'ستصلك تنبيهات فورية عند تسجيل الحضور والانصراف ومراقبة النطاق.');
         }
       } catch (_) {}
     }
@@ -5082,9 +5036,9 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       // 1. Native Phone Biometric Verification (Touch ID / Face ID / Android Fingerprint)
       let bioResult = null;
       if (action === 'enter' || action === 'exit') {
-        setMessage('🔐 يرجى لمس مستشعر بصمة الهاتف للمتابعة...');
+        setMessage('يرجى لمس مستشعر بصمة الهاتف للمتابعة...');
         bioResult = await promptBiometricVerification(curUser, action);
-        setMessage('📡 جاري التحقق من الموقع وتوثيق العملية...');
+        setMessage('جاري التحقق من الموقع وتوثيق العملية...');
       }
 
       let currentToken = customToken || token;
@@ -5210,11 +5164,11 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       if (isEnterAction) {
         playChime('enter');
         if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
-        sendSystemNotification('✅ تم تسجيل الحضور', r.message || 'تم تسجيل حضورك بنجاح');
+        sendSystemNotification('تم تسجيل الحضور', r.message || 'تم تسجيل حضورك بنجاح');
       } else {
         playChime('exit');
         if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 400]);
-        sendSystemNotification('👋 تم تسجيل الانصراف', r.message || 'تم تسجيل انصرافك بنجاح');
+        sendSystemNotification('تم تسجيل الانصراف', r.message || 'تم تسجيل انصرافك بنجاح');
       }
 
       setMessage(r.message || 'تم توثيق الحضور بنجاح');
@@ -5226,9 +5180,9 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         setError('LOCATION_DENIED');
         setShowLocationGuide(true);
       } else if (e?.code === 2 || e?.message === 'POSITION_UNAVAILABLE') {
-        setError('⚠️ تعذر تحديد موقعك الحالي. يرجى التأكد من تشغيل الـ GPS في جوالك وإعادة المحاولة.');
+        setError('تعذر تحديد موقعك الحالي. يرجى التأكد من تشغيل الـ GPS في جوالك وإعادة المحاولة.');
       } else if (e?.code === 3 || e?.message === 'TIMEOUT') {
-        setError('⚠️ استغرق التقاط الموقع وقتاً طويلاً. يرجى الخروج لمكان مفتوح أو الاقتراب من نافذة والمحاولة مجدداً.');
+        setError('استغرق التقاط الموقع وقتاً طويلاً. يرجى الخروج لمكان مفتوح أو الاقتراب من نافذة والمحاولة مجدداً.');
       } else {
         setError(e.message || 'حدث خطأ أثناء تسجيل الحضور');
       }
@@ -5324,8 +5278,8 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         if (res.action === 'exit' || res.automatic || res.record?.state === 'outside') {
           playChime('exit');
           if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 400]);
-          sendSystemNotification('👋 تم تسجيل الانصراف التلقائي', res.message || 'تم رصد مغادرتك لنطاق مقر العمل وتوثيق الانصراف تلقائياً.');
-          setMessage(res.message || '⚠️ تم رصد مغادرتك للنطاق بنجاح وتسجيل خروجك تلقائياً.');
+          sendSystemNotification('تم تسجيل الانصراف التلقائي', res.message || 'تم رصد مغادرتك لنطاق مقر العمل وتوثيق الانصراف تلقائياً.');
+          setMessage(res.message || 'تم رصد مغادرتك للنطاق بنجاح وتسجيل خروجك تلقائياً.');
           if (loadRef.current) loadRef.current(true);
           return;
         }
@@ -5348,7 +5302,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             hasWarnedExitRef.current = true;
             playChime('warning');
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-            sendSystemNotification('⚠️ تنبيه مغادرة نطاق العمل', `تم رصد تواجدك خارج نطاق العمل (${dist} م). جاري التحقق من تأكيد الانصراف التلقائي.`);
+            sendSystemNotification('تنبيه مغادرة نطاق العمل', `تم رصد تواجدك خارج نطاق العمل (${dist} م). جاري التحقق من تأكيد الانصراف التلقائي.`);
           }
           // Immediately schedule verification fix in 2.5s to confirm auto-exit
           if (!exitTimerRef.current) {
@@ -5370,7 +5324,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         // Auto check-in if arrived at branch while off duty
         if (!isInsideRef.current && isCurrentlyInside && autoCheckInRef.current && !hasAutoEnteredRef.current && (!todayRecordRef.current || todayRecordRef.current.state !== 'inside')) {
           hasAutoEnteredRef.current = true;
-          setMessage('🎯 تم رصد تواجدك داخل مقر العمل! جاري تسجيل الحضور التلقائي...');
+          setMessage('تم رصد تواجدك داخل مقر العمل! جاري تسجيل الحضور التلقائي...');
           try {
             const qrData = await api('/attendance/active-qr?action=enter');
             if (qrData?.token) {
@@ -5384,7 +5338,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               });
               playChime('enter');
               if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
-              sendSystemNotification('✅ تم تسجيل الحضور التلقائي', enterRes.message || 'مرحباً بك! تم تسجيل حضورك تلقائياً.');
+              sendSystemNotification('تم تسجيل الحضور التلقائي', enterRes.message || 'مرحباً بك! تم تسجيل حضورك تلقائياً.');
               setMessage(enterRes.message || 'تم توثيق حضورك التلقائي بنجاح!');
               if (loadRef.current) await loadRef.current();
               return;
@@ -5490,122 +5444,109 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   }, [isRemote, isInside]);
 
   return (
-    <div className="asas-employee-page">
-      {/* Top Header */}
-      <Glass className="asas-employee-header" style={{ padding: '16px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Brand />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button className="asas-bell-btn" onClick={onOpenAnnouncements} aria-label="الإشعارات">
-            <Icon name="bell" />
-            {announcements.length > 0 && <span className="asas-bell-badge">{announcements.length}</span>}
-          </button>
-          {onToggleTheme && (
-            <button className="asas-theme-btn" onClick={onToggleTheme} aria-label="تبديل مظهر النظام" title={theme === 'dark' ? 'التحويل للمظهر الفاتح' : 'التحويل للمظهر الداكن'}>
-              <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+    <>
+      <SiteHeader
+        brand={
+          <a
+            href="#duty"
+            className="brand"
+            onClick={(e) => { e.preventDefault(); setEmpPage('duty'); }}
+          >
+            <span className="brand__mark" aria-hidden="true" />
+            <span className="brand__name"><Swash>أساس</Swash></span>
+          </a>
+        }
+        nav={
+          <>
+            <a
+              href="#duty"
+              aria-current={empPage === 'duty' ? 'page' : undefined}
+              onClick={(e) => { e.preventDefault(); setEmpPage('duty'); }}
+            >
+              تسجيل الحضور
+            </a>
+            <a
+              href="#leave"
+              aria-current={empPage === 'leave' ? 'page' : undefined}
+              onClick={(e) => { e.preventDefault(); setEmpPage('leave'); loadLeaves(); }}
+            >
+              الإجازات
+            </a>
+            <a
+              href="#history"
+              aria-current={empPage === 'history' ? 'page' : undefined}
+              onClick={(e) => { e.preventDefault(); setEmpPage('history'); }}
+            >
+              السجل
+            </a>
+          </>
+        }
+        actions={
+          <>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm btn--icon asas-bell-btn"
+              onClick={onOpenAnnouncements}
+              aria-label="الإشعارات"
+              title="الإشعارات والتعميمات"
+            >
+              <Icon name="bell" />
+              {announcements.length > 0 && <span className="asas-bell-badge num">{announcements.length}</span>}
             </button>
-          )}
-          <button className="asas-btn sm" onClick={logout} title="تسجيل الخروج">
-            <Icon name="logout" />
-            خروج
-          </button>
-        </div>
-      </Glass>
+            {onToggleTheme && (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={theme === 'dark' ? 'sun' : 'moon'}
+                label={theme === 'dark' ? 'التحويل للمظهر الفاتح' : 'التحويل للمظهر الداكن'}
+                onClick={onToggleTheme}
+              />
+            )}
+            <Button variant="ghost" size="sm" icon="logout" onClick={logout} title="تسجيل الخروج">
+              خروج
+            </Button>
+          </>
+        }
+      />
 
-      {/* Profile Card */}
-      <Glass className="asas-employee-profile" style={{ padding: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, position: 'relative', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', zIndex: 1 }}>
-          <div className="asas-employee-avatar-wrap">
-            <UserAvatar user={user} size="lg" onClick={onOpenProfile} />
-            {isInside && <span className="asas-avatar-status-beacon" title="على رأس العمل" />}
-          </div>
-          <div>
-            <h1 style={{ fontSize: 22, margin: '0 0 4px', color: 'var(--text)' }}>
-              <AsasGreeting name={user.name} />
-            </h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span className="asas-readonly-id num" style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12.5 }}>
-                الرقم الوظيفي: {user.identifier}
-              </span>
-              <span className="asas-badge inside" style={{ fontSize: 11 }}>موظف معتمد</span>
-              {user.is_remote ? (
-                <span className="asas-badge" style={{ fontSize: 11, background: 'var(--glass-inset)', color: 'var(--chart-out)', border: '1px solid var(--chart-out)' }}>
-                  دوام عن بعد (أونلاين)
+      <div className="asas-employee-page container page">
+        {/* Profile Card */}
+        <Glass className="asas-employee-profile" style={{ padding: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', zIndex: 1 }}>
+            <div className="asas-employee-avatar-wrap">
+              <UserAvatar user={user} size="lg" onClick={onOpenProfile} />
+              {isInside && <span className="asas-avatar-status-beacon" title="على رأس العمل" />}
+            </div>
+            <div>
+              <h1 style={{ fontSize: 22, margin: '0 0 4px', color: 'var(--text)' }}>
+                <AsasGreeting name={user.name} />
+              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span className="asas-readonly-id num" style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12.5 }}>
+                  الرقم الوظيفي: {user.identifier}
                 </span>
-              ) : (
-                <span className="asas-badge outside" style={{ fontSize: 11 }}>
-                  دوام حضوري بالمقر
-                </span>
-              )}
-              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{user.email || '—'}</span>
+                <span className="asas-badge inside" style={{ fontSize: 11 }}>موظف معتمد</span>
+                {user.is_remote ? (
+                  <span className="asas-badge" style={{ fontSize: 11, background: 'var(--glass-inset)', color: 'var(--chart-out)', border: '1px solid var(--chart-out)' }}>
+                    دوام عن بعد (أونلاين)
+                  </span>
+                ) : (
+                  <span className="asas-badge outside" style={{ fontSize: 11 }}>
+                    دوام حضوري بالمقر
+                  </span>
+                )}
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{user.email || '—'}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <button className="asas-btn" onClick={onOpenProfile}>
-            <Icon name="user" />
-            الملف الشخصي والأمان
-          </button>
-          <LiveClock iconSize={14} iconColor="var(--accent)" />
-        </div>
-      </Glass>
-
-      {/* Employee Subpage Navigation Tabs (Responsive Segmented Control) */}
-      <div className="asas-employee-nav-wrap">
-        <nav className="asas-employee-tabs" role="tablist" aria-label="أقسام بوابة الموظف">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={empPage === 'duty'}
-            className={`asas-employee-tab ${empPage === 'duty' ? 'active' : ''}`}
-            onClick={() => setEmpPage('duty')}
-          >
-            <Icon name="shieldCheck" />
-            <span className="asas-tab-text-full">حالة وتسجيل الحضور</span>
-            <span className="asas-tab-text-short">تسجيل الحضور</span>
-            <span className="asas-tab-text-micro">الحضور</span>
-            {isInside && (
-              <span className="asas-tab-duty-dot" title="على رأس العمل" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            role="tab"
-            aria-selected={empPage === 'leave'}
-            className={`asas-employee-tab ${empPage === 'leave' ? 'active' : ''}`}
-            onClick={() => { setEmpPage('leave'); loadLeaves(); }}
-          >
-            <Icon name="briefcase" />
-            <span className="asas-tab-text-full">طلب إجازة واستئذان</span>
-            <span className="asas-tab-text-short">إجازة واستئذان</span>
-            <span className="asas-tab-text-micro">إجازة</span>
-            {leaves.filter(l => l.status === 'pending').length > 0 && (
-              <span className="asas-tab-badge urgent">
-                {leaves.filter(l => l.status === 'pending').length}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            role="tab"
-            aria-selected={empPage === 'history'}
-            className={`asas-employee-tab ${empPage === 'history' ? 'active' : ''}`}
-            onClick={() => setEmpPage('history')}
-          >
-            <Icon name="calendar" />
-            <span className="asas-tab-text-full">سجل الحضور والدوام</span>
-            <span className="asas-tab-text-short">السجل الحضوري</span>
-            <span className="asas-tab-text-micro">السجل</span>
-            {(data?.records || []).length > 0 && (
-              <span className="asas-tab-badge">
-                {(data?.records || []).length}
-              </span>
-            )}
-          </button>
-        </nav>
-      </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <Button variant="glass" size="sm" icon="user" onClick={onOpenProfile}>
+              الملف الشخصي والأمان
+            </Button>
+            <LiveClock iconSize={14} iconColor="var(--accent)" />
+          </div>
+        </Glass>
 
       {isInAppBrowser && (
         <div style={{
@@ -5632,10 +5573,10 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
       {error === 'LOCATION_DENIED' ? (
         <div className="asas-notice error" role="alert" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            <Icon name="alert" style={{ width: 22, height: 22, color: 'var(--danger)', flexShrink: 0, marginTop: 2 }} />
+            <Icon name="alert" style={{ width: 22, height: 22, color: 'var(--unpaid)', flexShrink: 0, marginTop: 2 }} />
             <div style={{ flex: 1 }}>
               <strong style={{ fontSize: 14, display: 'block', marginBottom: 4 }}>
-                ⚠️ تم حظر إذن الموقع الجغرافي من المتصفح (User denied Geolocation)
+                تم حظر إذن الموقع الجغرافي من المتصفح (User denied Geolocation)
               </strong>
               <span style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)' }}>
                 لتسجيل الحضور، يحتاج المتصفح لمعرفة أنك داخل مقر العمل. يرجى السماح للمتصفح بالوصول للموقع وإعادة المحاولة.
@@ -5650,7 +5591,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               style={{ fontWeight: 700 }}
             >
               <Icon name="mapPin" />
-              <span>عرض خطوات تفعيل الموقع 📍</span>
+              <span>عرض خطوات تفعيل الموقع</span>
             </button>
             <button
               type="button"
@@ -5803,7 +5744,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                     <div className="asas-remote-btn-title">تسجيل الحضور عن بعد</div>
                     <div className="asas-remote-btn-desc">بدء فترة وساعات العمل اليومية</div>
                     <div className={`asas-remote-btn-status ${!isInside ? 'ready-in' : 'done'}`}>
-                      <span>{!isInside ? '● جاهز لتسجيل الحضور الآن' : '✓ تم تسجيل الحضور اليوم'}</span>
+                      <span>{!isInside ? 'جاهز لتسجيل الحضور الآن' : 'تم تسجيل الحضور اليوم'}</span>
                     </div>
                   </div>
                 </button>
@@ -5823,7 +5764,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                     <div className="asas-remote-btn-title">تسجيل الانصراف عن بعد</div>
                     <div className="asas-remote-btn-desc">إنهاء فترة الدوام وحفظ السجل</div>
                     <div className={`asas-remote-btn-status ${isInside ? 'ready-out' : 'disabled'}`}>
-                      <span>{isInside ? '● جاهز لتسجيل الانصراف الآن' : 'يتطلب تسجيل الحضور أولاً'}</span>
+                      <span>{isInside ? 'جاهز لتسجيل الانصراف الآن' : 'يتطلب تسجيل الحضور أولاً'}</span>
                     </div>
                   </div>
                 </button>
@@ -6007,18 +5948,21 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               <button className="asas-modal-close" onClick={() => setShowLocationGuide(false)}>×</button>
             </div>
             <div className="asas-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', padding: 12, borderRadius: 10, fontSize: 12.5, lineHeight: 1.6 }}>
-                💡 <strong>لماذا يطلب النظام إذن الموقع؟</strong><br />
+              <div style={{ background: 'var(--glass-inset)', border: '1px solid var(--hairline)', padding: 12, borderRadius: 10, fontSize: 12.5, lineHeight: 1.6 }}>
+                <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="shieldCheck" style={{ width: 15, height: 15, color: 'var(--accent)' }} />
+                  لماذا يطلب النظام إذن الموقع؟
+                </strong><br />
                 يتطلب نظام أساس التحقق من تواجدك داخل مقر العمل لتوثيق حضورك بدقة تامة ومنع الأخطاء في سجلات الدوام.
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 10, border: '1px solid var(--hairline)' }}>
                   <strong style={{ color: 'var(--accent)', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                    <span>📱</span> في متصفح Google Chrome (أندرويد / كمبيوتر):
+                    <Icon name="smartphone" style={{ width: 16, height: 16 }} /> في متصفح Google Chrome (أندرويد / كمبيوتر):
                   </strong>
                   <ol style={{ margin: 0, paddingRight: 20, fontSize: 12.5, lineHeight: 1.7, color: 'var(--text-2)' }}>
-                    <li>اضغط على أيقونة <strong>القفل 🔒 أو علامة الإعدادات</strong> في شريط الرابط أعلى الشاشة بجوار رابط الموقع.</li>
+                    <li>اضغط على أيقونة <strong>القفل أو علامة الإعدادات</strong> في شريط الرابط أعلى الشاشة بجوار رابط الموقع.</li>
                     <li>اضغط على <strong>"الأذونات" (Permissions)</strong> أو <strong>"إعدادات الموقع" (Site Settings)</strong>.</li>
                     <li>ابحث عن <strong>"الموقع الجغرافي" (Location)</strong> وقم بتغييره إلى <strong>سماح (Allow)</strong>.</li>
                     <li>اسحب الشاشة للأسفل لتحديث الصفحة، ثم اضغط على زر التحضير مجدداً.</li>
@@ -6027,7 +5971,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
                 <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 10, border: '1px solid var(--hairline)' }}>
                   <strong style={{ color: 'var(--chart-out)', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                    <span>🍎</span> في متصفح Safari (آيفون iPhone / آيباد iPad):
+                    <Icon name="globe" style={{ width: 16, height: 16 }} /> في متصفح Safari (آيفون iPhone / آيباد iPad):
                   </strong>
                   <ol style={{ margin: 0, paddingRight: 20, fontSize: 12.5, lineHeight: 1.7, color: 'var(--text-2)' }}>
                     <li>اضغط على أيقونة <strong>(AA) أو (ع ع)</strong> في شريط العنوان أسفل أو أعلى الشاشة.</li>
@@ -6039,7 +5983,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
                 <div style={{ background: 'var(--partial-bg)', padding: 12, borderRadius: 10, border: '1px solid var(--partial)' }}>
                   <strong style={{ color: 'var(--partial)', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                    <span>💬</span> إذا كنت تتصفح من داخل تطبيق واتساب (WhatsApp):
+                    <Icon name="alert" style={{ width: 16, height: 16 }} /> إذا كنت تتصفح من داخل تطبيق واتساب (WhatsApp):
                   </strong>
                   <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-2)' }}>
                     متصفح واتساب الداخلي يحظر خدمات الموقع تلقائياً. اضغط على <strong>زر الخيارات الثلاث (⋮)</strong> في أعلى زاوية الشاشة، ثم اختر <strong>"فتح في Chrome / المتصفح"</strong> (Open in Browser).
@@ -6066,7 +6010,35 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      <TabBar label="بوابة الموظف">
+        <a
+          href="#duty"
+          aria-current={empPage === 'duty' ? 'page' : undefined}
+          onClick={(e) => { e.preventDefault(); setEmpPage('duty'); }}
+        >
+          <Icon name="shieldCheck" />
+          الحضور
+        </a>
+        <a
+          href="#leave"
+          aria-current={empPage === 'leave' ? 'page' : undefined}
+          onClick={(e) => { e.preventDefault(); setEmpPage('leave'); loadLeaves(); }}
+        >
+          <Icon name="briefcase" />
+          الإجازات
+        </a>
+        <a
+          href="#history"
+          aria-current={empPage === 'history' ? 'page' : undefined}
+          onClick={(e) => { e.preventDefault(); setEmpPage('history'); }}
+        >
+          <Icon name="calendar" />
+          السجل
+        </a>
+      </TabBar>
+    </>
   );
 }
 

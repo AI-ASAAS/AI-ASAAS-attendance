@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useCallback, useContext, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Glass } from './Glass';
 import { Icon } from './Icon';
@@ -14,6 +14,11 @@ const ToastContext = createContext<(message: string, tone?: Tone) => void>(() =>
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const notify = useCallback((message: string, tone: Tone = 'success') => {
     const id = Date.now() + Math.random();
@@ -24,7 +29,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={notify}>
       {children}
-      {createPortal(
+      {mounted && createPortal(
         <div className="toast-stack" role="status" aria-live="polite">
           {items.map((t) => (
             <Glass key={t.id} thick pill className={`toast toast--${t.tone}`}>
