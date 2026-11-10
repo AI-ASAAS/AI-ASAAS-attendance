@@ -43,12 +43,19 @@
   margin-block: 12px;
   margin-inline-start: 12px;
   border-radius: var(--radius-xl);
+  background: linear-gradient(175deg, rgba(252, 249, 245, 0.92) 0%, rgba(237, 231, 218, 0.78) 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 26%, var(--hairline));
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 18px 14px;
   gap: 14px;
   transition: transform 0.3s var(--ease-out);
+}
+
+:root[data-theme='dark'] .asas-sidebar {
+  background: linear-gradient(175deg, rgba(40, 34, 31, 0.90) 0%, rgba(24, 20, 18, 0.82) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 28%, rgba(255, 244, 222, 0.08));
 }
 
 .asas-sidebar-head {
@@ -219,6 +226,13 @@
   gap: 12px;
   min-height: var(--header-h);
   padding-inline: 18px 12px;
+  background: linear-gradient(165deg, rgba(252, 249, 245, 0.90) 0%, rgba(237, 231, 218, 0.76) 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 24%, var(--hairline));
+}
+
+:root[data-theme='dark'] .asas-topbar {
+  background: linear-gradient(165deg, rgba(40, 34, 31, 0.88) 0%, rgba(24, 20, 18, 0.78) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 26%, rgba(255, 244, 222, 0.08));
 }
 
 .asas-topbar-start {
@@ -387,7 +401,20 @@
   flex-shrink: 0;
 }
 
-/* ───────── Shared Stats, Grids & Banners ───────── */
+/* ───────── Shared Stats, Template Cards, Grids & Banners ───────── */
+.asas-content .card,
+.asas-employee-page .card {
+  background: linear-gradient(160deg, rgba(252, 249, 245, 0.88) 0%, rgba(237, 231, 218, 0.62) 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 22%, var(--hairline));
+  box-shadow: inset 0 1px 0 var(--glass-rim), var(--glass-shadow);
+}
+
+:root[data-theme='dark'] .asas-content .card,
+:root[data-theme='dark'] .asas-employee-page .card {
+  background: linear-gradient(160deg, rgba(42, 36, 33, 0.84) 0%, rgba(26, 22, 20, 0.70) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 24%, rgba(255, 244, 222, 0.08));
+}
+
 .asas-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -399,6 +426,21 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(155deg, rgba(252, 249, 245, 0.90) 0%, rgba(237, 231, 218, 0.66) 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 24%, var(--hairline));
+  box-shadow: inset 0 1px 0 var(--glass-rim), var(--glass-shadow);
+  transition: transform 0.25s var(--ease-spring), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.asas-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--brand-gold) 45%, var(--hairline));
+}
+
+:root[data-theme='dark'] .asas-stat-card {
+  background: linear-gradient(155deg, rgba(42, 36, 33, 0.86) 0%, rgba(26, 22, 20, 0.72) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 26%, rgba(255, 244, 222, 0.08));
 }
 
 .asas-stat-card-top {
@@ -412,11 +454,11 @@
 }
 
 .asas-stat-icon-wrap {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 11px;
-  background: linear-gradient(160deg, var(--glass-tint-strong), var(--glass-inset));
-  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 0 0 1px var(--hairline);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--brand-gold) 20%, rgba(252, 249, 245, 0.85)), var(--glass-inset));
+  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 0 0 1px color-mix(in srgb, var(--brand-gold) 24%, var(--hairline));
   color: var(--accent);
   display: grid;
   place-items: center;
@@ -446,10 +488,20 @@
 }
 
 .asas-hero-banner {
-  padding: 24px 26px;
+  padding: 26px 28px;
+  border-radius: var(--radius-xl);
   background:
-    radial-gradient(560px circle at 10% -25%, color-mix(in srgb, var(--brand-gold) 14%, transparent), transparent 65%),
-    linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 65%);
+    radial-gradient(620px circle at 10% -25%, color-mix(in srgb, var(--brand-gold) 18%, transparent), transparent 65%),
+    linear-gradient(135deg, rgba(252, 249, 245, 0.94) 0%, rgba(237, 231, 218, 0.72) 55%, rgba(211, 198, 180, 0.42) 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 28%, var(--hairline));
+  box-shadow: inset 0 1px 0 var(--glass-rim), var(--glass-shadow);
+}
+
+:root[data-theme='dark'] .asas-hero-banner {
+  background:
+    radial-gradient(620px circle at 10% -25%, color-mix(in srgb, var(--brand-gold) 20%, transparent), transparent 65%),
+    linear-gradient(135deg, rgba(44, 37, 33, 0.90) 0%, rgba(28, 24, 22, 0.76) 60%, rgba(34, 28, 22, 0.65) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 30%, rgba(255, 244, 222, 0.09));
 }
 
 .asas-hero-banner h2 {
@@ -598,12 +650,13 @@
 }
 
 .asas-table th {
-  padding: 12px 14px;
+  padding: 13px 14px;
   text-align: start;
   font-size: 12px;
   font-weight: 700;
   color: var(--text-2);
-  border-bottom: 1px solid var(--hairline);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand-gold) 8%, transparent), color-mix(in srgb, var(--brand-sand) 6%, transparent));
+  border-bottom: 1px solid color-mix(in srgb, var(--brand-gold) 22%, var(--hairline));
   white-space: nowrap;
 }
 
@@ -707,6 +760,14 @@ textarea.asas-input {
 select.asas-input {
   appearance: none;
   padding-inline-end: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ba9555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+  background-size: 16px;
+}
+
+:root[dir='ltr'] select.asas-input {
+  background-position: right 12px center;
 }
 
 select.asas-input option {
@@ -810,8 +871,14 @@ select.asas-input option {
 .asas-announcement-card {
   border-radius: var(--radius-lg);
   padding: 18px 20px;
-  background: var(--glass-tint);
-  border: 1px solid var(--hairline);
+  background: linear-gradient(155deg, rgba(252, 249, 245, 0.88) 0%, rgba(237, 231, 218, 0.62) 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 22%, var(--hairline));
+  box-shadow: inset 0 1px 0 var(--glass-rim);
+}
+
+:root[data-theme='dark'] .asas-announcement-card {
+  background: linear-gradient(155deg, rgba(42, 36, 33, 0.84) 0%, rgba(26, 22, 20, 0.68) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 24%, rgba(255, 244, 222, 0.08));
 }
 
 .asas-announcement-card.urgent {
@@ -859,13 +926,17 @@ select.asas-input option {
   width: 100%;
   max-width: 600px;
   border-radius: var(--radius-xl);
-  background: var(--bg);
-  background-image: linear-gradient(165deg, var(--glass-tint-strong), var(--glass-tint));
-  border: 1px solid var(--hairline);
+  background: linear-gradient(165deg, rgba(252, 249, 245, 0.96) 0%, rgba(237, 231, 218, 0.92) 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 28%, var(--hairline));
   box-shadow: inset 0 1px 0 var(--glass-rim), var(--glass-shadow);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+:root[data-theme='dark'] .asas-modal {
+  background: linear-gradient(165deg, rgba(36, 31, 28, 0.96) 0%, rgba(22, 19, 17, 0.94) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 30%, rgba(255, 244, 222, 0.1));
 }
 
 .asas-modal-head,
@@ -942,7 +1013,16 @@ select.asas-input option {
   flex-direction: column;
   justify-content: space-between;
   gap: 32px;
-  border-inline-end: 1px solid var(--hairline);
+  background:
+    radial-gradient(640px circle at 80% 12%, color-mix(in srgb, var(--brand-gold) 16%, transparent), transparent 64%),
+    linear-gradient(160deg, rgba(252, 249, 245, 0.56) 0%, rgba(236, 229, 215, 0.22) 100%);
+  border-inline-end: 1px solid color-mix(in srgb, var(--brand-gold) 22%, var(--hairline));
+}
+
+:root[data-theme='dark'] .asas-login-hero {
+  background:
+    radial-gradient(640px circle at 80% 12%, color-mix(in srgb, var(--brand-gold) 16%, transparent), transparent 64%),
+    linear-gradient(160deg, rgba(34, 29, 26, 0.55) 0%, rgba(20, 17, 17, 0.25) 100%);
 }
 
 .asas-login-hero .brand__mark {
@@ -1030,10 +1110,16 @@ select.asas-input option {
   max-width: 440px;
   padding: 32px 28px;
   border-radius: var(--radius-xl);
-  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 60%);
+  background: linear-gradient(165deg, rgba(252, 249, 245, 0.94) 0%, rgba(237, 231, 218, 0.72) 100%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
   backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 28%, var(--hairline));
   box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow);
+}
+
+:root[data-theme='dark'] .asas-login-box {
+  background: linear-gradient(165deg, rgba(42, 36, 33, 0.90) 0%, rgba(24, 20, 18, 0.78) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 30%, rgba(255, 244, 222, 0.1));
 }
 
 .asas-login-mobile-brand {
@@ -1091,12 +1177,12 @@ select.asas-input option {
 
 .asas-google-fallback-btn {
   width: 100%;
-  min-height: var(--tap);
-  padding: 0 14px;
+  min-height: 46px;
+  padding: 6px 14px;
   border-radius: var(--radius-pill);
-  background: var(--glass-tint-strong);
+  background: linear-gradient(165deg, rgba(252, 249, 245, 0.96) 0%, rgba(237, 231, 218, 0.80) 100%);
   color: var(--text);
-  border: 1px solid var(--hairline);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 30%, var(--hairline));
   box-shadow: inset 0 1px 0 var(--glass-rim), var(--glass-shadow);
   display: inline-flex;
   align-items: center;
@@ -1105,15 +1191,44 @@ select.asas-input option {
   font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 0.25s var(--ease-spring), border-color 0.2s, box-shadow 0.25s var(--ease-out);
+}
+
+:root[data-theme='dark'] .asas-google-fallback-btn {
+  background: linear-gradient(165deg, rgba(46, 40, 36, 0.94) 0%, rgba(30, 26, 24, 0.84) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 34%, rgba(255, 244, 222, 0.12));
+}
+
+.asas-google-fallback-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--brand-gold);
+  box-shadow: inset 0 1px 0 var(--glass-rim), 0 8px 20px -8px var(--accent-glow);
+}
+
+.asas-google-btn-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .asas-google-icon-wrapper {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: var(--brand-paper);
-  display: grid;
-  place-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(34, 31, 31, 0.08);
+  box-shadow: 0 2px 6px rgba(34, 31, 31, 0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.asas-google-icon-wrapper svg {
+  width: 18px !important;
+  height: 18px !important;
+  display: block;
   flex-shrink: 0;
 }
 
@@ -1301,6 +1416,20 @@ select.asas-input option {
 .asas-employee-page {
   padding-top: 16px;
   padding-bottom: 40px;
+}
+
+.asas-employee-profile {
+  background:
+    radial-gradient(540px circle at 10% -25%, color-mix(in srgb, var(--brand-gold) 15%, transparent), transparent 65%),
+    linear-gradient(155deg, rgba(252, 249, 245, 0.92) 0%, rgba(237, 231, 218, 0.68) 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 26%, var(--hairline));
+}
+
+:root[data-theme='dark'] .asas-employee-profile {
+  background:
+    radial-gradient(540px circle at 10% -25%, color-mix(in srgb, var(--brand-gold) 16%, transparent), transparent 65%),
+    linear-gradient(155deg, rgba(42, 36, 33, 0.88) 0%, rgba(24, 20, 18, 0.74) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 28%, rgba(255, 244, 222, 0.08));
 }
 
 .asas-employee-avatar-wrap {
@@ -1581,11 +1710,17 @@ select.asas-input option {
   padding: 22px;
   border-radius: var(--radius-xl);
   text-align: center;
-  background: var(--glass-tint);
-  border: 1px solid var(--hairline);
+  background: linear-gradient(160deg, rgba(252, 249, 245, 0.90) 0%, rgba(237, 231, 218, 0.66) 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 24%, var(--hairline));
+  box-shadow: inset 0 1px 0 var(--glass-rim), var(--glass-shadow);
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+:root[data-theme='dark'] .asas-qr-card {
+  background: linear-gradient(160deg, rgba(42, 36, 33, 0.86) 0%, rgba(26, 22, 20, 0.72) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 26%, rgba(255, 244, 222, 0.08));
 }
 
 .asas-qr-box {
