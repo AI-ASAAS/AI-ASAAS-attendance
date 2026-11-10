@@ -34,24 +34,62 @@ function AsasGreeting({ name }) {
 }
 
 function AsasAssistant({ user, isAdmin }) {
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    if (!user?.id) return undefined;
+    api('/assistant/status', 'GET', undefined, 0)
+      .then((res) => { if (active) setStatus(res); })
+      .catch(() => { if (active) setStatus({ enabled: true }); });
+    return () => { active = false; };
+  }, [user?.id]);
+
   if (!user?.id) return null;
+  if (status && status.enabled === false) return null;
+
+  const r = status?.restrictions || {};
+  const quota = status?.quota;
+  const baseSubtitle = isAdmin ? 'ملخصات الحضور الفورية' : 'مساعد الدوام والإجازات';
+  const quotaLabel = quota ? ` · متبقي ${quota.remaining}/${quota.limit} اليوم` : '';
+  const suggestions = isAdmin
+    ? [
+        'ملخص الحضور اليوم',
+        ...(r.allow_hours_info !== false ? ['من المتأخرون اليوم؟'] : []),
+        'من الغائبون اليوم؟',
+        ...(r.allow_leave_info !== false ? ['الطلبات والإجازات المعلقة'] : [])
+      ]
+    : [
+        'ما حالتي اليوم؟',
+        'ما هي ورديتي والفرع؟',
+        ...(r.allow_hours_info !== false ? ['كم مجموع ساعاتي هذا الشهر؟'] : []),
+        ...(r.allow_leave_info !== false ? ['ما حالة طلبات إجازتي؟'] : []),
+        ...(r.allow_general_help !== false ? ['كيف أسجل الحضور بالبصمة؟'] : [])
+      ];
+
   return (
     <AssistantWidget
       user={{ id: String(user.id), displayName: user.name || '' }}
-      ask={(messages) => api('/assistant', 'POST', { messages })}
+      ask={async (messages) => {
+        const res = await api('/assistant', 'POST', { messages }, 0);
+        if (res?.quota) {
+          setStatus((prev) => ({ ...(prev || { enabled: true }), quota: res.quota }));
+        }
+        return res;
+      }}
       title="مساعد أساس"
-      subtitle={isAdmin ? 'ملخصات الحضور الفورية' : 'مساعد الدوام والإجازات'}
-      suggestions={
-        isAdmin
-          ? ['ملخص الحضور اليوم', 'من المتأخرون اليوم؟', 'من الغائبون اليوم؟', 'الطلبات والإجازات المعلقة']
-          : ['ما حالتي اليوم؟', 'ما هي ورديتي والفرع؟', 'كم مجموع ساعاتي هذا الشهر؟', 'كيف أسجل بالبصمة؟']
-      }
+      subtitle={`${baseSubtitle}${quotaLabel}`}
+      suggestions={suggestions}
       intro={
         isAdmin
           ? 'اسألني عن الحاضرين والمتأخرين والغائبين والطلبات المعلقة الآن.'
-          : 'اسألني عن حضورك اليوم أو ورديتك أو ساعاتك هذا الشهر وإجازاتك.'
+          : 'اسألني عن حضورك اليوم أو ورديتك أو ساعاتك وإجازاتك ضمن ضوابط حسابك.'
       }
-      disclaimer="إجابات فورية مستندة مباشرة إلى سجلات أساس الحقيقية."
+      disclaimer={
+        status?.provider?.name
+          ? `مدعوم عبر ${status.provider.name} وبيانات أساس الموثقة فقط.`
+          : 'إجابات فورية مستندة مباشرة إلى سجلات أساس الحقيقية.'
+      }
     />
   );
 }
@@ -1194,7 +1232,26 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
     timezone: 'Asia/Aden',
     max_gps_accuracy: 250,
     email_notifications: false,
-    support_contact: '+967 770000000'
+    support_contact: '+967 770000000',
+    assistant_enabled: true,
+    assistant_daily_quota_employee: 20,
+    assistant_daily_quota_admin: 100,
+    assistant_strict_topic: true,
+    assistant_max_chars: 800,
+    assistant_api_url: 'https://api.llm7.io/v1/chat/completions',
+    assistant_model: 'mistral-Nemo-Instruct-2407',
+    assistant_provider_name: 'LLM7 Free AI'
+  });
+  const [assistantPolicyForm, setAssistantPolicyForm] = useState({
+    enabled: true,
+    daily_limit: '',
+    allow_hours_info: true,
+    allow_leave_info: true,
+    allow_team_data: false,
+    allow_general_help: true,
+    strict_topic_only: true,
+    blocked_keywords: '',
+    custom_note: ''
   });
 
   const can = p => user?.role === 'super_admin' || user?.permissions?.includes(p);
@@ -1428,6 +1485,17 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       }, 0) + 1;
       const nextId = String(nextNum).padStart(3, '0');
       setForm({ ...defaults.accounts, identifier: nextId, reason: '' });
+      setAssistantPolicyForm({
+        enabled: true,
+        daily_limit: '',
+        allow_hours_info: true,
+        allow_leave_info: true,
+        allow_team_data: false,
+        allow_general_help: true,
+        strict_topic_only: true,
+        blocked_keywords: '',
+        custom_note: ''
+      });
       setModal('accounts');
       try {
         const [b, s] = await Promise.all([api('/admin/branches'), api('/admin/shifts')]);
@@ -1440,10 +1508,38 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
     setForm({ ...defaults[kind], ...item, reason: '' });
     setModal(kind);
     if (kind === 'accounts') {
+      setAssistantPolicyForm({
+        enabled: true,
+        daily_limit: '',
+        allow_hours_info: true,
+        allow_leave_info: true,
+        allow_team_data: Boolean(item?.role && item.role !== 'employee'),
+        allow_general_help: true,
+        strict_topic_only: true,
+        blocked_keywords: '',
+        custom_note: ''
+      });
       try {
-        const [b, s] = await Promise.all([api('/admin/branches'), api('/admin/shifts')]);
+        const [b, s, ap] = await Promise.all([
+          api('/admin/branches'),
+          api('/admin/shifts'),
+          item?.id ? api(`/admin/assistant/policies/${item.id}`).catch(() => null) : Promise.resolve(null)
+        ]);
         setBranches(b);
         setShifts(s);
+        if (ap) {
+          setAssistantPolicyForm({
+            enabled: ap.enabled !== false,
+            daily_limit: ap.daily_limit === null || ap.daily_limit === undefined ? '' : String(ap.daily_limit),
+            allow_hours_info: ap.allow_hours_info !== false,
+            allow_leave_info: ap.allow_leave_info !== false,
+            allow_team_data: Boolean(ap.allow_team_data),
+            allow_general_help: ap.allow_general_help !== false,
+            strict_topic_only: ap.strict_topic_only !== false,
+            blocked_keywords: ap.blocked_keywords || '',
+            custom_note: ap.custom_note || ''
+          });
+        }
       } catch (e) { setError(e.message); }
     }
   }
@@ -1607,7 +1703,23 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           delete body.device_bound_at;
         }
       }
-      await api(`/admin/${modal}${body.id ? `/${body.id}` : ''}`, body.id ? (modal === 'accounts' ? 'PATCH' : 'PUT') : 'POST', body);
+      const savedRes = await api(`/admin/${modal}${body.id ? `/${body.id}` : ''}`, body.id ? (modal === 'accounts' ? 'PATCH' : 'PUT') : 'POST', body);
+      if (modal === 'accounts' && can('employees.write')) {
+        const targetAccountId = body.id || savedRes?.id;
+        if (targetAccountId) {
+          await api(`/admin/assistant/policies/${targetAccountId}`, 'PUT', {
+            enabled: Boolean(assistantPolicyForm.enabled),
+            daily_limit: assistantPolicyForm.daily_limit === '' ? null : Number(assistantPolicyForm.daily_limit),
+            allow_hours_info: Boolean(assistantPolicyForm.allow_hours_info),
+            allow_leave_info: Boolean(assistantPolicyForm.allow_leave_info),
+            allow_team_data: body.role === 'employee' ? false : Boolean(assistantPolicyForm.allow_team_data),
+            allow_general_help: Boolean(assistantPolicyForm.allow_general_help),
+            strict_topic_only: Boolean(assistantPolicyForm.strict_topic_only),
+            blocked_keywords: assistantPolicyForm.blocked_keywords || '',
+            custom_note: assistantPolicyForm.custom_note || ''
+          });
+        }
+      }
       setModal(null);
       setNotice('تم حفظ التغييرات وتوثيقها في سجل العمليات');
       await load();
@@ -3513,6 +3625,77 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     تفعيل إشعارات البريد الإلكتروني للمدراء عند تسجيل الحضور والغياب
                   </label>
 
+                  <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: 18, marginTop: 8, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                      <strong style={{ fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <Icon name="sparkle" style={{ width: 17, height: 17, color: 'var(--accent)' }} />
+                        إعدادات المساعد الذكي (Free AI API والقيود العامة)
+                      </strong>
+                      <span className="asas-badge inside">{systemSettings.assistant_provider_name || 'Pollinations Free AI'}</span>
+                    </div>
+
+                    <div className="asas-form-grid">
+                      <Field
+                        label="رابط API المزود المجاني (OpenAI-Compatible)"
+                        dir="ltr"
+                        value={systemSettings.assistant_api_url || 'https://api.llm7.io/v1/chat/completions'}
+                        onChange={e => setSystemSettings({ ...systemSettings, assistant_api_url: e.target.value })}
+                      />
+                      <Field
+                        label="اسم النموذج المجاني (Model)"
+                        dir="ltr"
+                        value={systemSettings.assistant_model || 'mistral-Nemo-Instruct-2407'}
+                        onChange={e => setSystemSettings({ ...systemSettings, assistant_model: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="asas-form-grid">
+                      <Field
+                        label="الحصة اليومية الافتراضية للموظف (سؤال/يوم)"
+                        type="number"
+                        min={1}
+                        max={500}
+                        value={systemSettings.assistant_daily_quota_employee ?? 20}
+                        onChange={e => setSystemSettings({ ...systemSettings, assistant_daily_quota_employee: Number(e.target.value) })}
+                      />
+                      <Field
+                        label="الحصة اليومية الافتراضية للمدير (سؤال/يوم)"
+                        type="number"
+                        min={1}
+                        max={2000}
+                        value={systemSettings.assistant_daily_quota_admin ?? 100}
+                        onChange={e => setSystemSettings({ ...systemSettings, assistant_daily_quota_admin: Number(e.target.value) })}
+                      />
+                      <Field
+                        label="الحد الأقصى لطول رسالة المستخدم (حرف)"
+                        type="number"
+                        min={50}
+                        max={2000}
+                        value={systemSettings.assistant_max_chars ?? 800}
+                        onChange={e => setSystemSettings({ ...systemSettings, assistant_max_chars: Number(e.target.value) })}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <label className="asas-check">
+                        <input
+                          type="checkbox"
+                          checked={systemSettings.assistant_enabled !== false}
+                          onChange={e => setSystemSettings({ ...systemSettings, assistant_enabled: e.target.checked })}
+                        />
+                        تفعيل المساعد الذكي على مستوى النظام بالكامل
+                      </label>
+                      <label className="asas-check">
+                        <input
+                          type="checkbox"
+                          checked={systemSettings.assistant_strict_topic !== false}
+                          onChange={e => setSystemSettings({ ...systemSettings, assistant_strict_topic: e.target.checked })}
+                        />
+                        فرض القيد الصارم (حظر الأسئلة خارج نطاق الدوام والعمل ومنع محاولات حقن الأوامر)
+                      </label>
+                    </div>
+                  </div>
+
                   <div style={{ marginTop: 14 }}>
                     <button className="asas-btn primary" type="submit" disabled={busy}>
                       <Icon name="check" />
@@ -3996,6 +4179,92 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   </div>
 
                   {form.id && <label className="asas-check"><input type="checkbox" checked={form.active} onChange={e => set('active', e.target.checked)} />حساب نشط</label>}
+
+                  <div style={{ marginTop: 14, padding: 14, borderRadius: 'var(--radius-md)', background: 'var(--glass-inset)', border: '1px solid var(--hairline)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <strong style={{ fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}>
+                      <Icon name="shieldCheck" style={{ width: 16, height: 16 }} />
+                      قيود المساعد الذكي المخصصة لهذا المستخدم
+                    </strong>
+
+                    <div className="asas-form-grid">
+                      <label className="asas-check">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(assistantPolicyForm.enabled)}
+                          onChange={e => setAssistantPolicyForm(p => ({ ...p, enabled: e.target.checked }))}
+                        />
+                        السماح باستخدام المساعد الذكي
+                      </label>
+                      <Field
+                        label="حصة يومية مخصصة (اتركه فارغاً للافتراضي)"
+                        type="number"
+                        min={0}
+                        max={2000}
+                        placeholder="الافتراضي"
+                        value={assistantPolicyForm.daily_limit}
+                        onChange={e => setAssistantPolicyForm(p => ({ ...p, daily_limit: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="asas-form-grid">
+                      <label className="asas-check">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(assistantPolicyForm.allow_hours_info)}
+                          onChange={e => setAssistantPolicyForm(p => ({ ...p, allow_hours_info: e.target.checked }))}
+                        />
+                        استعلام ساعات العمل والتأخير
+                      </label>
+                      <label className="asas-check">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(assistantPolicyForm.allow_leave_info)}
+                          onChange={e => setAssistantPolicyForm(p => ({ ...p, allow_leave_info: e.target.checked }))}
+                        />
+                        استعلام طلبات الإجازات
+                      </label>
+                      <label className="asas-check">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(assistantPolicyForm.allow_general_help)}
+                          onChange={e => setAssistantPolicyForm(p => ({ ...p, allow_general_help: e.target.checked }))}
+                        />
+                        الاستفسارات الإرشادية (GPS / QR)
+                      </label>
+                      <label className="asas-check">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(assistantPolicyForm.strict_topic_only)}
+                          onChange={e => setAssistantPolicyForm(p => ({ ...p, strict_topic_only: e.target.checked }))}
+                        />
+                        منع المواضيع خارج العمل
+                      </label>
+                    </div>
+
+                    {form.role && form.role !== 'employee' && (
+                      <label className="asas-check">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(assistantPolicyForm.allow_team_data)}
+                          onChange={e => setAssistantPolicyForm(p => ({ ...p, allow_team_data: e.target.checked }))}
+                        />
+                        السماح باستعلام ملخصات الفريق ضمن صلاحية الفرع
+                      </label>
+                    )}
+
+                    <Field
+                      label="كلمات ومواضيع محظورة لهذا المستخدم (مفصولة بفاصلة)"
+                      placeholder="مثال: رواتب، خصم، ترقية"
+                      value={assistantPolicyForm.blocked_keywords || ''}
+                      onChange={e => setAssistantPolicyForm(p => ({ ...p, blocked_keywords: e.target.value }))}
+                    />
+                    <Field
+                      label="توجيه أو قيد خاص يُمرّر للمساعد لهذا الحساب فقط"
+                      placeholder="مثال: ذكّره بموعد بدء الوردية في المقر الرئيسي"
+                      value={assistantPolicyForm.custom_note || ''}
+                      onChange={e => setAssistantPolicyForm(p => ({ ...p, custom_note: e.target.value }))}
+                    />
+                  </div>
                 </>
               )}
 

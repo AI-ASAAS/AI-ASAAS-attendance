@@ -10,6 +10,7 @@ const {closeScheduled}=require('./services/duty-maintenance');
 const notifications=require('./services/notification.service');
 const reportService=require('./services/report.service');
 const docxExport=require('./services/docx-export.service');
+const assistantService=require('./services/assistant.service');
 const app=express();
 app.set('trust proxy', 1);
 const wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
@@ -1231,6 +1232,9 @@ app.get('/api/admin/settings',admin,wrap(async(req,res)=>{
  const settingsMap = {};
  for(const row of settingsRows) settingsMap[row.key] = row.value;
 
+ const assistantGlobals = await assistantService.loadGlobalAssistantSettings();
+ const assistantProvider = assistantService.resolveLlmProvider(assistantGlobals);
+
  const dbTest=await db.query("SELECT strftime('%Y-%m-%dT%H:%M:%fZ','now') as now");
  respond(res,{
   company_name: settingsMap.company_name || 'شركة أساس الذكاء الاصطناعي (AI-ASAAS)',
@@ -1238,6 +1242,14 @@ app.get('/api/admin/settings',admin,wrap(async(req,res)=>{
   max_gps_accuracy: Number(settingsMap.max_gps_accuracy || 250),
   email_notifications: settingsMap.email_notifications === 'true',
   support_contact: settingsMap.support_contact || '+967 770000000',
+  assistant_enabled: assistantGlobals.enabled,
+  assistant_daily_quota_employee: assistantGlobals.dailyQuotaEmployee,
+  assistant_daily_quota_admin: assistantGlobals.dailyQuotaAdmin,
+  assistant_strict_topic: assistantGlobals.strictTopic,
+  assistant_max_chars: assistantGlobals.maxChars,
+  assistant_api_url: settingsMap.assistant_api_url || 'https://api.llm7.io/v1/chat/completions',
+  assistant_model: settingsMap.assistant_model || 'mistral-Nemo-Instruct-2407',
+  assistant_provider_name: assistantProvider.name,
   server_time:new Date().toISOString(),
   db_time:dbTest.rows[0]?.now,
   node_version:process.version,
@@ -1250,23 +1262,43 @@ app.get('/api/admin/settings',admin,wrap(async(req,res)=>{
 }));
 
 app.put('/api/admin/settings',admin,allow('locations.write'),wrap(async(req,res)=>{
- const {company_name, timezone, max_gps_accuracy, email_notifications, support_contact} = req.body;
+ const {
+  company_name,
+  timezone,
+  max_gps_accuracy,
+  email_notifications,
+  support_contact,
+  assistant_enabled,
+  assistant_daily_quota_employee,
+  assistant_daily_quota_admin,
+  assistant_strict_topic,
+  assistant_max_chars,
+  assistant_api_url,
+  assistant_model
+ } = req.body;
+ const upsertSetting = async (c, key, val) => c.query(
+  `INSERT INTO system_settings(key, value, updated_at) VALUES($1, $2, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`,
+  [key, String(val)]
+ );
  await db.transaction(async c => {
-  if(company_name !== undefined){
-   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('company_name', $1, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`, [string(company_name, 200)]);
+  if(company_name !== undefined) await upsertSetting(c, 'company_name', string(company_name, 200));
+  if(timezone !== undefined) await upsertSetting(c, 'timezone', string(timezone, 100));
+  if(max_gps_accuracy !== undefined) await upsertSetting(c, 'max_gps_accuracy', integer(max_gps_accuracy, 10, 1000));
+  if(email_notifications !== undefined) await upsertSetting(c, 'email_notifications', email_notifications ? 'true' : 'false');
+  if(support_contact !== undefined) await upsertSetting(c, 'support_contact', string(support_contact, 100));
+  if(assistant_enabled !== undefined) await upsertSetting(c, 'assistant_enabled', assistant_enabled ? 'true' : 'false');
+  if(assistant_daily_quota_employee !== undefined) await upsertSetting(c, 'assistant_daily_quota_employee', integer(Number(assistant_daily_quota_employee), 1, 500));
+  if(assistant_daily_quota_admin !== undefined) await upsertSetting(c, 'assistant_daily_quota_admin', integer(Number(assistant_daily_quota_admin), 1, 2000));
+  if(assistant_strict_topic !== undefined) await upsertSetting(c, 'assistant_strict_topic', assistant_strict_topic ? 'true' : 'false');
+  if(assistant_max_chars !== undefined) await upsertSetting(c, 'assistant_max_chars', integer(Number(assistant_max_chars), 50, 2000));
+  if(assistant_api_url !== undefined) {
+   const cleanUrl = String(assistant_api_url || '').trim();
+   if (cleanUrl && !assistantService.isSafeLlmUrl(cleanUrl)) {
+    error('VALIDATION', 'رابط مزود الذكاء الاصطناعي غير صالح أو غير مسموح به أمنياً', 400);
+   }
+   await upsertSetting(c, 'assistant_api_url', cleanUrl.slice(0, 300));
   }
-  if(timezone !== undefined){
-   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('timezone', $1, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`, [string(timezone, 100)]);
-  }
-  if(max_gps_accuracy !== undefined){
-   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('max_gps_accuracy', $1, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`, [String(integer(max_gps_accuracy, 10, 1000))]);
-  }
-  if(email_notifications !== undefined){
-   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('email_notifications', $1, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`, [email_notifications ? 'true' : 'false']);
-  }
-  if(support_contact !== undefined){
-   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('support_contact', $1, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`, [string(support_contact, 100)]);
-  }
+  if(assistant_model !== undefined) await upsertSetting(c, 'assistant_model', String(assistant_model || 'openai').trim().slice(0, 100));
   await audit(c, req.user, 'settings.update', null, 'تحديث إعدادات النظام الحقيقية');
  });
  respond(res, { saved: true, message: 'تم حفظ إعدادات النظام وتطبيقها فوراً' });
@@ -1535,113 +1567,40 @@ app.patch('/api/leave/:id',admin,allow('leave.review'),wrap(async(req,res)=>{
   return {updated:true};
  }));
 }));
-async function answerAttendanceAssistant(user, question) {
+app.get('/api/admin/assistant/policies/:id',admin,allow('employees.read'),wrap(async(req,res)=>{
+ const targetId=id(req.params.id);
+ const acc=(await db.query('SELECT id, branch_id FROM accounts WHERE id=$1',[targetId])).rows[0];
+ if(!acc)error('NOT_FOUND','الحساب غير موجود',404);
+ if(acc.branch_id)scope(req.user,acc.branch_id);
+ respond(res,await assistantService.getUserPolicyAdminView(targetId));
+}));
+
+app.put('/api/admin/assistant/policies/:id',admin,allow('employees.write'),wrap(async(req,res)=>{
+ const targetId=id(req.params.id);
+ const acc=(await db.query('SELECT id, branch_id FROM accounts WHERE id=$1',[targetId])).rows[0];
+ if(!acc)error('NOT_FOUND','الحساب غير موجود',404);
+ if(acc.branch_id)scope(req.user,acc.branch_id);
+ const updated=await assistantService.saveUserPolicyAdmin(targetId,req.user,req.body||{});
+ await audit(db,req.user,'assistant.policy.update',targetId,'تحديث قيود المساعد الذكي للمستخدم',updated);
+ respond(res,updated);
+}));
+
+app.get('/api/assistant/status', wrap(async (req, res) => {
+ respond(res, await assistantService.getAssistantStatusForUser(req.user));
+}));
+
+app.post('/api/assistant', rateLimit({ windowMs: 60000, max: 20, keyGenerator: (req) => String(req.user?.id || req.ip), standardHeaders: true, legacyHeaders: false }), wrap(async (req, res) => {
  await closeScheduled();
- const q = String(question || '').trim().toLowerCase();
- const today = policy.localDay();
- const isAdmin = user.role !== 'employee';
- const fmtTime = iso => {
-  if (!iso) return '—';
-  try {
-   return new Date(iso).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Aden' });
-  } catch { return '—'; }
- };
-
- if (isAdmin) {
-  const broad = ['super_admin', 'hr_admin'].includes(user.role);
-  const rows = await recordsFor(user, today, today);
-  const presentRows = rows.filter(r => r.id && r.first_in);
-  const insideRows = presentRows.filter(r => r.state === 'inside');
-  const lateRows = presentRows.filter(r => Number(r.late_minutes) > 0);
-  const absentRows = rows.filter(r => r.state === 'absent');
-  const leaveRows = rows.filter(r => r.state === 'leave');
-
-  if (q.includes('تأخر') || q.includes('متأخر')) {
-   if (!lateRows.length) return `لا يوجد أي موظف متأخر اليوم (${today}) ضمن نطاق صلاحيتك.`;
-   const list = lateRows.slice(0, 12).map(r => `• ${r.name}: تأخير ${r.late_minutes} دقيقة (دخول ${fmtTime(r.first_in)})`).join('\n');
-   return `المتأخرون اليوم (${lateRows.length}):\n${list}${lateRows.length > 12 ? `\n…وغيرهم (${lateRows.length - 12})` : ''}`;
-  }
-
-  if (q.includes('غائب') || q.includes('غياب') || q.includes('لم يسجل')) {
-   if (!absentRows.length) return `جميع الموظفين المكلّفين سجلوا حضورهم اليوم أو في إجازة معتمدة (${leaveRows.length}).`;
-   const list = absentRows.slice(0, 15).map(r => `• ${r.name} (${r.branch_name})`).join('\n');
-   return `لم يسجلوا حضورهم اليوم (${absentRows.length} موظف، إضافة إلى ${leaveRows.length} في إجازة):\n${list}${absentRows.length > 15 ? `\n…وغيرهم (${absentRows.length - 15})` : ''}`;
-  }
-
-  if (q.includes('طلب') || q.includes('معلق') || q.includes('إجاز') || q.includes('تسجيل') || q.includes('موافق')) {
-   const pendingAcc = (await db.query("SELECT name, identifier FROM accounts WHERE role='employee' AND active=FALSE AND ($1=1 OR branch_id=$2) ORDER BY id DESC LIMIT 10", [broad, user.branch_id])).rows;
-   const pendingLeave = (await db.query("SELECT l.from_date, l.to_date, a.name FROM leave_requests l JOIN accounts a ON a.id=l.employee_id WHERE l.status='pending' AND ($1=1 OR a.branch_id=$2) ORDER BY l.id DESC LIMIT 10", [broad, user.branch_id])).rows;
-   const lines = [
-    `• طلبات تفعيل الحسابات المعلقة: ${pendingAcc.length}${pendingAcc.length ? ' (' + pendingAcc.slice(0, 4).map(a => a.name).join('، ') + ')' : ''}`,
-    `• طلبات الإجازات المعلقة: ${pendingLeave.length}${pendingLeave.length ? ' (' + pendingLeave.slice(0, 4).map(l => l.name).join('، ') + ')' : ''}`
-   ];
-   return `حالة الطلبات المعلقة الآن:\n${lines.join('\n')}`;
-  }
-
-  const rate = rows.length ? Math.round((presentRows.length / rows.length) * 100) : 0;
-  return [
-   `ملخص الحضور اليوم (${today}):`,
-   `• إجمالي الموظفين: ${rows.length}`,
-   `• الحاضرون: ${presentRows.length} (نسبة الالتزام ${rate}%)`,
-   `• على رأس العمل الآن: ${insideRows.length}`,
-   `• المتأخرون: ${lateRows.length} | لم يسجلوا: ${absentRows.length} | في إجازة: ${leaveRows.length}`
-  ].join('\n');
- }
-
- const shift = user.shift_id ? (await db.query('SELECT name, start_time, end_time, grace_minutes FROM shifts WHERE id=$1', [user.shift_id])).rows[0] : null;
- const branch = user.branch_id ? (await db.query('SELECT name, entry_radius FROM branches WHERE id=$1', [user.branch_id])).rows[0] : null;
- const month = today.slice(0, 7);
- const monthRows = (await db.query("SELECT * FROM duty_records WHERE employee_id=$1 AND strftime('%Y-%m', shift_start, '+3 hours')=$2 ORDER BY shift_start DESC", [user.id, month])).rows;
- const todayRow = monthRows.find(r => {
-  try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden' }).format(new Date(r.shift_start)) === today; }
-  catch { return false; }
- }) || null;
-
- if (q.includes('وردي') || q.includes('دوام') || q.includes('فرع') || q.includes('مقر') || q.includes('وقت')) {
-  const mode = user.is_remote ? 'دوام عن بعد (أونلاين)' : `حضوري بالمقر (${branch?.name || 'الفرع الرئيسي'})`;
-  if (!shift) return `طبيعة دوامك: ${mode}. لم يتم ربط وردية محددة بعد.`;
-  return `تفاصيل دوامك المعتمدة:\n• الوردية: ${shift.name} (من ${shift.start_time} إلى ${shift.end_time})\n• فترة السماح: ${shift.grace_minutes ?? 15} دقيقة\n• طبيعة العمل: ${mode}`;
- }
-
- if (q.includes('شهر') || q.includes('ساع') || q.includes('مجموع') || q.includes('أيام')) {
-  const totalMins = monthRows.reduce((acc, r) => acc + countedMinutes(r), 0);
-  const hours = (totalMins / 60).toFixed(1);
-  return `ملخص دوامك لشهر ${month}:\n• أيام الحضور المسجلة: ${monthRows.filter(r => r.first_in).length} يوم\n• إجمالي ساعات العمل المحتسبة: ${hours} ساعة (${totalMins} دقيقة)`;
- }
-
- if (q.includes('إجاز') || q.includes('طلب')) {
-  const leaves = (await db.query('SELECT status, from_date, to_date FROM leave_requests WHERE employee_id=$1 ORDER BY id DESC LIMIT 10', [user.id])).rows;
-  if (!leaves.length) return 'لا توجد لديك طلبات إجازة مسجلة حتى الآن. يمكنك تقديم طلب من تبويب «طلب إجازة واستئذان».';
-  const pend = leaves.filter(l => l.status === 'pending').length;
-  const appv = leaves.filter(l => l.status === 'approved').length;
-  const latest = leaves[0];
-  const stLabel = latest.status === 'approved' ? 'مقبولة' : latest.status === 'rejected' ? 'مرفوضة' : 'قيد المراجعة';
-  return `ملخص إجازاتك (${leaves.length} طلبات):\n• مقبولة: ${appv} | قيد المراجعة: ${pend}\n• آخر طلب: من ${String(latest.from_date).slice(0, 10)} إلى ${String(latest.to_date).slice(0, 10)} (${stLabel})`;
- }
-
- if (q.includes('بصم') || q.includes('كيف') || q.includes('موقع') || q.includes('qr')) {
-  return user.is_remote
-   ? 'حسابك مضبوط على الدوام عن بعد: اضغط زر «تسجيل الحضور بالبصمة» وسيتم التحقق من بصمة الجهاز وتسجيل حضورك مباشرة.'
-   : 'لتسجيل الحضور بالمقر: تأكد من تفعيل الموقع الجغرافي (GPS) داخل نطاق الفرع، ثم استخدم زر «تسجيل الحضور بالبصمة» أو امسح رمز QR المعتمد.';
- }
-
- const statusStr = todayRow
-  ? (todayRow.state === 'inside'
-      ? `على رأس العمل (دخول ${fmtTime(todayRow.first_in)}${todayRow.late_minutes > 0 ? ` · تأخير ${todayRow.late_minutes} د` : ''})`
-      : `تم تسجيل انصرافك اليوم (دخول ${fmtTime(todayRow.first_in)} · خروج ${fmtTime(todayRow.last_out)})`)
-  : 'لم تسجل حضورك اليوم بعد';
- const totalMins = monthRows.reduce((acc, r) => acc + countedMinutes(r), 0);
- return `حالتك اليوم (${today}): ${statusStr}.\nإجمالي ساعاتك هذا الشهر: ${(totalMins / 60).toFixed(1)} ساعة (${shift ? `وردية ${shift.start_time}–${shift.end_time}` : 'بدون وردية'}).`;
-}
-
-app.get('/api/assistant/status', (req, res) => respond(res, { enabled: true }));
-
-app.post('/api/assistant', rateLimit({ windowMs: 60000, max: 40, standardHeaders: true, legacyHeaders: false }), wrap(async (req, res) => {
  const msgs = Array.isArray(req.body?.messages) ? req.body.messages.slice(-8) : [];
  const lastUser = [...msgs].reverse().find(m => m && m.role === 'user' && typeof m.content === 'string');
- const question = lastUser ? string(lastUser.content, 1500) : 'ملخص اليوم';
- const reply = await answerAttendanceAssistant(req.user, question);
- respond(res, { reply });
+ const question = lastUser ? lastUser.content : '';
+ const result = await assistantService.askAssistant({
+  user: req.user,
+  history: msgs,
+  question,
+  helpers: { recordsFor, countedMinutes }
+ });
+ respond(res, { reply: result.reply, quota: result.meta.quota, meta: result.meta });
 }));
 
 app.use((req,res)=>res.status(404).json({success:false,error:'NOT_FOUND',message:'المسار غير موجود'}));

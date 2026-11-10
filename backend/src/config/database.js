@@ -11,7 +11,18 @@ const { DatabaseSync, backup } = require('node:sqlite');
 const DEFAULT_DB_PATH = path.resolve(__dirname, '../../../database/asas.db');
 const SCHEMA_PATH = path.resolve(__dirname, '../../../database/asas-sqlite-schema.sql');
 
-const BOOLEAN_COLS = new Set(['active', 'deduct_away', 'is_remote', 'send_email']);
+const BOOLEAN_COLS = new Set([
+  'active',
+  'deduct_away',
+  'is_remote',
+  'send_email',
+  'enabled',
+  'allow_hours_info',
+  'allow_leave_info',
+  'allow_team_data',
+  'allow_general_help',
+  'strict_topic_only'
+]);
 const JSON_ARRAY_COLS = new Set(['permissions', 'work_days']);
 const JSON_OBJ_COLS = new Set(['exit_candidate', 'details']);
 
@@ -61,6 +72,31 @@ function getInstance() {
     const schemaSql = fs.readFileSync(SCHEMA_PATH, 'utf8');
     sqlite.exec(schemaSql);
   }
+
+  // Ensure assistant restriction & daily quota tables exist cleanly on existing databases
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS assistant_user_policies (
+      account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      daily_limit INTEGER,
+      allow_hours_info INTEGER NOT NULL DEFAULT 1,
+      allow_leave_info INTEGER NOT NULL DEFAULT 1,
+      allow_team_data INTEGER NOT NULL DEFAULT 0,
+      allow_general_help INTEGER NOT NULL DEFAULT 1,
+      strict_topic_only INTEGER NOT NULL DEFAULT 1,
+      blocked_keywords TEXT NOT NULL DEFAULT '',
+      custom_note TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    );
+    CREATE TABLE IF NOT EXISTS assistant_usage_daily (
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      day TEXT NOT NULL,
+      questions_count INTEGER NOT NULL DEFAULT 0,
+      blocked_count INTEGER NOT NULL DEFAULT 0,
+      last_asked_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      PRIMARY KEY (account_id, day)
+    );
+  `);
 
   dbInstance = sqlite;
   currentDbPath = targetPath;
