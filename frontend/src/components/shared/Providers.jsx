@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,12 +23,23 @@ export default function Providers({ children }) {
       <Toaster
         position="top-center"
         toastOptions={{
+          style: {
+            background: 'var(--glass-tint-strong)',
+            color: 'var(--text)',
+            border: '1px solid var(--glass-rim-low)',
+            borderRadius: '999px',
+            boxShadow: 'var(--glass-shadow)',
+            backdropFilter: 'blur(24px) saturate(175%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(175%)',
+            fontFamily: 'var(--font)',
+            fontSize: '14px',
+            padding: '10px 18px',
+          },
           success: {
-            style: { background: '#2E7D32', color: '#fff' },
-            iconTheme: { primary: '#fff', secondary: '#2E7D32' },
+            iconTheme: { primary: 'var(--paid)', secondary: 'var(--on-accent)' },
           },
           error: {
-            style: { background: '#E53935', color: '#fff' },
+            iconTheme: { primary: 'var(--unpaid)', secondary: '#ffffff' },
           },
           duration: 4000,
         }}

@@ -24,10 +24,6 @@
   --shadow-sm: 0 1px 3px rgba(34, 31, 31, 0.04), 0 8px 20px -8px rgba(186, 149, 85, 0.10);
   --shadow-md: var(--glass-shadow);
   --border-glass: var(--glass-rim);
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
 }
 
 :root[data-theme='dark'] {
@@ -2372,10 +2368,13 @@ select.asas-input option {
 }
 
 /* ───────── Dark Mode Comprehensive Polish (Asas Sovereign Obsidian #141111 Palette) ───────── */
-:root[data-theme='dark'] body,
+:root[data-theme='dark'] body {
+  background-color: var(--bg, #141111) !important;
+}
+
 :root[data-theme='dark'] .asas-app,
 :root[data-theme='dark'] .asas-employee-page {
-  background-color: #141111 !important;
+  background: transparent !important;
 }
 
 :root[data-theme='dark'] .glass,
@@ -2525,18 +2524,22 @@ select.asas-input option {
 }
 
 :root[data-theme='dark'] .asas-login {
-  background-color: #231f20 !important;
+  background: transparent !important;
 }
 
 :root[data-theme='dark'] .asas-login-hero {
-  background: rgba(35, 31, 32, 0.85) !important;
-  border-color: rgba(186, 149, 85, 0.32) !important;
+  background: rgba(20, 17, 17, 0.72) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border-color: rgba(186, 149, 85, 0.28) !important;
 }
 
 :root[data-theme='dark'] .asas-login-box {
-  background: rgba(35, 31, 32, 0.90) !important;
-  border-color: rgba(186, 149, 85, 0.36) !important;
-  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.30), 0 24px 60px -16px rgba(0, 0, 0, 0.60), inset 0 1px 0 rgba(186, 149, 85, 0.30) !important;
+  background: rgba(20, 17, 17, 0.80) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border-color: rgba(186, 149, 85, 0.34) !important;
+  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.35), 0 24px 60px -16px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 244, 222, 0.14) !important;
 }
 
 /* ========================================================
@@ -4196,8 +4199,59 @@ p, .prose, .asas-muted, .asas-hero-banner p, .asas-remote-btn-desc {
   justify-content: center;
   border-radius: var(--radius-pill);
   border: 1px solid rgba(186, 149, 85, 0.35);
-  background: var(--glass-card);
+  background: var(--glass-tint-strong);
   font-weight: 600;
   font-size: 13.5px;
   color: var(--text);
+}
+
+/* ───────── Brand Identity Integration: Asas Robot & Typography Craft ───────── */
+.asas-login-robot-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--glass-inset);
+  border: 1px solid rgba(186, 149, 85, 0.25);
+  margin-top: 18px;
+}
+
+.asas-login-robot-img {
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(74, 54, 22, 0.25));
+}
+
+.asas-login-robot-copy strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.asas-login-robot-copy span {
+  display: block;
+  font-family: var(--font-text);
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* Keep floating Asas Robot launcher clear of the mobile bottom dock & employee actions */
+@media (max-width: 1024px) {
+  :root:has(.asas-mobile-dock) {
+    --launcher-size: 62px;
+    --launcher-gap: 14px;
+    --launcher-bottom: calc(max(12px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) + 78px);
+  }
+}
+
+@media (max-width: 640px) {
+  .asas-employee-page {
+    padding-bottom: 92px;
+  }
 }

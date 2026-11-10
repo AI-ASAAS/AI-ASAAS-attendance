@@ -19,7 +19,7 @@ function p(text, opts = {}) {
   const align = opts.align || 'right';
   const size = opts.size || 20; // half-points (20 = 10pt)
   const bold = opts.bold ? '<w:b/>' : '';
-  const color = opts.color ? `<w:color w:val="${opts.color}"/>` : '<w:color w:val="221F20"/>';
+  const color = opts.color ? `<w:color w:val="${opts.color}"/>` : '<w:color w:val="221F1F"/>';
   const before = opts.before !== undefined ? opts.before : 40;
   const after = opts.after !== undefined ? opts.after : 40;
 
@@ -50,7 +50,7 @@ function p(text, opts = {}) {
   </w:p>`;
 }
 
-function table(headers, rows, colWidths = [], headerBg = '221F20') {
+function table(headers, rows, colWidths = [], headerBg = '221F1F') {
   const totalWidth = 9638; // standard content width between margins on A4 in twips
   const defaultColWidth = Math.floor(totalWidth / headers.length);
   const widths = headers.map((_, i) => colWidths[i] || defaultColWidth);
@@ -131,10 +131,10 @@ function table(headers, rows, colWidths = [], headerBg = '221F20') {
       <w:jc w:val="center"/>
       <w:bidiVisual/>
       <w:tblBorders>
-        <w:top w:val="single" w:sz="6" w:space="0" w:color="B59045"/>
-        <w:left w:val="single" w:sz="6" w:space="0" w:color="B59045"/>
-        <w:bottom w:val="single" w:sz="6" w:space="0" w:color="B59045"/>
-        <w:right w:val="single" w:sz="6" w:space="0" w:color="B59045"/>
+        <w:top w:val="single" w:sz="6" w:space="0" w:color="BA9555"/>
+        <w:left w:val="single" w:sz="6" w:space="0" w:color="BA9555"/>
+        <w:bottom w:val="single" w:sz="6" w:space="0" w:color="BA9555"/>
+        <w:right w:val="single" w:sz="6" w:space="0" w:color="BA9555"/>
         <w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0DACB"/>
         <w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0DACB"/>
       </w:tblBorders>
@@ -181,15 +181,15 @@ function generateEmployeeDossierDocx(dossier, from, to) {
   const nowStr = new Date().toLocaleString('ar-YE', { timeZone: 'Asia/Aden' });
 
   const bodyParts = [
-    p('تقرير الحضور والانصراف الرسمي - سجل الموظف الفردي', { align: 'center', size: 28, bold: true, color: '775B24', after: 40 }),
-    p('نظام أساس لإدارة الحضور والدوام · توقيت صنعاء (الجمهورية اليمنية)', { align: 'center', size: 18, color: '555555', after: 120 }),
+    p('تقرير الحضور والانصراف الرسمي - سجل الموظف الفردي', { align: 'center', size: 28, bold: true, color: '8F6626', after: 40 }),
+    p('أساس الذكاء الاصطناعي · لذكاء أكثر سيادة · توقيت صنعاء', { align: 'center', size: 18, color: '555555', after: 120 }),
 
     // Metadata Table
     table(
       ['اسم الموظف', 'الرقم الوظيفي', 'طبيعة الدوام', 'الفرع', 'الوردية', 'الفترة المحددة', 'تاريخ الإصدار'],
       [[
         { text: emp.name, bold: true },
-        { text: emp.identifier, bold: true, color: '775B24' },
+        { text: emp.identifier, bold: true, color: '8F6626' },
         emp.is_remote ? 'دوام عن بعد (أونلاين)' : 'دوام حضوري (مقر الشركة)',
         emp.branch_name,
         emp.shift_name,
@@ -206,15 +206,15 @@ function generateEmployeeDossierDocx(dossier, from, to) {
       ['أيام الدوام المستحقة', 'أيام الحضور الفعلي', 'أيام الغياب', 'مرات ودقائق التأخير', 'ساعات العمل الفعلية', 'الإجازات والعطلات', 'نسبة الالتزام'],
       [[
         `${sum.work_days} يوم`,
-        { text: `${sum.present_days} يوم`, bold: true, color: '2D6A4F' },
-        { text: `${sum.absent_days} يوم`, bold: sum.absent_days > 0, color: sum.absent_days > 0 ? 'B91C1C' : '221F20' },
+        { text: `${sum.present_days} يوم`, bold: true, color: '23744A' },
+        { text: `${sum.absent_days} يوم`, bold: sum.absent_days > 0, color: sum.absent_days > 0 ? 'B0342C' : '221F1F' },
         `${sum.late_days_count} (${sum.total_late_minutes} د)`,
         { text: `${sum.total_work_hours} س`, bold: true },
         `${sum.leave_days} إجازة / ${sum.weekend_days} عطلة`,
-        { text: `${sum.attendance_rate}%`, bold: true, color: '775B24' }
+        { text: `${sum.attendance_rate}%`, bold: true, color: '8F6626' }
       ]],
       [1400, 1400, 1200, 1500, 1400, 1500, 1238],
-      '775B24'
+      '8F6626'
     ),
 
     p('', { after: 100 })
@@ -235,11 +235,11 @@ function generateEmployeeDossierDocx(dossier, from, to) {
   // Day-by-Day Historical Timeline
   const headers = ['التاريخ', 'اليوم', 'الدوام', 'وقت الدخول', 'وقت الخروج', 'الحالة', 'التأخير', 'ساعات العمل', 'ملاحظات وتنبيهات'];
   const rows = dossier.timeline.map(t => {
-    let statusColor = '2D6A4F';
-    if (t.state === 'absent') statusColor = 'B91C1C';
-    else if (t.state === 'incomplete' || t.needs_review) statusColor = 'B91C1C';
-    else if (t.state === 'late') statusColor = 'B45309';
-    else if (t.state === 'leave') statusColor = '1D4ED8';
+    let statusColor = '23744A';
+    if (t.state === 'absent') statusColor = 'B0342C';
+    else if (t.state === 'incomplete' || t.needs_review) statusColor = 'B0342C';
+    else if (t.state === 'late') statusColor = '9A5F05';
+    else if (t.state === 'leave') statusColor = '00849E';
     else if (t.state === 'weekend') statusColor = '4B5563';
 
     const inTime = t.first_in ? new Date(t.first_in).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Aden' }) : (t.state === 'absent' ? 'لم يسجل' : '—');
@@ -249,12 +249,12 @@ function generateEmployeeDossierDocx(dossier, from, to) {
       t.date,
       t.day_name,
       t.is_workday ? (emp.shift_name || 'دوام رسمي') : 'عطلة أسبوعية',
-      { text: inTime, bold: Boolean(t.first_in), color: t.first_in ? '2D6A4F' : '221F20' },
+      { text: inTime, bold: Boolean(t.first_in), color: t.first_in ? '23744A' : '221F1F' },
       outTime,
       { text: t.status_label, bold: true, color: statusColor },
       t.late_minutes > 0 ? `${t.late_minutes} د` : '—',
       { text: `${t.work_hours || '0.0'} س`, bold: Number(t.work_hours) > 0 },
-      { text: t.needs_review ? '⚠️ يحتاج مراجعة' : (t.exit_reason_label || (t.is_weekend ? 'راحة أسبوعية' : '—')), color: t.needs_review ? 'B91C1C' : '555555' }
+      { text: t.needs_review ? '⚠️ يحتاج مراجعة' : (t.exit_reason_label || (t.is_weekend ? 'راحة أسبوعية' : '—')), color: t.needs_review ? 'B0342C' : '555555' }
     ];
   });
 
@@ -271,8 +271,8 @@ function generateCollectiveSummaryDocx(report, from, to) {
   const ov = report.overall;
 
   const bodyParts = [
-    p('التقرير الجماعي الشامل للحضور والانصراف', { align: 'center', size: 28, bold: true, color: '775B24', after: 40 }),
-    p('نظام أساس لإدارة الحضور والدوام · توقيت صنعاء (الجمهورية اليمنية)', { align: 'center', size: 18, color: '555555', after: 120 }),
+    p('التقرير الجماعي الشامل للحضور والانصراف', { align: 'center', size: 28, bold: true, color: '8F6626', after: 40 }),
+    p('أساس الذكاء الاصطناعي · لذكاء أكثر سيادة · توقيت صنعاء', { align: 'center', size: 18, color: '555555', after: 120 }),
 
     // Overall stats table
     table(
@@ -280,14 +280,14 @@ function generateCollectiveSummaryDocx(report, from, to) {
       [[
         `من ${from} إلى ${to}`,
         { text: `${ov.total_employees} موظف`, bold: true },
-        { text: `${ov.total_present_days} يوم`, bold: true, color: '2D6A4F' },
-        { text: `${ov.total_absent_days} يوم`, bold: ov.total_absent_days > 0, color: ov.total_absent_days > 0 ? 'B91C1C' : '221F20' },
+        { text: `${ov.total_present_days} يوم`, bold: true, color: '23744A' },
+        { text: `${ov.total_absent_days} يوم`, bold: ov.total_absent_days > 0, color: ov.total_absent_days > 0 ? 'B0342C' : '221F1F' },
         `${ov.total_late_days} (${ov.total_late_minutes} د)`,
         { text: `${ov.total_work_hours} س`, bold: true },
-        { text: `${ov.average_attendance_rate}%`, bold: true, color: '775B24' }
+        { text: `${ov.average_attendance_rate}%`, bold: true, color: '8F6626' }
       ]],
       [1800, 1300, 1300, 1300, 1400, 1300, 1238],
-      '775B24'
+      '8F6626'
     ),
 
     p('', { after: 120 })
@@ -295,17 +295,17 @@ function generateCollectiveSummaryDocx(report, from, to) {
 
   const headers = ['الرقم الوظيفي', 'اسم الموظف', 'طبيعة الدوام', 'الفرع', 'الوردية', 'حضور', 'غياب', 'التأخير', 'ساعات العمل', 'الإجازات', 'نسبة الالتزام'];
   const rows = report.employees.map(e => [
-    { text: e.identifier, bold: true, color: '775B24' },
+    { text: e.identifier, bold: true, color: '8F6626' },
     { text: e.name, bold: true, align: 'right' },
     e.is_remote ? 'دوام عن بعد' : 'حضوري بالمقر',
     e.branch_name,
     e.shift_name,
-    { text: `${e.present_days} يوم`, color: '2D6A4F', bold: true },
-    { text: `${e.absent_days} يوم`, color: e.absent_days > 0 ? 'B91C1C' : '221F20' },
+    { text: `${e.present_days} يوم`, color: '23744A', bold: true },
+    { text: `${e.absent_days} يوم`, color: e.absent_days > 0 ? 'B0342C' : '221F1F' },
     e.late_days_count > 0 ? `${e.late_days_count} (${e.total_late_minutes} د)` : 'في الموعد',
     { text: `${e.total_work_hours} س`, bold: true },
     `${e.leave_days}`,
-    { text: `${e.attendance_rate}%`, bold: true, color: e.attendance_rate >= 80 ? '2D6A4F' : 'B45309' }
+    { text: `${e.attendance_rate}%`, bold: true, color: e.attendance_rate >= 80 ? '23744A' : '9A5F05' }
   ]);
 
   bodyParts.push(table(headers, rows, [1000, 1600, 1100, 1100, 1100, 750, 750, 1000, 850, 650, 738]));
@@ -320,14 +320,14 @@ function generateDutyRecordsDocx(rows, from, to) {
   const nowStr = new Date().toLocaleString('ar-YE', { timeZone: 'Asia/Aden' });
 
   const bodyParts = [
-    p('تقرير حركات الحضور والانصراف التفصيلية', { align: 'center', size: 28, bold: true, color: '775B24', after: 40 }),
-    p('نظام أساس لإدارة الحضور والدوام · توقيت صنعاء (الجمهورية اليمنية)', { align: 'center', size: 18, color: '555555', after: 120 }),
+    p('تقرير حركات الحضور والانصراف التفصيلية', { align: 'center', size: 28, bold: true, color: '8F6626', after: 40 }),
+    p('أساس الذكاء الاصطناعي · لذكاء أكثر سيادة · توقيت صنعاء', { align: 'center', size: 18, color: '555555', after: 120 }),
 
     table(
       ['الفترة المحددة', 'إجمالي الحركات', 'تاريخ ووقت الإصدار'],
       [[`من ${from} إلى ${to}`, `${rows.length} حركة مسجلة`, nowStr]],
       [3200, 3200, 3238],
-      '775B24'
+      '8F6626'
     ),
 
     p('', { after: 120 })
@@ -345,7 +345,7 @@ function generateDutyRecordsDocx(rows, from, to) {
       { text: r.name, bold: true, align: 'right' },
       r.branch_name,
       r.shift_start ? new Date(r.shift_start).toLocaleDateString('ar-YE', { timeZone: 'Asia/Aden' }) : '—',
-      { text: inTime, bold: Boolean(r.first_in), color: r.first_in ? '2D6A4F' : (isAbsent ? 'B91C1C' : '221F20') },
+      { text: inTime, bold: Boolean(r.first_in), color: r.first_in ? '23744A' : (isAbsent ? 'B0342C' : '221F1F') },
       outTime,
       { text: r.status_label || (isInside ? 'حاضر الآن' : (isAbsent ? 'غائب' : 'تم الانصراف')), bold: true },
       r.exit_reason_label || '—',

@@ -5,6 +5,7 @@ import { getDeviceId, getDeviceName } from '../../utils/device';
 import { promptBiometricVerification } from '../../utils/biometric';
 import {
   Ambient,
+  AssistantWidget,
   Glass,
   Card,
   Icon,
@@ -12,8 +13,43 @@ import {
   Swash,
   Stretch,
   useTheme,
+  firstName,
   formatNumber
 } from '../../asaas-ui';
+
+function AsasGreeting({ name }) {
+  const isMorning = new Date().getHours() < 12;
+  const first = firstName(name || '');
+  return (
+    <>
+      {isMorning ? <Stretch before="صب" after="اح" length={2} /> : <Stretch before="مس" after="اء" length={2} />} الخير
+      {first ? `، ${first}` : ''}
+    </>
+  );
+}
+
+function AsasAssistant({ user, isAdmin }) {
+  if (!user?.id) return null;
+  return (
+    <AssistantWidget
+      user={{ id: String(user.id), displayName: user.name || '' }}
+      ask={(messages) => api('/assistant', 'POST', { messages })}
+      title="مساعد أساس"
+      subtitle={isAdmin ? 'ملخصات الحضور الفورية' : 'مساعد الدوام والإجازات'}
+      suggestions={
+        isAdmin
+          ? ['ملخص الحضور اليوم', 'من المتأخرون اليوم؟', 'من الغائبون اليوم؟', 'الطلبات والإجازات المعلقة']
+          : ['ما حالتي اليوم؟', 'ما هي ورديتي والفرع؟', 'كم مجموع ساعاتي هذا الشهر؟', 'كيف أسجل بالبصمة؟']
+      }
+      intro={
+        isAdmin
+          ? 'اسألني عن الحاضرين والمتأخرين والغائبين والطلبات المعلقة الآن.'
+          : 'اسألني عن حضورك اليوم أو ورديتك أو ساعاتك هذا الشهر وإجازاتك.'
+      }
+      disclaimer="إجابات فورية مستندة مباشرة إلى سجلات أساس الحقيقية."
+    />
+  );
+}
 
 // Avatar Presets: Man, Woman, or Admin
 const AVATAR_PRESETS = [
@@ -197,8 +233,8 @@ function Brand() {
     <div className="asas-logo">
       <div className="asas-mark" />
       <div>
-        <strong>أساس</strong>
-        <small>نظام الحضور والدوام السيادي</small>
+        <strong><Swash>أساس</Swash></strong>
+        <small>لذكاء أكثر سيادة · الحضور والدوام</small>
       </div>
     </div>
   );
@@ -269,16 +305,16 @@ function Records({ rows = [], onEdit, canEdit }) {
                 <td>{date(r.shift_start)}</td>
                 <td>
                   {r.first_in ? (
-                    <span style={{ color: 'var(--paid)', fontWeight: 600 }}>{time(r.first_in)}</span>
+                    <span className="num" style={{ color: 'var(--paid)', fontWeight: 600 }}>{time(r.first_in)}</span>
                   ) : (
-                    <span style={{ color: isAbsent ? '#ef4444' : 'var(--text-3)', fontWeight: 500 }}>
+                    <span style={{ color: isAbsent ? 'var(--unpaid)' : 'var(--text-3)', fontWeight: 500 }}>
                       {isAbsent ? 'لم يحضر' : '—'}
                     </span>
                   )}
                 </td>
                 <td>
                   {r.last_out ? (
-                    <span style={{ color: 'var(--text)' }}>{time(r.last_out)}</span>
+                    <span className="num" style={{ color: 'var(--text)' }}>{time(r.last_out)}</span>
                   ) : (
                     <span style={{ color: isInside ? 'var(--partial)' : 'var(--text-3)', fontWeight: isInside ? 600 : 400 }}>
                       {isInside ? 'حاضر الآن' : '—'}
@@ -289,8 +325,8 @@ function Records({ rows = [], onEdit, canEdit }) {
                   <span 
                     className={`asas-badge ${isInside ? 'inside' : 'outside'}`}
                     style={
-                      isAbsent ? { background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' } :
-                      isLeave ? { background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)' } :
+                      isAbsent ? { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' } :
+                      isLeave ? { background: 'var(--glass-inset)', color: 'var(--chart-out)', border: '1px solid var(--chart-out)' } :
                       {}
                     }
                   >
@@ -301,7 +337,7 @@ function Records({ rows = [], onEdit, canEdit }) {
                 <td>
                   <span style={{
                     fontSize: 12,
-                    color: isInside ? 'var(--text-3)' : (isAbsent ? '#ef4444' : (exitReasonLabel.includes('مبكر') ? 'var(--unpaid)' : 'var(--paid)')),
+                    color: isInside ? 'var(--text-3)' : (isAbsent ? 'var(--unpaid)' : (exitReasonLabel.includes('مبكر') ? 'var(--unpaid)' : 'var(--paid)')),
                     fontWeight: 600
                   }}>
                     {exitReasonLabel}
@@ -309,14 +345,14 @@ function Records({ rows = [], onEdit, canEdit }) {
                 </td>
                 <td>
                   {isAbsent ? (
-                    <span style={{ color: '#ef4444', fontSize: 12, fontWeight: 500 }}>0 دقيقة (غائب)</span>
+                    <span style={{ color: 'var(--unpaid)', fontSize: 12, fontWeight: 500 }}>0 دقيقة (غائب)</span>
                   ) : isLeave ? (
-                    <span style={{ color: '#3b82f6', fontSize: 12, fontWeight: 500 }}>إجازة معتمدة</span>
+                    <span style={{ color: 'var(--chart-out)', fontSize: 12, fontWeight: 500 }}>إجازة معتمدة</span>
                   ) : r.counted_minutes == null ? (
                     <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}>مفتوح (قيد الاحتساب)</span>
                   ) : (
                     <>
-                      <strong>{formatNumber(r.counted_minutes)} دقيقة</strong>
+                      <strong className="num">{formatNumber(r.counted_minutes)} دقيقة</strong>
                       <small>{r.deduct_away ? 'مع خصم المغادرة' : 'دون خصم المغادرة'}</small>
                     </>
                   )}
@@ -1332,10 +1368,14 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   useEffect(() => { setQr(null); }, [branchId]);
 
   async function logout() {
+    const uid = user?.id;
     try { await api('/auth/logout', 'POST', {}); } catch (e) {}
     if (typeof window !== 'undefined') {
       localStorage.removeItem('asas_token');
       localStorage.removeItem('asas_account');
+      if (uid) {
+        try { sessionStorage.removeItem(`asaas-ui:assistant:${uid}`); } catch {}
+      }
     }
     setUser(null);
   }
@@ -1721,6 +1761,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           theme={theme}
           onToggleTheme={toggleTheme}
         />
+        <AsasAssistant user={user} isAdmin={false} />
         {showAnnouncementsModal && (
           <AnnouncementsModal
             announcements={announcements}
@@ -1915,9 +1956,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
             <>
               <Glass className="asas-hero-banner">
                 <div>
-                  <p className="asas-eyebrow">منظومة العمل الذكية</p>
-                  <h2><Stretch before="أهْـ" after="ـلاً" length={3} /> بك في لوحة تحكم أساس</h2>
-                  <p>حضور مؤكد جغرافياً ومقيد بأجهزة الموظفين مع تحديث لحظي على السحابة وقواعد البيانات.</p>
+                  <p className="asas-eyebrow">منظومة العمل الذكية · لذكاء أكثر سيادة</p>
+                  <h2><AsasGreeting name={user.name} /></h2>
+                  <p className="prose">حضور مؤكد جغرافياً ومقيد بأجهزة الموظفين مع تحديث لحظي على السحابة وقواعد البيانات.</p>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
                     <button className="asas-btn primary" onClick={() => setTab('qr')}>
                       <Icon name="qrCode" />
@@ -2383,7 +2424,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                 </td>
                                 <td>
                                   {emp.leave_days > 0 ? (
-                                    <span style={{ color: '#3b82f6', fontWeight: 600 }}>{emp.leave_days} يوم</span>
+                                    <span className="num" style={{ color: 'var(--chart-out)', fontWeight: 600 }}>{emp.leave_days} يوم</span>
                                   ) : (
                                     <span style={{ color: 'var(--text-3)' }}>0</span>
                                   )}
@@ -2456,12 +2497,11 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                 <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
                                   {individualData.employee.name}
                                 </h3>
-                                <span style={{
+                                <span className="num" style={{
                                   padding: '2px 8px',
                                   borderRadius: 6,
-                                  background: 'rgba(181, 144, 69, 0.2)',
-                                  color: 'var(--brand-gold, #b59045)',
-                                  fontFamily: 'monospace',
+                                  background: 'var(--gold-soft)',
+                                  color: 'var(--accent)',
                                   fontWeight: 700,
                                   fontSize: 13
                                 }}>
@@ -2469,9 +2509,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                 </span>
                               </div>
                               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6, fontSize: 13, color: 'var(--text-2)' }}>
-                                <span>📍 الفرع: <strong>{individualData.employee.branch_name || 'الفرع الرئيسي'}</strong></span>
-                                <span>⏰ الوردية: <strong>{individualData.employee.shift_name || 'دوام رسمي'}</strong></span>
-                                <span>طبيعة العمل: <strong style={{ color: individualData.employee.is_remote ? '#60a5fa' : 'inherit' }}>{individualData.employee.is_remote ? 'دوام عن بعد (أونلاين)' : 'دوام حضوري بالمقر'}</strong></span>
+                                <span>الفرع: <strong>{individualData.employee.branch_name || 'الفرع الرئيسي'}</strong></span>
+                                <span>الوردية: <strong>{individualData.employee.shift_name || 'دوام رسمي'}</strong></span>
+                                <span>طبيعة العمل: <strong style={{ color: individualData.employee.is_remote ? 'var(--chart-out)' : 'inherit' }}>{individualData.employee.is_remote ? 'دوام عن بعد (أونلاين)' : 'دوام حضوري بالمقر'}</strong></span>
                                 {individualData.employee.shift_start_time && (
                                   <span>مواعيد الدوام: <strong>{String(individualData.employee.shift_start_time).slice(0, 5)} إلى {String(individualData.employee.shift_end_time).slice(0, 5)}</strong> (سماح {individualData.employee.grace_minutes || 10} د)</span>
                                 )}
@@ -2604,18 +2644,18 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                   const isInc = day.state === 'incomplete' || day.needs_review;
                                   const isPend = day.state === 'pending';
 
-                                  let badgeStyle = { background: 'rgba(16, 185, 129, 0.12)', color: 'var(--paid)' };
-                                  if (isAbs) badgeStyle = { background: 'rgba(239, 68, 68, 0.12)', color: 'var(--unpaid)', border: '1px solid rgba(239, 68, 68, 0.3)' };
-                                  else if (isInc) badgeStyle = { background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid #ef4444' };
-                                  else if (isLate) badgeStyle = { background: 'rgba(245, 158, 11, 0.15)', color: 'var(--partial)' };
-                                  else if (isLev) badgeStyle = { background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' };
-                                  else if (isWkd) badgeStyle = { background: 'rgba(156, 163, 175, 0.12)', color: 'var(--text-3)' };
-                                  else if (isPend) badgeStyle = { background: 'rgba(139, 92, 246, 0.15)', color: '#a78bfa' };
+                                  let badgeStyle = { background: 'var(--paid-bg)', color: 'var(--paid)' };
+                                  if (isAbs) badgeStyle = { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' };
+                                  else if (isInc) badgeStyle = { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' };
+                                  else if (isLate) badgeStyle = { background: 'var(--partial-bg)', color: 'var(--partial)' };
+                                  else if (isLev) badgeStyle = { background: 'var(--glass-inset)', color: 'var(--chart-out)' };
+                                  else if (isWkd) badgeStyle = { background: 'var(--glass-inset)', color: 'var(--text-3)' };
+                                  else if (isPend) badgeStyle = { background: 'var(--gold-soft)', color: 'var(--accent)' };
 
                                   return (
-                                    <tr key={day.date + '-' + dIdx} style={isInc ? { background: 'rgba(239, 68, 68, 0.04)' } : undefined}>
+                                    <tr key={day.date + '-' + dIdx} style={isInc ? { background: 'var(--unpaid-bg)' } : undefined}>
                                       <td>
-                                        <strong style={{ fontFamily: 'monospace' }}>{day.date}</strong>
+                                        <strong className="num">{day.date}</strong>
                                       </td>
                                       <td>
                                         <strong style={{ color: isWkd ? 'var(--text-3)' : 'var(--text)' }}>
@@ -2787,11 +2827,11 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   marginBottom: 16
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Icon name="clock" style={{ color: '#f59e0b' }} />
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--partial-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon name="clock" style={{ color: 'var(--partial)' }} />
                     </div>
                     <div>
-                      <strong style={{ fontSize: 14, color: '#f59e0b', display: 'block' }}>
+                      <strong style={{ fontSize: 14, color: 'var(--partial)', display: 'block' }}>
                         تنبيه الإدارة: يوجد {rows.filter(a => !a.active).length} طلب تسجيل حساب جديد بحاجة للمراجعة والموافقة
                       </strong>
                       <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
@@ -2802,7 +2842,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       className="asas-btn sm"
-                      style={{ background: '#f59e0b', borderColor: '#d97706', color: '#111', fontWeight: 800 }}
+                      style={{ background: 'var(--partial)', borderColor: 'var(--partial)', color: 'var(--on-accent)', fontWeight: 800 }}
                       onClick={() => setAccountFilter('pending')}
                     >
                       عرض الطلبات المعلقة ({rows.filter(a => !a.active).length})
@@ -2841,7 +2881,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   </button>
                   <button
                     className={`asas-btn sm ${accountFilter === 'pending' ? 'primary' : ''}`}
-                    style={rows.some(a => !a.active) ? { borderColor: '#f59e0b', color: accountFilter === 'pending' ? '#fff' : '#f59e0b' } : {}}
+                    style={rows.some(a => !a.active) ? { borderColor: 'var(--partial)', color: accountFilter === 'pending' ? 'var(--on-accent)' : 'var(--partial)' } : {}}
                     onClick={() => setAccountFilter('pending')}
                   >
                     <Icon name="clock" style={{ width: 12, height: 12 }} />
@@ -2950,7 +2990,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                             {a.active ? (
                               <span className="asas-badge inside">نشط</span>
                             ) : (
-                              <span className="asas-badge pending" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.4)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                              <span className="asas-badge pending" style={{ background: 'var(--partial-bg)', color: 'var(--partial)', borderColor: 'var(--partial)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                                 <Icon name="clock" style={{ width: 12, height: 12 }} />
                                 بانتظار الموافقة
                               </span>
@@ -2961,7 +3001,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                               {!a.active && can('employees.write') && (
                                 <button
                                   className="asas-btn primary sm"
-                                  style={{ background: '#10b981', borderColor: '#059669', color: '#fff', fontWeight: 700 }}
+                                  style={{ background: 'var(--paid)', borderColor: 'var(--paid)', color: 'var(--on-accent)', fontWeight: 700 }}
                                   title="قبول طلب التسجيل وتفعيل الحساب فوراً"
                                   onClick={() => approveAccount(a)}
                                 >
@@ -3489,7 +3529,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 <div style={{ fontSize: 13, color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div>الفحمي الأساسي (Ink): <code dir="ltr">#221F1F</code></div>
                   <div>الذهبي الملكي (Gold): <code dir="ltr">#BA9555</code></div>
-                  <div>الخطوط المعتمدة: <strong>Thmanyah Sans / Serif</strong></div>
+                  <div>الكريمي والرملي (Cream / Sand): <code dir="ltr">#EDE7DA / #D3C6B4</code></div>
+                  <div>الشعار والمبدأ: <strong>لذكاء أكثر سيادة</strong></div>
+                  <div>الخطوط المعتمدة: <strong>Thmanyah Sans / Serif Display &amp; Text</strong></div>
                 </div>
               </Glass>
             </form>
@@ -3555,6 +3597,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           </button>
         </nav>
       </div>
+
+      <AsasAssistant user={user} isAdmin />
 
       {/* MODALS */}
       {showAnnouncementsModal && (
@@ -4307,8 +4351,8 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
           <Brand />
           <div>
             <p className="asas-eyebrow">منظومة الحضور والعمل الذكية</p>
-            <h1><Swash>حضور مؤكد</Swash><br /><span>وفريق متصل دائماً.</span></h1>
-            <p>مساحة عمل تنفيذية لإدارة الحضور والانصراف بدقة وموثوقية عالية، متصلة بسجلات الأجهزة وقواعد البيانات السيادية.</p>
+            <h1><Swash>حضور موثوق</Swash><br /><span>وفريق متصل دائماً.</span></h1>
+            <p className="prose">مساحة عمل تنفيذية لإدارة الحضور والانصراف بدقة وموثوقية عالية، متصلة بسجلات الأجهزة وقواعد البيانات السيادية.</p>
 
             <div className="asas-hero-features-list">
               <div className="asas-hero-feature-item">
@@ -4324,10 +4368,18 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                 <span>حماية سيادية مشفرة متوافقة مع ضوابط الأمن السيبراني</span>
               </div>
             </div>
+
+            <div className="asas-login-robot-card">
+              <img className="asas-login-robot-img" src="/brand/mascot/welcome.webp" alt="مساعد أساس" width={58} height={58} />
+              <div className="asas-login-robot-copy">
+                <strong>مساعد أساس للحضور الذكي</strong>
+                <span>هوية أساس الذكاء الاصطناعي — لذكاء أكثر سيادة.</span>
+              </div>
+            </div>
           </div>
           <footer>
-            <span>شركة أساس الذكاء الاصطناعي</span>
-            <p>نظام حضور ذكي ومحمي</p>
+            <span>أساس الذكاء الاصطناعي · ASAAS</span>
+            <p>لذكاء أكثر سيادة</p>
           </footer>
         </section>
 
@@ -4421,20 +4473,20 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                   width: 60,
                   height: 60,
                   borderRadius: '50%',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  color: '#f59e0b',
+                  background: 'var(--partial-bg)',
+                  color: 'var(--partial)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginBottom: 14,
-                  border: '2px solid rgba(245, 158, 11, 0.4)'
+                  border: '2px solid var(--partial)'
                 }}>
-                  <Icon name="clock" style={{ width: 28, height: 28, color: '#f59e0b' }} />
+                  <Icon name="clock" style={{ width: 28, height: 28, color: 'var(--partial)' }} />
                 </div>
                 <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 8px', color: 'var(--text)' }}>
                   {pendingInfo.title}
                 </h3>
-                <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, margin: '0 0 16px' }}>
+                <p className="prose" style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, margin: '0 0 16px' }}>
                   {pendingInfo.message}
                 </p>
 
@@ -4453,7 +4505,7 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                   {pendingInfo.identifier && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                       <span className="asas-muted" style={{ fontSize: 12 }}>الرقم الوظيفي المبدئي:</span>
-                      <strong style={{ fontFamily: 'monospace', color: 'var(--accent)', fontSize: 14 }}>{pendingInfo.identifier}</strong>
+                      <strong className="num" style={{ color: 'var(--accent)', fontSize: 14 }}>{pendingInfo.identifier}</strong>
                     </div>
                   )}
                   {pendingInfo.email && (
@@ -4465,13 +4517,13 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                   {pendingInfo.work_type && (
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span className="asas-muted" style={{ fontSize: 12 }}>طبيعة العمل:</span>
-                      <strong style={{ fontSize: 12.5, color: '#38bdf8' }}>{pendingInfo.work_type}</strong>
+                      <strong style={{ fontSize: 12.5, color: 'var(--chart-out)' }}>{pendingInfo.work_type}</strong>
                     </div>
                   )}
                 </div>
 
-                <div style={{ background: 'rgba(16, 185, 129, 0.08)', borderRadius: 10, padding: 10, border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: 11.5, color: 'var(--text-2)', marginBottom: 18, lineHeight: 1.5, textAlign: 'right', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <Icon name="shieldCheck" style={{ width: 15, height: 15, color: '#10b981', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ background: 'var(--paid-bg)', borderRadius: 10, padding: 10, border: '1px solid var(--paid)', fontSize: 11.5, color: 'var(--text-2)', marginBottom: 18, lineHeight: 1.5, textAlign: 'right', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <Icon name="shieldCheck" style={{ width: 15, height: 15, color: 'var(--paid)', flexShrink: 0, marginTop: 2 }} />
                   <span><strong>تنبيه الأمان والاعتماد:</strong> سيتم تفعيل حسابك فور موافقة إدارة النظام في لوحة التحكم. يمكنك بعدها تسجيل الدخول بالرقم الوظيفي أو البريد.</span>
                 </div>
 
@@ -4495,7 +4547,7 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                   <div className={`asas-notice ${error.includes('بانتظار موافقة') || error.includes('قيد المراجعة') ? 'warning' : 'error'}`} role="alert" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {error.includes('بانتظار موافقة') || error.includes('قيد المراجعة') ? (
-                        <Icon name="clock" style={{ width: 18, height: 18, color: '#f59e0b', flexShrink: 0 }} />
+                        <Icon name="clock" style={{ width: 18, height: 18, color: 'var(--partial)', flexShrink: 0 }} />
                       ) : (
                         <Icon name="alert" style={{ width: 18, height: 18, flexShrink: 0 }} />
                       )}
@@ -5475,15 +5527,15 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           </div>
           <div>
             <h1 style={{ fontSize: 22, margin: '0 0 4px', color: 'var(--text)' }}>
-              <Stretch before="أهْـ" after="ـلاً" length={2} />، {user.name}
+              <AsasGreeting name={user.name} />
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span className="asas-readonly-id" style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12.5 }}>
+              <span className="asas-readonly-id num" style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12.5 }}>
                 الرقم الوظيفي: {user.identifier}
               </span>
               <span className="asas-badge inside" style={{ fontSize: 11 }}>موظف معتمد</span>
               {user.is_remote ? (
-                <span className="asas-badge" style={{ fontSize: 11, background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                <span className="asas-badge" style={{ fontSize: 11, background: 'var(--glass-inset)', color: 'var(--chart-out)', border: '1px solid var(--chart-out)' }}>
                   دوام عن بعد (أونلاين)
                 </span>
               ) : (
@@ -5564,9 +5616,9 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
       {isInAppBrowser && (
         <div style={{
-          background: 'rgba(245, 158, 11, 0.12)',
-          border: '1px solid rgba(245, 158, 11, 0.35)',
-          color: '#fbbf24',
+          background: 'var(--partial-bg)',
+          border: '1px solid var(--partial)',
+          color: 'var(--partial)',
           padding: '10px 14px',
           borderRadius: 12,
           marginBottom: 14,
@@ -5576,7 +5628,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           alignItems: 'center',
           gap: 10
         }}>
-          <Icon name="alert" style={{ width: 22, height: 22, flexShrink: 0, color: '#f59e0b' }} />
+          <Icon name="alert" style={{ width: 22, height: 22, flexShrink: 0, color: 'var(--partial)' }} />
           <div>
             <strong>تنبيه: أنت تتصفح من داخل تطبيق واتساب.</strong><br />
             متصفح واتساب يقيّد خدمات الموقع والكاميرا. يرجى الضغط على زر الخيارات (⋮) أعلى زاوية الشاشة واختيار <strong>"فتح في Chrome / المتصفح"</strong> لإتمام الحضور والموقع بنجاح.
@@ -5685,7 +5737,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             {isRemote ? (
               <div className="asas-duty-capsule remote">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Icon name="shieldCheck" style={{ width: 16, height: 16, color: '#38bdf8', flexShrink: 0 }} />
+                  <Icon name="shieldCheck" style={{ width: 16, height: 16, color: 'var(--chart-out)', flexShrink: 0 }} />
                   <span>نظام العمل عن بعد معتمد لجهازك • التحضير فوري بدون الحاجة لمسح كود QR</span>
                 </div>
               </div>
@@ -5981,7 +6033,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 </div>
 
                 <div style={{ background: 'var(--glass-inset)', padding: 12, borderRadius: 10, border: '1px solid var(--hairline)' }}>
-                  <strong style={{ color: '#38bdf8', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <strong style={{ color: 'var(--chart-out)', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <span>🍎</span> في متصفح Safari (آيفون iPhone / آيباد iPad):
                   </strong>
                   <ol style={{ margin: 0, paddingRight: 20, fontSize: 12.5, lineHeight: 1.7, color: 'var(--text-2)' }}>
@@ -5992,8 +6044,8 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                   </ol>
                 </div>
 
-                <div style={{ background: 'rgba(245, 158, 11, 0.08)', padding: 12, borderRadius: 10, border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-                  <strong style={{ color: '#f59e0b', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <div style={{ background: 'var(--partial-bg)', padding: 12, borderRadius: 10, border: '1px solid var(--partial)' }}>
+                  <strong style={{ color: 'var(--partial)', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <span>💬</span> إذا كنت تتصفح من داخل تطبيق واتساب (WhatsApp):
                   </strong>
                   <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-2)' }}>

@@ -1535,6 +1535,115 @@ app.patch('/api/leave/:id',admin,allow('leave.review'),wrap(async(req,res)=>{
   return {updated:true};
  }));
 }));
+async function answerAttendanceAssistant(user, question) {
+ await closeScheduled();
+ const q = String(question || '').trim().toLowerCase();
+ const today = policy.localDay();
+ const isAdmin = user.role !== 'employee';
+ const fmtTime = iso => {
+  if (!iso) return '—';
+  try {
+   return new Date(iso).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Aden' });
+  } catch { return '—'; }
+ };
+
+ if (isAdmin) {
+  const broad = ['super_admin', 'hr_admin'].includes(user.role);
+  const rows = await recordsFor(user, today, today);
+  const presentRows = rows.filter(r => r.id && r.first_in);
+  const insideRows = presentRows.filter(r => r.state === 'inside');
+  const lateRows = presentRows.filter(r => Number(r.late_minutes) > 0);
+  const absentRows = rows.filter(r => r.state === 'absent');
+  const leaveRows = rows.filter(r => r.state === 'leave');
+
+  if (q.includes('تأخر') || q.includes('متأخر')) {
+   if (!lateRows.length) return `لا يوجد أي موظف متأخر اليوم (${today}) ضمن نطاق صلاحيتك.`;
+   const list = lateRows.slice(0, 12).map(r => `• ${r.name}: تأخير ${r.late_minutes} دقيقة (دخول ${fmtTime(r.first_in)})`).join('\n');
+   return `المتأخرون اليوم (${lateRows.length}):\n${list}${lateRows.length > 12 ? `\n…وغيرهم (${lateRows.length - 12})` : ''}`;
+  }
+
+  if (q.includes('غائب') || q.includes('غياب') || q.includes('لم يسجل')) {
+   if (!absentRows.length) return `جميع الموظفين المكلّفين سجلوا حضورهم اليوم أو في إجازة معتمدة (${leaveRows.length}).`;
+   const list = absentRows.slice(0, 15).map(r => `• ${r.name} (${r.branch_name})`).join('\n');
+   return `لم يسجلوا حضورهم اليوم (${absentRows.length} موظف، إضافة إلى ${leaveRows.length} في إجازة):\n${list}${absentRows.length > 15 ? `\n…وغيرهم (${absentRows.length - 15})` : ''}`;
+  }
+
+  if (q.includes('طلب') || q.includes('معلق') || q.includes('إجاز') || q.includes('تسجيل') || q.includes('موافق')) {
+   const pendingAcc = (await db.query("SELECT name, identifier FROM accounts WHERE role='employee' AND active=FALSE AND ($1=1 OR branch_id=$2) ORDER BY id DESC LIMIT 10", [broad, user.branch_id])).rows;
+   const pendingLeave = (await db.query("SELECT l.from_date, l.to_date, a.name FROM leave_requests l JOIN accounts a ON a.id=l.employee_id WHERE l.status='pending' AND ($1=1 OR a.branch_id=$2) ORDER BY l.id DESC LIMIT 10", [broad, user.branch_id])).rows;
+   const lines = [
+    `• طلبات تفعيل الحسابات المعلقة: ${pendingAcc.length}${pendingAcc.length ? ' (' + pendingAcc.slice(0, 4).map(a => a.name).join('، ') + ')' : ''}`,
+    `• طلبات الإجازات المعلقة: ${pendingLeave.length}${pendingLeave.length ? ' (' + pendingLeave.slice(0, 4).map(l => l.name).join('، ') + ')' : ''}`
+   ];
+   return `حالة الطلبات المعلقة الآن:\n${lines.join('\n')}`;
+  }
+
+  const rate = rows.length ? Math.round((presentRows.length / rows.length) * 100) : 0;
+  return [
+   `ملخص الحضور اليوم (${today}):`,
+   `• إجمالي الموظفين: ${rows.length}`,
+   `• الحاضرون: ${presentRows.length} (نسبة الالتزام ${rate}%)`,
+   `• على رأس العمل الآن: ${insideRows.length}`,
+   `• المتأخرون: ${lateRows.length} | لم يسجلوا: ${absentRows.length} | في إجازة: ${leaveRows.length}`
+  ].join('\n');
+ }
+
+ const shift = user.shift_id ? (await db.query('SELECT name, start_time, end_time, grace_minutes FROM shifts WHERE id=$1', [user.shift_id])).rows[0] : null;
+ const branch = user.branch_id ? (await db.query('SELECT name, entry_radius FROM branches WHERE id=$1', [user.branch_id])).rows[0] : null;
+ const month = today.slice(0, 7);
+ const monthRows = (await db.query("SELECT * FROM duty_records WHERE employee_id=$1 AND strftime('%Y-%m', shift_start, '+3 hours')=$2 ORDER BY shift_start DESC", [user.id, month])).rows;
+ const todayRow = monthRows.find(r => {
+  try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden' }).format(new Date(r.shift_start)) === today; }
+  catch { return false; }
+ }) || null;
+
+ if (q.includes('وردي') || q.includes('دوام') || q.includes('فرع') || q.includes('مقر') || q.includes('وقت')) {
+  const mode = user.is_remote ? 'دوام عن بعد (أونلاين)' : `حضوري بالمقر (${branch?.name || 'الفرع الرئيسي'})`;
+  if (!shift) return `طبيعة دوامك: ${mode}. لم يتم ربط وردية محددة بعد.`;
+  return `تفاصيل دوامك المعتمدة:\n• الوردية: ${shift.name} (من ${shift.start_time} إلى ${shift.end_time})\n• فترة السماح: ${shift.grace_minutes ?? 15} دقيقة\n• طبيعة العمل: ${mode}`;
+ }
+
+ if (q.includes('شهر') || q.includes('ساع') || q.includes('مجموع') || q.includes('أيام')) {
+  const totalMins = monthRows.reduce((acc, r) => acc + countedMinutes(r), 0);
+  const hours = (totalMins / 60).toFixed(1);
+  return `ملخص دوامك لشهر ${month}:\n• أيام الحضور المسجلة: ${monthRows.filter(r => r.first_in).length} يوم\n• إجمالي ساعات العمل المحتسبة: ${hours} ساعة (${totalMins} دقيقة)`;
+ }
+
+ if (q.includes('إجاز') || q.includes('طلب')) {
+  const leaves = (await db.query('SELECT status, from_date, to_date FROM leave_requests WHERE employee_id=$1 ORDER BY id DESC LIMIT 10', [user.id])).rows;
+  if (!leaves.length) return 'لا توجد لديك طلبات إجازة مسجلة حتى الآن. يمكنك تقديم طلب من تبويب «طلب إجازة واستئذان».';
+  const pend = leaves.filter(l => l.status === 'pending').length;
+  const appv = leaves.filter(l => l.status === 'approved').length;
+  const latest = leaves[0];
+  const stLabel = latest.status === 'approved' ? 'مقبولة' : latest.status === 'rejected' ? 'مرفوضة' : 'قيد المراجعة';
+  return `ملخص إجازاتك (${leaves.length} طلبات):\n• مقبولة: ${appv} | قيد المراجعة: ${pend}\n• آخر طلب: من ${String(latest.from_date).slice(0, 10)} إلى ${String(latest.to_date).slice(0, 10)} (${stLabel})`;
+ }
+
+ if (q.includes('بصم') || q.includes('كيف') || q.includes('موقع') || q.includes('qr')) {
+  return user.is_remote
+   ? 'حسابك مضبوط على الدوام عن بعد: اضغط زر «تسجيل الحضور بالبصمة» وسيتم التحقق من بصمة الجهاز وتسجيل حضورك مباشرة.'
+   : 'لتسجيل الحضور بالمقر: تأكد من تفعيل الموقع الجغرافي (GPS) داخل نطاق الفرع، ثم استخدم زر «تسجيل الحضور بالبصمة» أو امسح رمز QR المعتمد.';
+ }
+
+ const statusStr = todayRow
+  ? (todayRow.state === 'inside'
+      ? `على رأس العمل (دخول ${fmtTime(todayRow.first_in)}${todayRow.late_minutes > 0 ? ` · تأخير ${todayRow.late_minutes} د` : ''})`
+      : `تم تسجيل انصرافك اليوم (دخول ${fmtTime(todayRow.first_in)} · خروج ${fmtTime(todayRow.last_out)})`)
+  : 'لم تسجل حضورك اليوم بعد';
+ const totalMins = monthRows.reduce((acc, r) => acc + countedMinutes(r), 0);
+ return `حالتك اليوم (${today}): ${statusStr}.\nإجمالي ساعاتك هذا الشهر: ${(totalMins / 60).toFixed(1)} ساعة (${shift ? `وردية ${shift.start_time}–${shift.end_time}` : 'بدون وردية'}).`;
+}
+
+app.get('/api/assistant/status', (req, res) => respond(res, { enabled: true }));
+
+app.post('/api/assistant', rateLimit({ windowMs: 60000, max: 40, standardHeaders: true, legacyHeaders: false }), wrap(async (req, res) => {
+ const msgs = Array.isArray(req.body?.messages) ? req.body.messages.slice(-8) : [];
+ const lastUser = [...msgs].reverse().find(m => m && m.role === 'user' && typeof m.content === 'string');
+ const question = lastUser ? string(lastUser.content, 1500) : 'ملخص اليوم';
+ const reply = await answerAttendanceAssistant(req.user, question);
+ respond(res, { reply });
+}));
+
 app.use((req,res)=>res.status(404).json({success:false,error:'NOT_FOUND',message:'المسار غير موجود'}));
 app.use((err,req,res,next)=>{
  const conflict=err.code==='23505',validation=err.code==='23503'||err.code==='23514'||err.type==='entity.parse.failed';

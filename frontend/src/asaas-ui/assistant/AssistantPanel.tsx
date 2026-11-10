@@ -61,7 +61,10 @@ function save(key: string, entries: Entry[]) {
   }
 }
 
-const newId = () => crypto.randomUUID();
+const newId = () =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 /** The conversation: header, scrolling thread and composer, sized by its container. */
 export function AssistantPanel({ config, onClose }: { config: AssistantConfig; onClose: () => void }) {
