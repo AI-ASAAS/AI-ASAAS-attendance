@@ -29,25 +29,39 @@
   overflow-x: clip;
 }
 
+.asas-sidebar-scrim {
+  display: none;
+}
+
 .asas-sidebar {
   position: sticky;
-  top: 0;
-  z-index: 25;
-  flex: 0 0 264px;
-  width: 264px;
-  height: 100dvh;
-  border-radius: 0;
-  border-inline-end: 1px solid var(--hairline);
+  top: 12px;
+  z-index: 60;
+  flex: 0 0 268px;
+  width: 268px;
+  height: calc(100dvh - 24px);
+  margin-block: 12px;
+  margin-inline-start: 12px;
+  border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 20px 14px 18px;
-  gap: 16px;
+  padding: 18px 14px;
+  gap: 14px;
+  transition: transform 0.3s var(--ease-out);
 }
 
 .asas-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 4px 6px 12px;
   border-bottom: 1px solid var(--hairline);
+}
+
+.asas-sidebar-close-btn {
+  display: none;
 }
 
 .asas-sidebar-scroll {
@@ -180,7 +194,7 @@
   color: var(--text-3);
 }
 
-/* Main Column & SiteHeader Adaptation for Admin Desktop */
+/* Main Column & Single Utility Top Bar */
 .asas-main {
   flex: 1 1 auto;
   min-width: 0;
@@ -188,17 +202,38 @@
   flex-direction: column;
 }
 
-.asas-main .site-header .container {
-  max-width: none;
-  padding-inline: var(--page-pad);
+.asas-topbar-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 12px var(--page-pad) 0;
 }
 
-.asas-main .site-nav {
+.asas-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--header-h);
+  padding-inline: 18px 12px;
+}
+
+.asas-topbar-start {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.asas-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+.asas-menu-btn {
   display: none;
-}
-
-.asas-main .site-header__actions {
-  margin-inline-start: auto;
 }
 
 .asas-header-mobile-brand {
@@ -1722,8 +1757,36 @@ select.asas-input option {
 }
 
 @media (max-width: 900px) {
+  .asas-sidebar-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    display: block;
+    background: var(--overlay);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+
   .asas-sidebar {
-    display: none;
+    position: fixed;
+    inset-block: 10px;
+    inset-inline-start: 10px;
+    width: min(300px, calc(100vw - 24px));
+    height: calc(100dvh - 20px);
+    margin: 0;
+    z-index: 60;
+    transform: translateX(calc(var(--dir-x) * -115%));
+    pointer-events: none;
+  }
+
+  .asas-sidebar.open {
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .asas-sidebar-close-btn,
+  .asas-menu-btn {
+    display: inline-flex;
   }
 
   .asas-header-mobile-brand {
@@ -1734,8 +1797,32 @@ select.asas-input option {
     display: none;
   }
 
-  .asas-main .site-header[data-open='true'] .site-nav {
+  .asas-employee-shell .site-header__menu,
+  .asas-employee-shell .site-nav {
+    display: none;
+  }
+
+  .tabbar button {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-2);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .tabbar button svg {
+    width: 22px;
+    height: 22px;
   }
 
   .asas-login {
@@ -1811,6 +1898,8 @@ select.asas-input option {
   }
 
   .asas-sidebar,
+  .asas-sidebar-scrim,
+  .asas-topbar-wrap,
   .site-header,
   .tabbar,
   .ambient,

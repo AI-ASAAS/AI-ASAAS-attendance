@@ -1126,7 +1126,25 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notice, setNotice] = useState('');
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    const media = window.matchMedia('(max-width: 900px)');
+    const onChange = () => {
+      if (!media.matches) setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    media.addEventListener('change', onChange);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      media.removeEventListener('change', onChange);
+    };
+  }, [sidebarOpen]);
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [branches, setBranches] = useState([]);
@@ -1796,6 +1814,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const set = (k, value) => setForm(f => ({ ...f, [k]: value }));
   const selectAdminTab = (key) => {
     setTab(key);
+    setSidebarOpen(false);
     setData(null);
     setNotice('');
     setSearch('');
@@ -1807,10 +1826,26 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
     <div className="asas-app">
       <Ambient />
 
-      {/* Desktop Sidebar (hidden below 900px in favor of TabBar + SiteHeader menu) */}
-      <Glass as="aside" thick className="asas-sidebar">
+      {sidebarOpen && (
+        <div
+          className="asas-sidebar-scrim"
+          aria-hidden="true"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Single Responsive Floating Glass Sidebar (docked > 900px, slide drawer <= 900px) */}
+      <Glass as="aside" thick className={`asas-sidebar ${sidebarOpen ? 'open' : ''}`} aria-label="التنقل الرئيسي">
         <div className="asas-sidebar-head">
           <Brand />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="close"
+            label="إغلاق القائمة"
+            className="asas-sidebar-close-btn"
+            onClick={() => setSidebarOpen(false)}
+          />
         </div>
 
         <div className="asas-sidebar-scroll">
@@ -1865,9 +1900,18 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
 
       {/* Main Workspace */}
       <div className="asas-main">
-        <SiteHeader
-          brand={
-            <>
+        <div className="asas-topbar-wrap">
+          <Glass as="header" thick pill className="asas-topbar">
+            <div className="asas-topbar-start">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="menu"
+                label="فتح القائمة الجانبية"
+                className="asas-menu-btn"
+                aria-expanded={sidebarOpen}
+                onClick={() => setSidebarOpen(true)}
+              />
               <a
                 href="#dashboard"
                 className="brand asas-header-mobile-brand"
@@ -1877,20 +1921,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 <span className="brand__name"><Swash>أساس</Swash></span>
               </a>
               <span className="asas-header-section"><Swash>{title}</Swash></span>
-            </>
-          }
-          nav={visibleTabs.map(([key, label]) => (
-            <a
-              key={key}
-              href={`#${key}`}
-              aria-current={tab === key ? 'page' : undefined}
-              onClick={(e) => { e.preventDefault(); selectAdminTab(key); }}
-            >
-              {label}
-            </a>
-          ))}
-          actions={
-            <>
+            </div>
+
+            <div className="asas-topbar-actions">
               <LiveClock iconSize={14} iconColor="var(--accent)" />
               <button
                 type="button"
@@ -1918,9 +1951,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
               >
                 <UserAvatar user={user} size="sm" />
               </button>
-            </>
-          }
-        />
+            </div>
+          </Glass>
+        </div>
 
         <main className="asas-content">
           <div className="asas-heading">
@@ -3522,7 +3555,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           )}
         </main>
 
-        <TabBar label="التنقل الرئيسي">
+        <TabBar label="التنقل السريع">
           <a
             href="#dashboard"
             aria-current={tab === 'dashboard' ? 'page' : undefined}
@@ -3550,14 +3583,6 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
             </a>
           )}
           <a
-            href="#qr"
-            aria-current={tab === 'qr' ? 'page' : undefined}
-            onClick={(e) => { e.preventDefault(); selectAdminTab('qr'); }}
-          >
-            <Icon name="qrCode" />
-            الرموز
-          </a>
-          <a
             href="#settings"
             aria-current={tab === 'settings' ? 'page' : undefined}
             onClick={(e) => { e.preventDefault(); selectAdminTab('settings'); }}
@@ -3565,6 +3590,14 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
             <Icon name="settings" />
             الإعدادات
           </a>
+          <button
+            type="button"
+            aria-expanded={sidebarOpen}
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Icon name="menu" />
+            الأقسام
+          </button>
         </TabBar>
       </div>
 
@@ -5444,7 +5477,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   }, [isRemote, isInside]);
 
   return (
-    <>
+    <div className="asas-employee-shell">
       <SiteHeader
         brand={
           <a
@@ -6038,7 +6071,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           السجل
         </a>
       </TabBar>
-    </>
+    </div>
   );
 }
 
