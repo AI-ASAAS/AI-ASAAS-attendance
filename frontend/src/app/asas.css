@@ -66,8 +66,20 @@ h3 { font-size: clamp(14.5px, 0.4vw + 13px, 16.5px); }
 
 .btn {
   min-width: 0;
-  padding: 0 clamp(14px, 1.5vw, 18px);
   font-size: clamp(12.5px, 0.2vw + 12px, 14px);
+}
+
+.btn:not(.btn--icon) {
+  padding-inline: clamp(12px, 1.4vw, 18px);
+}
+
+.btn.btn--sm:not(.btn--icon) {
+  padding-inline: clamp(10px, 1.2vw, 14px);
+  font-size: clamp(12px, 0.2vw + 11.4px, 13px);
+}
+
+.btn.btn--icon {
+  padding: 0;
 }
 
 .grid--stats > *,
@@ -1874,6 +1886,7 @@ select.asas-input option {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   gap: clamp(10px, 1.6vw, 14px);
+  margin-bottom: clamp(18px, 3vw, 26px);
 }
 
 .asas-employee-stats .asas-stat-card {
@@ -1941,16 +1954,24 @@ select.asas-input option {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  padding: 10px 14px;
+  padding: clamp(11px, 1.8vw, 14px) clamp(14px, 2vw, 18px);
   border-radius: var(--radius-md);
-  font-size: 12.5px;
+  font-size: clamp(12px, 0.25vw + 11.2px, 13px);
   font-weight: 600;
-  margin-bottom: 14px;
+  margin-top: 2px;
+  margin-bottom: clamp(16px, 2.5vw, 22px);
   border: 1px solid var(--hairline);
   background: var(--glass-inset);
   color: var(--text-2);
+}
+
+.asas-duty-capsule-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .asas-duty-capsule.inside {

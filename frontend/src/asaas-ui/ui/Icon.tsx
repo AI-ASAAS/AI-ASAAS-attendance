@@ -146,8 +146,8 @@ const paths = {
   ),
   logout: (
     <>
-      <path d="M14 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
-      <path d="M10 16l-4-4 4-4M6 12h9" />
+      <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+      <path d="M9 16.5 4.5 12 9 7.5M5 12h11" />
     </>
   ),
   file: (
@@ -304,7 +304,7 @@ const paths = {
   remoteOut: (
     <>
       <rect x="3" y="4.5" width="18" height="12" rx="2" />
-      <path d="M2 20h20M9.5 8l5 5M14.5 8l-5 5" />
+      <path d="M2 20h20M13 8v5M10 10.5H5.5M8 8l-2.5 2.5L8 13" />
     </>
   ),
   globe: (
@@ -327,7 +327,7 @@ export type IconName = keyof typeof paths;
  * Icons that point along the reading direction. They are drawn for Arabic
  * (chevronLeft = "next/forward") and mirror themselves when `<html dir="ltr">`.
  */
-const DIRECTIONAL = new Set<IconName>(['chevronLeft', 'chevronRight']);
+const DIRECTIONAL = new Set<IconName>(['chevronLeft', 'chevronRight', 'logout', 'logIn']);
 
 export function Icon({ name, className, ...props }: { name: IconName } & SVGProps<SVGSVGElement>) {
   return (

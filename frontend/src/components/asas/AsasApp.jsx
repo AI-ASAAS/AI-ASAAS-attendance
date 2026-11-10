@@ -5906,14 +5906,14 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             {/* 3. Verification Bar */}
             {isRemote ? (
               <div className="asas-duty-capsule remote">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="asas-duty-capsule-main">
                   <Icon name="shieldCheck" style={{ width: 16, height: 16, color: 'var(--chart-out)', flexShrink: 0 }} />
                   <span>نظام العمل عن بعد معتمد لجهازك • التحضير فوري بدون الحاجة لمسح كود QR</span>
                 </div>
               </div>
             ) : (
               <div className={`asas-duty-capsule ${geofenceStatus.inside ? 'inside' : 'outside'}`}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="asas-duty-capsule-main">
                   <Icon name={geofenceStatus.inside ? 'checkCircle' : 'mapPin'} style={{ width: 16, height: 16, flexShrink: 0 }} />
                   <span>
                     {geofenceStatus.inside 
@@ -6026,7 +6026,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                     onClick={() => act('exit')}
                     title="تسجيل الانصراف عبر بصمة الهاتف"
                   >
-                    <Icon name="checkCircle" style={{ width: 18, height: 18 }} />
+                    <Icon name="logout" style={{ width: 18, height: 18 }} />
                     <span>تسجيل الانصراف بالبصمة</span>
                   </button>
                 </div>
