@@ -2188,7 +2188,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 <Card title="حوكمة المنشأة والموقع" icon="building">
                   <div style={{ padding: '12px 6px' }}>
                     <p className="asas-muted">إدارة المواقع الجغرافية وضبط دقة قراءات GPS وفترة تأكيد الخروج.</p>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
                       <button className="asas-btn primary sm" onClick={() => setTab('branches')}>
                         <Icon name="mapPin" />
                         المواقع الجغرافية
@@ -3509,7 +3509,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           {/* SYSTEM SETTINGS TAB */}
           {tab === 'settings' && (
             <form onSubmit={saveSystemSettings} className="asas-form-grid">
-              <Glass style={{ gridColumn: '1 / -1', padding: 26 }}>
+              <Glass style={{ gridColumn: '1 / -1', padding: 'clamp(16px, 2.5vw, 26px)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                   <h2 style={{ margin: 0, fontSize: 20 }}>إعدادات النظام وسياسات التشغيل الحقيقية</h2>
                   <div className="asas-tile-icon" style={{ width: 30, height: 30 }}>
