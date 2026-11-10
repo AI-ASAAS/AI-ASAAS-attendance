@@ -1,7 +1,7 @@
 # =============================================================================
 # ASAS Attendance System - 24/7 Automated Watchdog & Self-Healing Service
 # Monitors & Auto-Recovers:
-# 1. PostgreSQL Database (Port 6543) + Postmaster Stale PID Cleanser
+# 1. SQLite Database Integrity (database\asas.db)
 # 2. Backend API Service (Port 6500)
 # 3. Next.js Frontend Server (Port 7442)
 # 4. Smart Dual Proxy (Ports 7443 & 8443)
@@ -49,14 +49,18 @@ function Log-Message {
         Add-Content -Path $WatchdogLog -Value $entry -Encoding UTF8 -ErrorAction SilentlyContinue
     } catch {}
     
-    if ($Level -eq "ERROR") {
-        Write-Host $entry -ForegroundColor Red
-    } elseif ($Level -eq "WARN") {
-        Write-Host $entry -ForegroundColor Yellow
-    } elseif ($Level -eq "SUCCESS") {
-        Write-Host $entry -ForegroundColor Green
-    } else {
-        Write-Host $entry -ForegroundColor Cyan
+    if (-not $Continuous) {
+        try {
+            if ($Level -eq "ERROR") {
+                Write-Host $entry -ForegroundColor Red
+            } elseif ($Level -eq "WARN") {
+                Write-Host $entry -ForegroundColor Yellow
+            } elseif ($Level -eq "SUCCESS") {
+                Write-Host $entry -ForegroundColor Green
+            } else {
+                Write-Host $entry -ForegroundColor Cyan
+            }
+        } catch {}
     }
 }
 
@@ -79,55 +83,13 @@ function Test-TcpPort {
     }
 }
 
-function Ensure-Postgres {
-    $dbPort = 6543
-    $pgData = "C:\Users\Anoos.alaghbari\asas_pgdata"
-    
-    if (Test-TcpPort -Port $dbPort) {
+function Ensure-SqliteDb {
+    $dbFile = Join-Path $BaseDir "database\asas.db"
+    if (Test-Path $dbFile) {
         return $true
     }
-
-    Log-Message "PostgreSQL on port $dbPort is DOWN. Checking stale PID..." "WARN"
-    
-    # 1. Clean stale postmaster.pid if postgres terminated abnormally
-    $pidFile = Join-Path $pgData "postmaster.pid"
-    if (Test-Path $pidFile) {
-        try {
-            $rawPid = (Get-Content $pidFile -Head 1).Trim()
-            $existingProc = Get-Process -Id $rawPid -ErrorAction SilentlyContinue
-            if (-not $existingProc) {
-                Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
-                Log-Message "Removed stale postmaster.pid (PID $rawPid)" "INFO"
-            }
-        } catch {
-            Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
-        }
-    }
-
-    # 2. Launch PostgreSQL
-    $pgExe = "C:\Program Files\PostgreSQL\18\bin\postgres.exe"
-    if (-not (Test-Path $pgExe)) {
-        $pgExe = "C:\Program Files\PostgreSQL\17\bin\postgres.exe"
-    }
-
-    if (Test-Path $pgExe) {
-        Start-Process -FilePath $pgExe -ArgumentList "-D `"$pgData`" -p $dbPort" -WindowStyle Hidden
-    } else {
-        Log-Message "postgres.exe not found at standard path!" "ERROR"
-        return $false
-    }
-
-    # 3. Wait up to 15 seconds for DB to become ready
-    for ($i = 0; $i -lt 15; $i++) {
-        Start-Sleep -Seconds 1
-        if (Test-TcpPort -Port $dbPort) {
-            Log-Message "PostgreSQL on port $dbPort recovered successfully!" "SUCCESS"
-            return $true
-        }
-    }
-
-    Log-Message "Failed to start PostgreSQL on port $dbPort" "ERROR"
-    return $false
+    Log-Message "SQLite database file missing at $dbFile (will be initialized by backend)." "WARN"
+    return $true
 }
 
 function Ensure-Backend {
@@ -277,7 +239,7 @@ function Ensure-CloudflareTunnel {
 }
 
 function Run-HealthCycle {
-    $dbOk = Ensure-Postgres
+    $dbOk = Ensure-SqliteDb
     $beOk = Ensure-Backend
     $feOk = Ensure-Frontend
     $prOk = Ensure-SmartProxy

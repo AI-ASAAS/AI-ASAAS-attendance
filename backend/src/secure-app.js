@@ -81,14 +81,14 @@ app.post('/api/auth/login',rateLimit({windowMs:900000,max:20,standardHeaders:tru
    error('DEVICE_MISMATCH',`حسابك مقترن بجهاز آخر (${account.bound_device_name||'جوالك السابق'}). يرجى التواصل مع إدارة النظام لفك الارتباط إذا غيرت هاتفك.`,403);
   }
   if(!account.bound_device_id){
-   await db.query('UPDATE accounts SET bound_device_id=$1, bound_device_name=$2, device_bound_at=NOW(), phone=COALESCE(phone,$3) WHERE id=$4',[deviceId,deviceName||'هاتف ذكي',phone,account.id]);
+   await db.query("UPDATE accounts SET bound_device_id=$1, bound_device_name=$2, device_bound_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), phone=COALESCE(phone,$3) WHERE id=$4",[deviceId,deviceName||'هاتف ذكي',phone,account.id]);
    account.bound_device_id=deviceId;account.bound_device_name=deviceName||'هاتف ذكي';account.device_bound_at=new Date();
    if(!account.phone&&phone)account.phone=phone;
   }
  }
 
  const token=security.newToken();
- await db.query("INSERT INTO auth_sessions(token_hash,account_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '365 days')",[security.digest(token),account.id]);
+ await db.query("INSERT INTO auth_sessions(token_hash,account_id,expires_at) VALUES($1,$2,strftime('%Y-%m-%dT%H:%M:%fZ','now','+365 days'))",[security.digest(token),account.id]);
  res.cookie('asas_session',token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',maxAge:365*24*3600000,path:'/'});
  respond(res,{account:safeAccount(account),token});
 }));
@@ -96,9 +96,9 @@ app.post('/api/auth/login',rateLimit({windowMs:900000,max:20,standardHeaders:tru
 async function generateNextEmployeeIdentifier(client) {
  const res = await client.query(`
    SELECT identifier FROM accounts 
-   WHERE identifier ~ '^[0-9]+$' 
-   ORDER BY CAST(identifier AS BIGINT) DESC 
-   LIMIT 1 FOR UPDATE
+   WHERE identifier GLOB '[0-9]*' AND identifier NOT GLOB '*[^0-9]*'
+   ORDER BY CAST(identifier AS INTEGER) DESC 
+   LIMIT 1
  `);
  let nextNum = 1;
  if (res.rows.length) {
@@ -224,7 +224,7 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
 
  let isNew = false;
  const account = await db.transaction(async c => {
-  const result = await c.query('SELECT * FROM accounts WHERE LOWER(email)=$1 FOR UPDATE', [targetEmail]);
+  const result = await c.query('SELECT * FROM accounts WHERE LOWER(email)=$1', [targetEmail]);
   let acc = result.rows[0];
 
   if(deviceId){
@@ -274,7 +274,7 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
      error('DEVICE_MISMATCH',`حسابك مقترن بجهاز آخر (${acc.bound_device_name||'جوالك السابق'}). يرجى التواصل مع إدارة النظام لفك الارتباط.`,403);
     }
     if(!acc.bound_device_id){
-     await c.query('UPDATE accounts SET bound_device_id=$1, bound_device_name=$2, device_bound_at=NOW(), phone=COALESCE(phone,$3) WHERE id=$4',[deviceId,deviceName||'هاتف ذكي',userPhone,acc.id]);
+     await c.query("UPDATE accounts SET bound_device_id=$1, bound_device_name=$2, device_bound_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), phone=COALESCE(phone,$3) WHERE id=$4",[deviceId,deviceName||'هاتف ذكي',userPhone,acc.id]);
      acc.bound_device_id=deviceId;
      acc.bound_device_name=deviceName||'هاتف ذكي';
      acc.device_bound_at=new Date();
@@ -295,7 +295,7 @@ app.post('/api/auth/google',rateLimit({windowMs:900000,max:25,standardHeaders:tr
  }
 
  const token=security.newToken();
- await db.query("INSERT INTO auth_sessions(token_hash,account_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '365 days')",[security.digest(token),account.id]);
+ await db.query("INSERT INTO auth_sessions(token_hash,account_id,expires_at) VALUES($1,$2,strftime('%Y-%m-%dT%H:%M:%fZ','now','+365 days'))",[security.digest(token),account.id]);
  res.cookie('asas_session',token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',maxAge:365*24*3600000,path:'/'});
  respond(res,{
   account:safeAccount(account),
@@ -323,7 +323,7 @@ app.use('/api',wrap(async(req,res,next)=>{
  const cookie=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('asas_session='))?.slice(13);
  const token=req.headers.authorization?.startsWith('Bearer ')?req.headers.authorization.slice(7):cookie;
  if(!token||token.length>256)error('UNAUTHORIZED','يرجى تسجيل الدخول',401);
- const {rows}=await db.query('SELECT a.* FROM auth_sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=$1 AND s.expires_at>NOW() AND a.active=TRUE',[security.digest(token)]);
+ const {rows}=await db.query("SELECT a.* FROM auth_sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=$1 AND s.expires_at>strftime('%Y-%m-%dT%H:%M:%fZ','now') AND a.active=TRUE",[security.digest(token)]);
  if(!rows[0])error('UNAUTHORIZED','انتهت الجلسة؛ سجل الدخول مجدداً',401);
  req.user=rows[0];req.tokenHash=security.digest(token);next();
 }));
@@ -337,7 +337,7 @@ app.post('/api/auth/logout',wrap(async(req,res)=>{
 
 app.get('/api/admin/branches',admin,wrap(async(req,res)=>{
  const broad=['super_admin','hr_admin'].includes(req.user.role);
- respond(res,(await db.query('SELECT * FROM branches WHERE $1::boolean OR id=$2 ORDER BY id',[broad,req.user.branch_id])).rows);
+ respond(res,(await db.query('SELECT * FROM branches WHERE ($1=1 OR id=$2) ORDER BY id',[broad,req.user.branch_id])).rows);
 }));
 function branchInput(b){
  const name=string(b.name);
@@ -353,7 +353,7 @@ app.post('/api/admin/branches',admin,allow('locations.write'),wrap(async(req,res
 app.put('/api/admin/branches/:id',admin,allow('locations.write'),wrap(async(req,res)=>{
  const branchId=id(req.params.id);scope(req.user,branchId);const values=branchInput(req.body),reason=string(req.body.reason,500);
  respond(res,await db.transaction(async c=>{
- const old=(await c.query('SELECT * FROM branches WHERE id=$1 FOR UPDATE',[branchId])).rows[0];if(!old)error('NOT_FOUND','الموقع غير موجود',404);
+ const old=(await c.query('SELECT * FROM branches WHERE id=$1',[branchId])).rows[0];if(!old)error('NOT_FOUND','الموقع غير موجود',404);
  const r=await c.query('UPDATE branches SET name=$1,latitude=$2,longitude=$3,entry_radius=$4,exit_radius=$5,max_accuracy=$6,exit_samples=$7,exit_delay_seconds=$8,active=$9,location_revision=location_revision+1 WHERE id=$10 RETURNING *',[...values,branchId]);
  await c.query('UPDATE duty_records SET exit_candidate=NULL WHERE branch_id=$1',[branchId]);await audit(c,req.user,'branch.update',branchId,reason,{before:old,after:r.rows[0]});return r.rows[0];}));
 }));
@@ -409,9 +409,9 @@ app.put('/api/admin/shifts/:id',admin,allow('shifts.write'),wrap(async(req,res)=
 }));
 app.delete('/api/admin/shifts/:id',admin,allow('shifts.write'),wrap(async(req,res)=>{
  const shiftId=id(req.params.id);
- const assigned=(await db.query('SELECT COUNT(*)::integer AS cnt FROM accounts WHERE shift_id=$1',[shiftId])).rows[0].cnt;
+ const assigned=(await db.query('SELECT COUNT(*) AS cnt FROM accounts WHERE shift_id=$1',[shiftId])).rows[0].cnt;
  if(assigned>0)error('VALIDATION',`لا يمكن حذف هذا الدوام لأنه مرتبط بـ ${assigned} موظف حالياً. يرجى تعديل دوام الموظفين أولاً.`,409);
- const totalShifts=(await db.query('SELECT COUNT(*)::integer AS cnt FROM shifts')).rows[0].cnt;
+ const totalShifts=(await db.query('SELECT COUNT(*) AS cnt FROM shifts')).rows[0].cnt;
  if(totalShifts<=1)error('VALIDATION','يجب أن يبقى جدول دوام واحد على الأقل في النظام.',400);
  await db.transaction(async c=>{
   const r=await c.query('DELETE FROM shifts WHERE id=$1 RETURNING name',[shiftId]);
@@ -423,6 +423,7 @@ app.delete('/api/admin/shifts/:id',admin,allow('shifts.write'),wrap(async(req,re
 
 app.get('/api/admin/accounts',admin,allow('employees.read'),wrap(async(req,res)=>{
  const broad=['super_admin','hr_admin'].includes(req.user.role);
+ const todayAden = policy.localDay();
  const rows=(await db.query(`
    SELECT 
      a.id, a.identifier, a.name, a.email, a.phone, a.bound_device_id, a.bound_device_name, a.device_bound_at,
@@ -437,21 +438,21 @@ app.get('/api/admin/accounts',admin,allow('employees.read'),wrap(async(req,res)=
    FROM accounts a
    LEFT JOIN branches b ON b.id = a.branch_id
    LEFT JOIN shifts s ON s.id = a.shift_id
-   LEFT JOIN LATERAL (
-     SELECT state, first_in, last_out, late_minutes
-     FROM duty_records
-     WHERE employee_id = a.id AND (shift_start AT TIME ZONE 'Asia/Aden')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Aden')::date
-     ORDER BY shift_start DESC LIMIT 1
-   ) dr ON TRUE
-   LEFT JOIN LATERAL (
-     SELECT id
-     FROM leave_requests
-     WHERE employee_id = a.id AND status = 'approved' AND (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Aden')::date BETWEEN from_date AND to_date
+   LEFT JOIN duty_records dr ON dr.id = (
+     SELECT d.id
+     FROM duty_records d
+     WHERE d.employee_id = a.id AND date(d.shift_start, '+3 hours') = $3
+     ORDER BY d.shift_start DESC LIMIT 1
+   )
+   LEFT JOIN leave_requests lr ON lr.id = (
+     SELECT l.id
+     FROM leave_requests l
+     WHERE l.employee_id = a.id AND l.status = 'approved' AND $3 BETWEEN substr(l.from_date, 1, 10) AND substr(l.to_date, 1, 10)
      LIMIT 1
-   ) lr ON TRUE
-   WHERE ($1::boolean OR a.branch_id=$2)
+   )
+   WHERE ($1=1 OR a.branch_id=$2)
    ORDER BY a.active ASC, a.id DESC LIMIT 1000
- `, [broad, req.user.branch_id])).rows;
+ `, [broad, req.user.branch_id, todayAden])).rows;
 
  const accounts = rows.map(r => {
    let attendance_status = 'absent';
@@ -503,7 +504,7 @@ app.post('/api/admin/accounts',admin,allow('employees.write'),wrap(async(req,res
 app.patch('/api/admin/accounts/:id',admin,allow('employees.write'),wrap(async(req,res)=>{
  const accountId=id(req.params.id),b=req.body,reason=string(b.reason,500);
  respond(res,await db.transaction(async c=>{
-  const account=(await c.query('SELECT * FROM accounts WHERE id=$1 FOR UPDATE',[accountId])).rows[0];if(!account)error('NOT_FOUND','الحساب غير موجود',404);
+  const account=(await c.query('SELECT * FROM accounts WHERE id=$1',[accountId])).rows[0];if(!account)error('NOT_FOUND','الحساب غير موجود',404);
   if(account.role!=='employee'&&req.user.role!=='super_admin')error('FORBIDDEN','تعديل الإدارة لمدير النظام فقط',403);
   if(accountId===req.user.id&&b.active===false)error('VALIDATION','لا يمكنك تعطيل حسابك الحالي');
   if(account.branch_id)scope(req.user,account.branch_id);
@@ -535,7 +536,7 @@ app.patch('/api/admin/accounts/:id',admin,allow('employees.write'),wrap(async(re
 app.post('/api/admin/accounts/:id/reset-device',admin,allow('employees.write'),wrap(async(req,res)=>{
  const accountId=id(req.params.id),reason=string(req.body.reason||'فك ارتباط الجهاز بطلب من الإدارة',500);
  respond(res,await db.transaction(async c=>{
-  const acc=(await c.query('SELECT * FROM accounts WHERE id=$1 FOR UPDATE',[accountId])).rows[0];if(!acc)error('NOT_FOUND','الحساب غير موجود',404);
+  const acc=(await c.query('SELECT * FROM accounts WHERE id=$1',[accountId])).rows[0];if(!acc)error('NOT_FOUND','الحساب غير موجود',404);
   if(acc.branch_id)scope(req.user,acc.branch_id);
   await c.query('UPDATE accounts SET bound_device_id=NULL, bound_device_name=NULL, device_bound_at=NULL WHERE id=$1',[accountId]);
   await c.query('DELETE FROM auth_sessions WHERE account_id=$1',[accountId]);
@@ -549,7 +550,7 @@ app.post('/api/admin/accounts/:id/approve',admin,allow('employees.write'),wrap(a
  const b=req.body||{};
  const reason=string(b.reason||'اعتماد وتفعيل حساب الموظف من لوحة التحكم',500);
  respond(res,await db.transaction(async c=>{
-  const acc=(await c.query('SELECT * FROM accounts WHERE id=$1 FOR UPDATE',[accountId])).rows[0];
+  const acc=(await c.query('SELECT * FROM accounts WHERE id=$1',[accountId])).rows[0];
   if(!acc)error('NOT_FOUND','الحساب غير موجود',404);
   if(acc.branch_id)scope(req.user,acc.branch_id);
 
@@ -570,7 +571,7 @@ app.delete('/api/admin/accounts/:id',admin,allow('employees.write'),wrap(async(r
  const accountId=id(req.params.id);
  if(accountId===req.user.id)error('VALIDATION','لا يمكنك حذف حسابك الحالي');
  respond(res,await db.transaction(async c=>{
-  const account=(await c.query('SELECT * FROM accounts WHERE id=$1 FOR UPDATE',[accountId])).rows[0];
+  const account=(await c.query('SELECT * FROM accounts WHERE id=$1',[accountId])).rows[0];
   if(!account)error('NOT_FOUND','الحساب غير موجود',404);
   if(account.role!=='employee'&&req.user.role!=='super_admin')error('FORBIDDEN','حذف الحسابات الإدارية لمدير النظام فقط',403);
   if(account.branch_id)scope(req.user,account.branch_id);
@@ -594,7 +595,7 @@ app.put('/api/auth/profile',wrap(async(req,res)=>{
  const {current_password,new_password,avatar,phone}=req.body;
  const accountId=req.user.id;
  respond(res,await db.transaction(async c=>{
-  const acc=(await c.query('SELECT * FROM accounts WHERE id=$1 FOR UPDATE',[accountId])).rows[0];
+  const acc=(await c.query('SELECT * FROM accounts WHERE id=$1',[accountId])).rows[0];
   if(!acc)error('NOT_FOUND','المستخدم غير موجود',404);
 
   let newHash=acc.password_hash;
@@ -642,7 +643,7 @@ app.post('/api/admin/announcements',admin,wrap(async(req,res)=>{
  const inserted=await db.transaction(async c=>{
   const r=await c.query(
    `INSERT INTO announcements(title,content,priority,sender_id,sender_name,send_email,created_at,active)
-    VALUES($1,$2,$3,$4,$5,$6,NOW(),TRUE) RETURNING *`,
+    VALUES($1,$2,$3,$4,$5,$6,strftime('%Y-%m-%dT%H:%M:%fZ','now'),TRUE) RETURNING *`,
    [cleanTitle,cleanContent,cleanPriority,req.user.id,req.user.name,bool(send_email)]
   );
   await audit(c,req.user,'announcement.create',r.rows[0].id,cleanTitle);
@@ -673,7 +674,7 @@ app.put('/api/admin/announcements/:id',admin,wrap(async(req,res)=>{
  const cleanPriority=['normal','important','urgent'].includes(priority)?priority:'normal';
 
  const updated=await db.transaction(async c=>{
-  const existing=(await c.query('SELECT * FROM announcements WHERE id=$1 AND active=TRUE FOR UPDATE',[annId])).rows[0];
+  const existing=(await c.query('SELECT * FROM announcements WHERE id=$1 AND active=TRUE',[annId])).rows[0];
   if(!existing)error('NOT_FOUND','التعميم غير موجود أو تم حذفه مسبقاً',404);
 
   const r=await c.query(
@@ -700,7 +701,7 @@ app.put('/api/admin/announcements/:id',admin,wrap(async(req,res)=>{
 app.delete('/api/admin/announcements/:id',admin,wrap(async(req,res)=>{
  const annId=id(req.params.id);
  await db.transaction(async c=>{
-  const existing=(await c.query('SELECT * FROM announcements WHERE id=$1 FOR UPDATE',[annId])).rows[0];
+  const existing=(await c.query('SELECT * FROM announcements WHERE id=$1',[annId])).rows[0];
   if(existing){
    await c.query('UPDATE announcements SET active=FALSE WHERE id=$1',[annId]);
    await audit(c,req.user,'announcement.delete',annId,existing.title);
@@ -804,11 +805,11 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
  await closeScheduled();
  const result=await db.transaction(async c=>{
   // Serialize all employee actions, including initial check-in, to close race windows.
-  await c.query('SELECT id FROM accounts WHERE id=$1 FOR UPDATE',[req.user.id]);
+  await c.query('SELECT id FROM accounts WHERE id=$1',[req.user.id]);
   const replay=await c.query('SELECT id FROM attendance_events WHERE employee_id=$1 AND request_id=$2',[req.user.id,b.request_id]);
   if(replay.rows.length)return {duplicate:true};
   const now=new Date();
-  let record=(await c.query("SELECT * FROM duty_records WHERE employee_id=$1 ORDER BY shift_start DESC LIMIT 1 FOR UPDATE",[req.user.id])).rows[0];
+  let record=(await c.query("SELECT * FROM duty_records WHERE employee_id=$1 ORDER BY shift_start DESC LIMIT 1",[req.user.id])).rows[0];
    const isAuto = b.action === 'auto' || Boolean(b.is_auto);
 
   // Strict separation of QR enter vs exit actions
@@ -840,7 +841,7 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
 
   const isRemote = Boolean(req.user.is_remote || b.token === 'remote_token');
   const branchId=record?.state==='inside'?record.branch_id:(req.user.branch_id||1);
-  const branch=(await c.query('SELECT * FROM branches WHERE id=$1 FOR SHARE',[branchId])).rows[0];
+  const branch=(await c.query('SELECT * FROM branches WHERE id=$1',[branchId])).rows[0];
   if(!branch)error('NO_BRANCH','لم يتم تعيين موقع لك');
   const location=policy.classifyFix(b.fix,branch,now);
   if(b.action!=='location'){
@@ -867,11 +868,12 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
    const shift=(await c.query('SELECT * FROM shifts WHERE id=$1',[shiftId])).rows[0];
    if(!shift)error('NO_SHIFT','لم يتم تعيين دوام لك');
    const window=policy.shiftWindow(shift,now);
-   record=(await c.query('SELECT * FROM duty_records WHERE employee_id=$1 AND shift_start=$2 FOR UPDATE',[req.user.id,window.start])).rows[0];
+   record=(await c.query('SELECT * FROM duty_records WHERE employee_id=$1 AND shift_start=$2',[req.user.id,window.start])).rows[0];
    const returning=!!record;
    if(record?.state==='closed')error('SHIFT_CLOSED','تم إغلاق هذه المناوبة',409);
    if(record){
-    record=(await c.query("UPDATE duty_records SET state='inside',away_seconds=away_seconds+GREATEST(0,FLOOR(EXTRACT(EPOCH FROM ($1::timestamptz-away_started))))::integer,away_started=NULL,exit_candidate=NULL,last_seen=$1,gps_state='inside' WHERE id=$2 RETURNING *",[now,record.id])).rows[0];
+    const awayAdded = record.away_started ? Math.max(0, Math.floor((now - new Date(record.away_started)) / 1000)) : 0;
+    record=(await c.query("UPDATE duty_records SET state='inside',away_seconds=away_seconds+$3,away_started=NULL,exit_candidate=NULL,last_seen=$1,gps_state='inside' WHERE id=$2 RETURNING *",[now,record.id,awayAdded])).rows[0];
    }else{
     const late=Math.max(0,Math.floor((now-window.start)/60000)-shift.grace_minutes);
     record=(await c.query("INSERT INTO duty_records(employee_id,branch_id,shift_id,shift_start,shift_end,first_in,state,close_policy,deduct_away,late_minutes,last_seen) VALUES($1,$2,$3,$4,$5,$6,'inside',$7,$8,$9,$6) RETURNING *",[req.user.id,branch.id,shift.id,window.start,window.end,now,shift.close_policy,shift.deduct_away,late])).rows[0];
@@ -1083,7 +1085,7 @@ async function recordsFor(user,from,to){
       s.end_time,
       s.grace_minutes,
       r.id,
-      COALESCE(r.shift_start, ($3::text || ' ' || COALESCE(s.start_time, '08:00:00'))::timestamptz) AS shift_start,
+      COALESCE(r.shift_start, ($3 || 'T' || COALESCE(s.start_time, '08:00:00') || '+03:00')) AS shift_start,
       r.first_in,
       r.last_out,
       CASE 
@@ -1100,19 +1102,19 @@ async function recordsFor(user,from,to){
     FROM accounts a
     LEFT JOIN branches b ON b.id = a.branch_id
     LEFT JOIN shifts s ON s.id = a.shift_id
-    LEFT JOIN LATERAL (
-      SELECT *
-      FROM duty_records
-      WHERE employee_id = a.id AND (shift_start AT TIME ZONE 'Asia/Aden')::date = $3::date
-      ORDER BY shift_start DESC LIMIT 1
-    ) r ON TRUE
-    LEFT JOIN LATERAL (
-      SELECT id
-      FROM leave_requests
-      WHERE employee_id = a.id AND status = 'approved' AND $3::date BETWEEN from_date AND to_date
+    LEFT JOIN duty_records r ON r.id = (
+      SELECT d.id
+      FROM duty_records d
+      WHERE d.employee_id = a.id AND date(d.shift_start, '+3 hours') = $3
+      ORDER BY d.shift_start DESC LIMIT 1
+    )
+    LEFT JOIN leave_requests lr ON lr.id = (
+      SELECT l.id
+      FROM leave_requests l
+      WHERE l.employee_id = a.id AND l.status = 'approved' AND $3 BETWEEN substr(l.from_date, 1, 10) AND substr(l.to_date, 1, 10)
       LIMIT 1
-    ) lr ON TRUE
-    WHERE a.role = 'employee' AND a.active = TRUE AND ($1::boolean OR a.branch_id = $2)
+    )
+    WHERE a.role = 'employee' AND a.active = TRUE AND ($1=1 OR a.branch_id = $2)
     ORDER BY 
       CASE 
         WHEN r.state = 'inside' THEN 1
@@ -1139,8 +1141,8 @@ async function recordsFor(user,from,to){
    JOIN accounts a ON a.id = r.employee_id
    LEFT JOIN branches b ON b.id = r.branch_id
    LEFT JOIN shifts s ON s.id = r.shift_id
-   WHERE a.active = TRUE AND ($1::boolean OR r.branch_id = $2)
-     AND (r.shift_start AT TIME ZONE 'Asia/Aden')::date BETWEEN $3::date AND $4::date
+   WHERE a.active = TRUE AND ($1=1 OR r.branch_id = $2)
+     AND date(r.shift_start, '+3 hours') BETWEEN $3 AND $4
    ORDER BY r.shift_start DESC LIMIT 5000
  `, [broad, user.branch_id, from, to])).rows;
 }
@@ -1188,11 +1190,12 @@ app.post('/api/admin/records',admin,allow('attendance.edit'),wrap(async(req,res)
   if(!emp)error('NOT_FOUND','الموظف غير موجود',404);
   scope(req.user,emp.branch_id);
   const shiftStart = new Date(firstIn);
+  const shiftEnd = new Date(shiftStart.getTime() + 8 * 3600000);
   const r = await c.query(
-   `INSERT INTO duty_records(employee_id,branch_id,shift_id,shift_start,shift_end,first_in,last_out,state,exit_reason,close_policy)
-    VALUES($1,$2,$3,$4,$4 + INTERVAL '8 hours',$5,$6,$7,'manual','manual')
+   `INSERT INTO duty_records(employee_id,branch_id,shift_id,shift_start,shift_end,first_in,last_out,state,exit_reason,close_policy,deduct_away)
+    VALUES($1,$2,$3,$4,$8,$5,$6,$7,'manual','manual',0)
     RETURNING *`,
-   [emp.id, emp.branch_id, emp.shift_id, shiftStart, firstIn, lastOut, state]
+   [emp.id, emp.branch_id, emp.shift_id, shiftStart, firstIn, lastOut, state, shiftEnd]
   );
   await audit(c,req.user,'record.create_manual',r.rows[0].id,reason,{employee_id:emp.id,first_in:firstIn,last_out:lastOut});
   return r.rows[0];
@@ -1201,11 +1204,11 @@ app.post('/api/admin/records',admin,allow('attendance.edit'),wrap(async(req,res)
 app.patch('/api/admin/records/:id',admin,allow('attendance.edit'),wrap(async(req,res)=>{
  const recordId=id(req.params.id),b=req.body,reason=string(b.reason,500);
  respond(res,await db.transaction(async c=>{
-  const old=(await c.query('SELECT * FROM duty_records WHERE id=$1 FOR UPDATE',[recordId])).rows[0];
+  const old=(await c.query('SELECT * FROM duty_records WHERE id=$1',[recordId])).rows[0];
   if(!old)error('NOT_FOUND','سجل الحضور غير موجود',404);
   scope(req.user,old.branch_id);
-  const firstIn=b.first_in===undefined?old.first_in:(b.first_in?new Date(b.first_in):null);
-  const lastOut=b.last_out===undefined?old.last_out:(b.last_out?new Date(b.last_out):null);
+  const firstIn=b.first_in===undefined?(old.first_in?new Date(old.first_in):null):(b.first_in?new Date(b.first_in):null);
+  const lastOut=b.last_out===undefined?(old.last_out?new Date(old.last_out):null):(b.last_out?new Date(b.last_out):null);
   if(!firstIn||isNaN(firstIn.getTime()))error('VALIDATION','وقت الدخول غير صالح');
   if(lastOut&&isNaN(lastOut.getTime()))error('VALIDATION','وقت الخروج غير صالح');
   if(lastOut&&lastOut<firstIn)error('VALIDATION','وقت الخروج يجب أن يكون بعد وقت الدخول');
@@ -1228,7 +1231,7 @@ app.get('/api/admin/settings',admin,wrap(async(req,res)=>{
  const settingsMap = {};
  for(const row of settingsRows) settingsMap[row.key] = row.value;
 
- const dbTest=await db.query('SELECT NOW() as now');
+ const dbTest=await db.query("SELECT strftime('%Y-%m-%dT%H:%M:%fZ','now') as now");
  respond(res,{
   company_name: settingsMap.company_name || 'شركة أساس الذكاء الاصطناعي (AI-ASAAS)',
   timezone: settingsMap.timezone || 'Asia/Aden',
@@ -1250,19 +1253,19 @@ app.put('/api/admin/settings',admin,allow('locations.write'),wrap(async(req,res)
  const {company_name, timezone, max_gps_accuracy, email_notifications, support_contact} = req.body;
  await db.transaction(async c => {
   if(company_name !== undefined){
-   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('company_name', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [string(company_name, 200)]);
+   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('company_name', $1, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`, [string(company_name, 200)]);
   }
   if(timezone !== undefined){
-   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('timezone', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [string(timezone, 100)]);
+   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('timezone', $1, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`, [string(timezone, 100)]);
   }
   if(max_gps_accuracy !== undefined){
-   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('max_gps_accuracy', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [String(integer(max_gps_accuracy, 10, 1000))]);
+   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('max_gps_accuracy', $1, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`, [String(integer(max_gps_accuracy, 10, 1000))]);
   }
   if(email_notifications !== undefined){
-   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('email_notifications', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [email_notifications ? 'true' : 'false']);
+   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('email_notifications', $1, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`, [email_notifications ? 'true' : 'false']);
   }
   if(support_contact !== undefined){
-   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('support_contact', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [string(support_contact, 100)]);
+   await c.query(`INSERT INTO system_settings(key, value, updated_at) VALUES('support_contact', $1, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`, [string(support_contact, 100)]);
   }
   await audit(c, req.user, 'settings.update', null, 'تحديث إعدادات النظام الحقيقية');
  });
@@ -1270,9 +1273,9 @@ app.put('/api/admin/settings',admin,allow('locations.write'),wrap(async(req,res)
 }));
 app.get('/api/admin/dashboard',admin,wrap(async(req,res)=>{
  await closeScheduled();const broad=['super_admin','hr_admin'].includes(req.user.role);
- const accounts=(await db.query("SELECT id,name,branch_id FROM accounts WHERE role='employee' AND active=TRUE AND ($1::boolean OR branch_id=$2)",[broad,req.user.branch_id])).rows;
+ const accounts=(await db.query("SELECT id,name,branch_id FROM accounts WHERE role='employee' AND active=TRUE AND ($1=1 OR branch_id=$2)",[broad,req.user.branch_id])).rows;
  const today=policy.localDay(),records=await recordsFor(req.user,today,today);
- const active=(await db.query("SELECT r.* FROM duty_records r WHERE state='inside' AND (shift_start AT TIME ZONE 'Asia/Aden')::date = $1::date AND ($2::boolean OR branch_id=$3)",[today,broad,req.user.branch_id])).rows;
+ const active=(await db.query("SELECT r.* FROM duty_records r WHERE state='inside' AND date(shift_start, '+3 hours') = $1 AND ($2=1 OR branch_id=$3)",[today,broad,req.user.branch_id])).rows;
  const fresh=active.filter(r=>r.last_seen&&Date.now()-new Date(r.last_seen)<90000&&r.gps_state==='inside').length;
  respond(res,{
   total:accounts.length,
@@ -1513,16 +1516,16 @@ app.get('/api/admin/audit',admin,allow('audit.read'),wrap(async(req,res)=>{
 }));
 app.get('/api/leave',wrap(async(req,res)=>{
  const isEmployee=req.user.role==='employee',broad=['super_admin','hr_admin'].includes(req.user.role);
- const rows=await db.query('SELECT l.*,a.name FROM leave_requests l JOIN accounts a ON a.id=l.employee_id WHERE ($1::boolean AND l.employee_id=$2) OR (NOT $1::boolean AND ($3::boolean OR a.branch_id=$4)) ORDER BY l.id DESC LIMIT 200',[isEmployee,req.user.id,broad,req.user.branch_id]);respond(res,rows.rows);
+ const rows=await db.query('SELECT l.*,a.name FROM leave_requests l JOIN accounts a ON a.id=l.employee_id WHERE ($1=1 AND l.employee_id=$2) OR ($1=0 AND ($3=1 OR a.branch_id=$4)) ORDER BY l.id DESC LIMIT 200',[isEmployee,req.user.id,broad,req.user.branch_id]);respond(res,rows.rows);
 }));
 app.post('/api/leave',employee,wrap(async(req,res)=>{
  const b=req.body;const [from,to]=dateRange({query:{from:b.from_date,to:b.to_date}});const reason=string(b.reason,1000);
- respond(res,await db.transaction(async c=>{await c.query('SELECT id FROM accounts WHERE id=$1 FOR UPDATE',[req.user.id]);const overlap=await c.query("SELECT id FROM leave_requests WHERE employee_id=$1 AND status IN ('pending','approved') AND from_date<=$3 AND to_date>=$2",[req.user.id,from,to]);if(overlap.rows.length)error('OVERLAP','لديك طلب متداخل',409);return (await c.query('INSERT INTO leave_requests(employee_id,from_date,to_date,reason) VALUES($1,$2,$3,$4) RETURNING *',[req.user.id,from,to,reason])).rows[0];}));
+ respond(res,await db.transaction(async c=>{await c.query('SELECT id FROM accounts WHERE id=$1',[req.user.id]);const overlap=await c.query("SELECT id FROM leave_requests WHERE employee_id=$1 AND status IN ('pending','approved') AND substr(from_date,1,10)<=$3 AND substr(to_date,1,10)>=$2",[req.user.id,from,to]);if(overlap.rows.length)error('OVERLAP','لديك طلب متداخل',409);return (await c.query('INSERT INTO leave_requests(employee_id,from_date,to_date,reason) VALUES($1,$2,$3,$4) RETURNING *',[req.user.id,from,to,reason])).rows[0];}));
 }));
 app.patch('/api/leave/:id',admin,allow('leave.review'),wrap(async(req,res)=>{
  const b=req.body;if(!['approved','rejected'].includes(b.status))error('VALIDATION','قرار غير صالح');const comment=string(b.comment,1000);
  respond(res,await db.transaction(async c=>{
-  const row=(await c.query('SELECT l.*,a.name,a.email,a.branch_id FROM leave_requests l JOIN accounts a ON a.id=l.employee_id WHERE l.id=$1 FOR UPDATE OF l',[id(req.params.id)])).rows[0];
+  const row=(await c.query('SELECT l.*,a.name,a.email,a.branch_id FROM leave_requests l JOIN accounts a ON a.id=l.employee_id WHERE l.id=$1',[id(req.params.id)])).rows[0];
   if(!row)error('NOT_FOUND','الطلب غير موجود',404);
   scope(req.user,row.branch_id);
   if(row.status!=='pending')error('CONFLICT','تمت مراجعة الطلب',409);

@@ -9,8 +9,12 @@ coverage/
 test-results/
 *.tsbuildinfo
 
-# Local In-Project PostgreSQL Database Data
+# Local In-Project Database Data & Backups
 database/pgdata/
+database/*.db
+database/*.db-wal
+database/*.db-shm
+backups/
 *.pid
  
 *secret*.json

@@ -118,7 +118,7 @@ async function getEmployeeDossier(user, employeeId, from, to) {
     FROM accounts a
     LEFT JOIN branches b ON b.id = a.branch_id
     LEFT JOIN shifts s ON s.id = a.shift_id
-    WHERE a.id = $1 AND a.active = TRUE AND ($2::boolean OR a.branch_id = $3)
+    WHERE a.id = $1 AND a.active = TRUE AND ($2 = 1 OR a.branch_id = $3)
   `, [employeeId, broad, user.branch_id]);
 
   if (!empRes.rows.length) {
@@ -129,17 +129,17 @@ async function getEmployeeDossier(user, employeeId, from, to) {
 
   const recordsRes = await db.query(`
     SELECT r.*,
-           (r.shift_start AT TIME ZONE 'Asia/Aden')::date as local_date
+           date(r.shift_start, '+3 hours') as local_date
     FROM duty_records r
     WHERE r.employee_id = $1
-      AND (r.shift_start AT TIME ZONE 'Asia/Aden')::date BETWEEN $2::date AND $3::date
+      AND date(r.shift_start, '+3 hours') BETWEEN $2 AND $3
     ORDER BY r.shift_start ASC, r.id ASC
   `, [employeeId, from, to]);
 
   const leavesRes = await db.query(`
     SELECT * FROM leave_requests
     WHERE employee_id = $1 AND status = 'approved'
-      AND from_date <= $3::date AND to_date >= $2::date
+      AND substr(from_date, 1, 10) <= $3 AND substr(to_date, 1, 10) >= $2
   `, [employeeId, from, to]);
 
   const todayAden = getTodayAden();
@@ -429,7 +429,7 @@ async function getCollectiveReport(user, from, to, branchId = null, search = '')
     FROM duty_records r
     JOIN accounts a ON a.id = r.employee_id
     WHERE a.active = TRUE
-      AND (r.shift_start AT TIME ZONE 'Asia/Aden')::date BETWEEN $1::date AND $2::date
+      AND date(r.shift_start, '+3 hours') BETWEEN $1 AND $2
   `;
   const rParams = [from, to];
   if (effectiveBranch) {
@@ -444,7 +444,7 @@ async function getCollectiveReport(user, from, to, branchId = null, search = '')
     FROM leave_requests l
     JOIN accounts a ON a.id = l.employee_id
     WHERE a.active = TRUE AND l.status = 'approved'
-      AND l.from_date <= $2::date AND l.to_date >= $1::date
+      AND substr(l.from_date, 1, 10) <= $2 AND substr(l.to_date, 1, 10) >= $1
   `;
   const lParams = [from, to];
   if (effectiveBranch) {
