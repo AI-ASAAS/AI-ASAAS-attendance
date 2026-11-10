@@ -2032,7 +2032,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 <span className="brand__mark" aria-hidden="true" />
                 <span className="brand__name"><Swash>أساس</Swash></span>
               </a>
-              <span className="asas-header-section"><Swash>{title}</Swash></span>
+              <span className="asas-header-section">{roles[user.role] || 'لوحة الإدارة'}</span>
             </div>
 
             <div className="asas-topbar-actions">
@@ -2073,7 +2073,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
               <h1><Swash>{title}</Swash></h1>
               <p className="asas-muted prose">متابعة الحضور الفوري، المواقع المعتمدة، وسجلات الدوام.</p>
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div className="asas-heading-actions">
               <button className="asas-btn" onClick={() => load(true)} disabled={busy}>
                 <Icon name="refresh" />
                 تحديث فوري
@@ -2265,15 +2265,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 </div>
 
                 {/* Period Controls & Quick Presets */}
-                <div style={{
-                  padding: '12px 16px',
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid var(--border-glass)',
-                  borderRadius: 12,
-                  marginBottom: 16
-                }}>
-                  <div className="asas-presets-bar" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
-                    <span style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 600 }}>فترات سريعة:</span>
+                <div className="asas-records-period-box">
+                  <div className="asas-presets-bar">
+                    <span className="asas-presets-label">فترات سريعة:</span>
                     {[
                       ['today', 'اليوم'],
                       ['yesterday', 'أمس'],
@@ -2283,17 +2277,15 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     ].map(([key, label]) => (
                       <button
                         key={key}
-                        className="asas-btn sm"
+                        className="asas-btn sm asas-preset-btn"
                         onClick={() => applyPreset(key)}
-                        style={{ fontSize: 12, padding: '4px 10px' }}
                       >
                         {label}
                       </button>
                     ))}
                     <button
-                      className={`asas-btn sm ${showMonthYearPicker ? 'primary' : ''}`}
+                      className={`asas-btn sm asas-preset-btn ${showMonthYearPicker ? 'primary' : ''}`}
                       onClick={() => setShowMonthYearPicker(!showMonthYearPicker)}
-                      style={{ fontSize: 12, padding: '4px 10px' }}
                     >
                       <Icon name="calendar" style={{ width: 12, height: 12 }} />
                       <span>تحديد شهر وسنة</span>
@@ -2302,18 +2294,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
 
                   {/* Month & Year Picker Dropdown */}
                   {showMonthYearPicker && (
-                    <div style={{
-                      margin: '10px 0 16px',
-                      padding: '14px 16px',
-                      background: 'var(--glass-inset)',
-                      border: '1px solid var(--glass-rim)',
-                      backdropFilter: 'blur(16px)',
-                      borderRadius: 10,
-                      display: 'flex',
-                      gap: 12,
-                      flexWrap: 'wrap',
-                      alignItems: 'flex-end'
-                    }}>
+                    <div className="asas-month-picker-panel">
                       <Field label="السنة">
                         <select
                           className="asas-input"
@@ -2359,13 +2340,13 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   )}
 
                   {/* Date Range Inputs & Filters */}
-                  <div className="asas-filter-container" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                    <div className="asas-filter-fields" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+                  <div className="asas-filter-container">
+                    <div className="asas-filter-fields">
                       <Field label="من تاريخ" type="date" value={from} onChange={e => setFrom(e.target.value)} />
                       <Field label="إلى تاريخ" type="date" value={to} onChange={e => setTo(e.target.value)} />
 
                       {recordsTabMode === 'individual' && (
-                        <div className="asas-filter-emp-select" style={{ minWidth: 260 }}>
+                        <div className="asas-filter-emp-select">
                           <Field label="اختر الموظف لعرض سجله الفردي">
                             <select
                               className="asas-input"
@@ -2386,18 +2367,17 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                       )}
 
                       {recordsTabMode !== 'individual' && (
-                        <div className="asas-filter-search-wrap" style={{ width: 220 }}>
+                        <div className="asas-filter-search-wrap">
                           <Field label="بحث بالاسم أو الرقم">
-                            <div style={{ position: 'relative' }}>
+                            <div className="asas-search-box">
                               <input
-                                className="asas-input"
+                                className="asas-input asas-search-input"
                                 type="search"
                                 placeholder="بحث في الموظفين..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
-                                style={{ paddingRight: 32 }}
                               />
-                              <Icon name="search" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: 'var(--text-3)', pointerEvents: 'none' }} />
+                              <Icon name="search" className="asas-search-icon" />
                             </div>
                           </Field>
                         </div>
@@ -2405,7 +2385,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     </div>
 
                     {can('reports.export') && (
-                      <div className="asas-filter-export-actions" style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
+                      <div className="asas-filter-export-actions">
                         <button className="asas-btn sm" disabled={busy} onClick={exportCsv} title="تصدير إلى جدول Excel">
                           <Icon name="fileSpreadsheet" />
                           Excel / CSV
@@ -2519,7 +2499,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <strong>{emp.name}</strong>
                                     {emp.is_remote && (
-                                      <span className="asas-badge" style={{ fontSize: 10, padding: '1px 6px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                      <span className="asas-badge remote sm-badge">
                                         <Icon name="globe" style={{ width: 10, height: 10 }} />
                                         <span>عن بعد</span>
                                       </span>
@@ -2559,14 +2539,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                 </td>
                                 <td>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span style={{
-                                      padding: '2px 8px',
-                                      borderRadius: 6,
-                                      fontSize: 12,
-                                      fontWeight: 700,
-                                      background: emp.attendance_rate >= 80 ? 'rgba(16, 185, 129, 0.12)' : (emp.attendance_rate >= 50 ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)'),
-                                      color: emp.attendance_rate >= 80 ? 'var(--paid)' : (emp.attendance_rate >= 50 ? 'var(--partial)' : 'var(--unpaid)')
-                                    }}>
+                                    <span
+                                      className={`asas-rate-pill ${emp.attendance_rate >= 80 ? 'good' : (emp.attendance_rate >= 50 ? 'warn' : 'bad')}`}
+                                    >
                                       {emp.attendance_rate}%
                                     </span>
                                   </div>
@@ -2606,37 +2581,19 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     {individualData?.employee ? (
                       <>
                         {/* Employee Identity Banner */}
-                        <div style={{
-                          padding: '16px 20px',
-                          background: 'linear-gradient(135deg, rgba(181, 144, 69, 0.12), rgba(35, 31, 32, 0.6))',
-                          border: '1px solid var(--border-glass)',
-                          borderRadius: 14,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          flexWrap: 'wrap',
-                          gap: 16,
-                          marginBottom: 16
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div className="asas-dossier-banner">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
                             <UserAvatar user={individualData.employee} size="lg" />
-                            <div>
+                            <div style={{ minWidth: 0 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                                 <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
                                   {individualData.employee.name}
                                 </h3>
-                                <span className="num" style={{
-                                  padding: '2px 8px',
-                                  borderRadius: 6,
-                                  background: 'var(--gold-soft)',
-                                  color: 'var(--accent)',
-                                  fontWeight: 700,
-                                  fontSize: 13
-                                }}>
+                                <span className="asas-dossier-id num">
                                   #{individualData.employee.identifier}
                                 </span>
                               </div>
-                              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6, fontSize: 13, color: 'var(--text-2)' }}>
+                              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6, fontSize: 13, color: 'var(--text-2)' }}>
                                 <span>الفرع: <strong>{individualData.employee.branch_name || 'الفرع الرئيسي'}</strong></span>
                                 <span>الوردية: <strong>{individualData.employee.shift_name || 'دوام رسمي'}</strong></span>
                                 <span>طبيعة العمل: <strong style={{ color: individualData.employee.is_remote ? 'var(--chart-out)' : 'inherit' }}>{individualData.employee.is_remote ? 'دوام عن بعد (أونلاين)' : 'دوام حضوري بالمقر'}</strong></span>
@@ -2647,10 +2604,10 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ textAlign: 'center', padding: '8px 16px', background: 'rgba(0, 0, 0, 0.25)', borderRadius: 10, border: '1px solid var(--border-glass)' }}>
-                              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-3)' }}>نسبة الالتزام</span>
-                              <strong style={{ fontSize: 20, color: 'var(--accent)' }}>
+                          <div className="asas-dossier-rate-wrap">
+                            <div className="asas-dossier-rate">
+                              <span>نسبة الالتزام</span>
+                              <strong className="num">
                                 {individualData.summary.attendance_rate}%
                               </strong>
                             </div>
@@ -2659,16 +2616,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
 
                         {/* Incomplete Records Warning Banner */}
                         {individualData.summary.incomplete_records_count > 0 && (
-                          <div style={{
-                            padding: '12px 18px',
-                            background: 'rgba(239, 68, 68, 0.12)',
-                            border: '1px solid rgba(239, 68, 68, 0.35)',
-                            borderRadius: 12,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            marginBottom: 16
-                          }}>
+                          <div className="asas-alert-banner danger">
                             <Icon name="alert" style={{ width: 22, height: 22, color: 'var(--unpaid)', flexShrink: 0 }} />
                             <div>
                               <strong style={{ color: 'var(--unpaid)', fontSize: 14, display: 'block' }}>
@@ -2778,7 +2726,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                   else if (isLate) badgeStyle = { background: 'var(--partial-bg)', color: 'var(--partial)' };
                                   else if (isLev) badgeStyle = { background: 'var(--glass-inset)', color: 'var(--chart-out)' };
                                   else if (isWkd) badgeStyle = { background: 'var(--glass-inset)', color: 'var(--text-3)' };
-                                  else if (isPend) badgeStyle = { background: 'var(--gold-soft)', color: 'var(--accent)' };
+                                  else if (isPend) badgeStyle = { background: 'var(--glass-tint-strong)', color: 'var(--accent)' };
 
                                   return (
                                     <tr key={day.date + '-' + dIdx} style={isInc ? { background: 'var(--unpaid-bg)' } : undefined}>
@@ -2943,35 +2891,23 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
             <>
               {/* Sovereign Pending Approval Banner */}
               {rows.some(a => !a.active) && (
-                <div style={{
-                  padding: '14px 18px',
-                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(217, 119, 6, 0.08))',
-                  border: '1px solid rgba(245, 158, 11, 0.35)',
-                  borderRadius: 14,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 12,
-                  marginBottom: 16
-                }}>
+                <div className="asas-pending-banner">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--partial-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Icon name="clock" style={{ color: 'var(--partial)' }} />
+                    <div className="asas-pending-banner-icon">
+                      <Icon name="clock" />
                     </div>
                     <div>
-                      <strong style={{ fontSize: 14, color: 'var(--partial)', display: 'block' }}>
+                      <strong className="asas-pending-banner-title">
                         تنبيه الإدارة: يوجد {rows.filter(a => !a.active).length} طلب تسجيل حساب جديد بحاجة للمراجعة والموافقة
                       </strong>
-                      <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                      <span className="asas-pending-banner-sub">
                         الموظفون المسجلون حديثاً لا يمكنهم تسجيل الدخول أو إثبات الحضور حتى يتم اعتمادهم وتفعيل حساباتهم من هنا.
                       </span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="asas-pending-banner-cta">
                     <button
-                      className="asas-btn sm"
-                      style={{ background: 'var(--partial)', borderColor: 'var(--partial)', color: 'var(--on-accent)', fontWeight: 800 }}
+                      className="asas-btn sm warning"
                       onClick={() => setAccountFilter('pending')}
                     >
                       عرض الطلبات المعلقة ({rows.filter(a => !a.active).length})
@@ -2980,22 +2916,21 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 </div>
               )}
 
-              <div className="asas-accounts-toolbar" style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 12 }}>
-                <div className="asas-accounts-search" style={{ position: 'relative', flex: 1, maxWidth: 420 }}>
+              <div className="asas-accounts-toolbar">
+                <div className="asas-accounts-search asas-search-box">
                   <input
-                    className="asas-input"
+                    className="asas-input asas-search-input-lg"
                     placeholder="ابحث بالاسم، الرقم الوظيفي، البريد أو الهاتف…"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    style={{ paddingRight: 40 }}
                   />
-                  <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-3)' }}>
+                  <div className="asas-search-icon-lg">
                     <Icon name="search" />
                   </div>
                 </div>
 
                 {/* Filter buttons */}
-                <div className="asas-accounts-filters" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <div className="asas-accounts-filters">
                   <button
                     className={`asas-btn sm ${accountFilter === 'all' ? 'primary' : ''}`}
                     onClick={() => setAccountFilter('all')}
@@ -3009,8 +2944,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     النشطون ({rows.filter(a => a.active).length})
                   </button>
                   <button
-                    className={`asas-btn sm ${accountFilter === 'pending' ? 'primary' : ''}`}
-                    style={rows.some(a => !a.active) ? { borderColor: 'var(--partial)', color: accountFilter === 'pending' ? 'var(--on-accent)' : 'var(--partial)' } : {}}
+                    className={`asas-btn sm ${accountFilter === 'pending' ? 'primary' : (rows.some(a => !a.active) ? 'pending-outline' : '')}`}
                     onClick={() => setAccountFilter('pending')}
                   >
                     <Icon name="clock" style={{ width: 12, height: 12 }} />
@@ -3042,19 +2976,19 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                         return true;
                       })
                       .map(a => (
-                        <tr key={a.id} style={!a.active ? { background: 'rgba(245, 158, 11, 0.04)' } : undefined}>
+                        <tr key={a.id} className={!a.active ? 'asas-row-pending' : undefined}>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <UserAvatar user={a} size="sm" />
                               <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                   <strong>{a.name}</strong>
                                   {a.is_remote ? (
-                                    <span className="asas-badge" style={{ fontSize: 10.5, padding: '1px 6px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                                    <span className="asas-badge remote sm-badge">
                                       عن بعد
                                     </span>
                                   ) : (
-                                    <span className="asas-badge" style={{ fontSize: 10.5, padding: '1px 6px', background: 'rgba(156, 163, 175, 0.1)', color: 'var(--text-3)' }}>
+                                    <span className="asas-badge onsite sm-badge">
                                       حضوري
                                     </span>
                                   )}
@@ -3080,7 +3014,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                 في إجازة
                               </span>
                             ) : (
-                              <span className="asas-badge" style={{ background: 'var(--glass-inset)', color: 'var(--text-3)' }}>
+                              <span className="asas-badge neutral">
                                 <Icon name="alert" style={{ width: 12, height: 12 }} />
                                 لم يسجل اليوم
                               </span>
@@ -3119,7 +3053,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                             {a.active ? (
                               <span className="asas-badge inside">نشط</span>
                             ) : (
-                              <span className="asas-badge pending" style={{ background: 'var(--partial-bg)', color: 'var(--partial)', borderColor: 'var(--partial)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                              <span className="asas-badge pending">
                                 <Icon name="clock" style={{ width: 12, height: 12 }} />
                                 بانتظار الموافقة
                               </span>
@@ -3129,8 +3063,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                               {!a.active && can('employees.write') && (
                                 <button
-                                  className="asas-btn primary sm"
-                                  style={{ background: 'var(--paid)', borderColor: 'var(--paid)', color: 'var(--on-accent)', fontWeight: 700 }}
+                                  className="asas-btn success sm"
                                   title="قبول طلب التسجيل وتفعيل الحساب فوراً"
                                   onClick={() => approveAccount(a)}
                                 >
@@ -3192,7 +3125,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+              <div className="asas-announcements-grid">
                 {announcements.map(a => (
                   <article key={a.id} className={`asas-announcement-card ${a.priority || 'normal'}`}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 }}>
@@ -5787,6 +5720,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         }
         actions={
           <>
+            <LiveClock iconSize={14} iconColor="var(--accent)" />
             <button
               type="button"
               className="btn btn--ghost btn--sm btn--icon asas-bell-btn"
@@ -5815,40 +5749,38 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
       <div className="asas-employee-page container page">
         {/* Profile Card */}
-        <Glass className="asas-employee-profile" style={{ padding: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', zIndex: 1 }}>
+        <Glass className="asas-employee-profile">
+          <div className="asas-employee-profile-main">
             <div className="asas-employee-avatar-wrap">
               <UserAvatar user={user} size="lg" onClick={onOpenProfile} />
               {isInside && <span className="asas-avatar-status-beacon" title="على رأس العمل" />}
             </div>
-            <div>
-              <h1 style={{ fontSize: 22, margin: '0 0 4px', color: 'var(--text)' }}>
+            <div className="asas-employee-profile-info">
+              <h1 className="asas-employee-greeting">
                 <AsasGreeting name={user.name} />
               </h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span className="asas-readonly-id num" style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12.5 }}>
+              <div className="asas-employee-profile-badges">
+                <span className="asas-readonly-id num">
                   الرقم الوظيفي: {user.identifier}
                 </span>
-                <span className="asas-badge inside" style={{ fontSize: 11 }}>موظف معتمد</span>
                 {user.is_remote ? (
-                  <span className="asas-badge" style={{ fontSize: 11, background: 'var(--glass-inset)', color: 'var(--chart-out)', border: '1px solid var(--chart-out)' }}>
+                  <span className="asas-badge remote">
                     دوام عن بعد (أونلاين)
                   </span>
                 ) : (
-                  <span className="asas-badge outside" style={{ fontSize: 11 }}>
+                  <span className="asas-badge onsite">
                     دوام حضوري بالمقر
                   </span>
                 )}
-                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{user.email || '—'}</span>
+                {user.email && <span className="asas-employee-email">{user.email}</span>}
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div className="asas-employee-profile-actions">
             <Button variant="glass" size="sm" icon="user" onClick={onOpenProfile}>
               الملف الشخصي والأمان
             </Button>
-            <LiveClock iconSize={14} iconColor="var(--accent)" />
           </div>
         </Glass>
 
@@ -5928,7 +5860,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               <div className="asas-duty-banner-info">
                 <span className="asas-duty-banner-eyebrow">حالة الدوام الحالية</span>
                 <div className="asas-duty-banner-heading">
-                  <span className="asas-pulse-status-dot" style={{ color: isInside ? 'var(--paid)' : (isRemote ? '#38bdf8' : 'var(--accent)') }} />
+                  <span className="asas-pulse-status-dot" style={{ color: isInside ? 'var(--paid)' : (isRemote ? 'var(--chart-out)' : 'var(--accent)') }} />
                   <span>
                     {isInside 
                       ? (isRemote ? 'على رأس العمل (دوام عن بعد)' : 'داخل مقر العمل (على رأس العمل)') 
@@ -5939,8 +5871,8 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 </div>
               </div>
               <div className="asas-duty-banner-meta">
-                <span className={`asas-badge ${isInside ? 'inside' : 'outside'}`}>
-                  {isRemote ? 'دوام عن بعد' : (todayRecord?.branch_name || 'الفرع الرئيسي')}
+                <span className={`asas-badge ${isInside ? 'inside' : (todayRecord?.last_out ? 'closed' : (isRemote ? 'remote' : 'onsite'))}`}>
+                  {todayRecord?.branch_name || (isRemote ? 'مزامنة مباشرة' : 'الفرع الرئيسي')}
                 </span>
               </div>
             </div>

@@ -258,10 +258,17 @@
 }
 
 .asas-header-section {
-  font-family: var(--font-display);
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--glass-inset);
+  border: 1px solid var(--hairline);
+  font-size: 12.5px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-2);
+  white-space: nowrap;
 }
 
 .asas-content {
@@ -280,6 +287,13 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
+}
+
+.asas-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }
 
 .asas-heading h1 {
@@ -422,6 +436,7 @@
 }
 
 .asas-stat-card {
+  min-width: 0;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -456,12 +471,17 @@
 .asas-stat-icon-wrap {
   width: 36px;
   height: 36px;
+  flex: none;
   border-radius: 11px;
   background: linear-gradient(145deg, color-mix(in srgb, var(--brand-gold) 20%, rgba(252, 249, 245, 0.85)), var(--glass-inset));
   box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 0 0 1px color-mix(in srgb, var(--brand-gold) 24%, var(--hairline));
   color: var(--accent);
   display: grid;
   place-items: center;
+}
+
+:root[data-theme='dark'] .asas-stat-icon-wrap {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--brand-gold) 22%, rgba(44, 38, 34, 0.88)), var(--glass-inset));
 }
 
 .asas-stat-icon-wrap svg {
@@ -572,6 +592,25 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--unpaid) 25%, var(--hairline));
 }
 
+.asas-btn.success {
+  background: linear-gradient(165deg, color-mix(in srgb, var(--paid) 88%, #ffffff) 0%, var(--paid) 100%);
+  color: var(--on-accent);
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 16px -8px color-mix(in srgb, var(--paid) 55%, transparent);
+}
+
+.asas-btn.warning {
+  background: linear-gradient(165deg, color-mix(in srgb, var(--partial) 86%, #ffffff) 0%, var(--partial) 100%);
+  color: var(--on-accent);
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.asas-btn.pending-outline {
+  border: 1px solid color-mix(in srgb, var(--partial) 45%, var(--hairline));
+  color: var(--partial);
+}
+
 .asas-btn.sm {
   min-height: 36px;
   padding: 0 14px;
@@ -613,6 +652,12 @@
   color: var(--text-2);
 }
 
+.asas-badge.sm-badge {
+  font-size: 10.5px;
+  padding: 2px 7px;
+  gap: 4px;
+}
+
 .asas-badge.inside,
 .asas-badge.approved {
   background: var(--paid-bg);
@@ -622,6 +667,7 @@
 .asas-badge.pending {
   background: var(--partial-bg);
   color: var(--partial);
+  border: 1px solid color-mix(in srgb, var(--partial) 35%, transparent);
 }
 
 .asas-badge.outside,
@@ -630,9 +676,50 @@
   color: var(--unpaid);
 }
 
-.asas-badge.closed {
+.asas-badge.remote {
+  background: color-mix(in srgb, var(--chart-out) 14%, transparent);
+  color: var(--chart-out);
+  border: 1px solid color-mix(in srgb, var(--chart-out) 30%, transparent);
+}
+
+.asas-badge.onsite {
   background: var(--glass-inset);
   color: var(--text-2);
+  border: 1px solid var(--hairline);
+}
+
+.asas-badge.closed,
+.asas-badge.neutral {
+  background: var(--glass-inset);
+  color: var(--text-3);
+}
+
+.asas-rate-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.asas-rate-pill.good {
+  background: var(--paid-bg);
+  color: var(--paid);
+}
+
+.asas-rate-pill.warn {
+  background: var(--partial-bg);
+  color: var(--partial);
+}
+
+.asas-rate-pill.bad {
+  background: var(--unpaid-bg);
+  color: var(--unpaid);
+}
+
+.asas-table tbody tr.asas-row-pending {
+  background: color-mix(in srgb, var(--partial) 6%, transparent);
 }
 
 /* ───────── Tables ───────── */
@@ -825,18 +912,69 @@ select.asas-input option {
   gap: 12px;
 }
 
+.asas-accounts-toolbar {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
 .asas-filter-fields {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 10px;
+  gap: 12px;
   flex: 1 1 320px;
+  min-width: 0;
 }
 
-.asas-filter-emp-select,
-.asas-filter-search-wrap,
-.asas-accounts-search {
+.asas-filter-emp-select {
+  flex: 1 1 240px;
+  min-width: 220px;
+}
+
+.asas-filter-search-wrap {
+  flex: 1 1 200px;
   min-width: 190px;
+  max-width: 280px;
+}
+
+.asas-accounts-search {
+  position: relative;
+  flex: 1 1 260px;
+  min-width: 220px;
+  max-width: 420px;
+}
+
+.asas-search-box {
+  position: relative;
+}
+
+.asas-search-input {
+  padding-inline-start: 34px;
+}
+
+.asas-search-icon {
+  position: absolute;
+  inset-inline-start: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+.asas-search-input-lg {
+  padding-inline-start: 40px;
+}
+
+.asas-search-icon-lg {
+  position: absolute;
+  inset-inline-start: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text-3);
+  display: inline-flex;
 }
 
 .asas-filter-export-actions,
@@ -844,6 +982,171 @@ select.asas-input option {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.asas-records-mode-tabs {
+  margin-bottom: 14px;
+}
+
+.asas-records-period-box {
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--glass-tint);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 22%, var(--hairline));
+  box-shadow: inset 0 1px 0 var(--glass-rim);
+  margin-bottom: 16px;
+}
+
+.asas-presets-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.asas-presets-label {
+  font-size: 13px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.asas-preset-btn {
+  font-size: 12px;
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+.asas-month-picker-panel {
+  margin: 10px 0 14px;
+  padding: 14px 16px;
+  background: var(--glass-inset);
+  border: 1px solid var(--glass-rim);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-radius: var(--radius-md);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.asas-dossier-banner {
+  padding: 18px 20px;
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(500px circle at 10% -20%, color-mix(in srgb, var(--brand-gold) 15%, transparent), transparent 65%),
+    linear-gradient(145deg, rgba(252, 249, 245, 0.92) 0%, rgba(237, 231, 218, 0.72) 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 28%, var(--hairline));
+  box-shadow: inset 0 1px 0 var(--glass-rim), var(--glass-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+:root[data-theme='dark'] .asas-dossier-banner {
+  background:
+    radial-gradient(500px circle at 10% -20%, color-mix(in srgb, var(--brand-gold) 16%, transparent), transparent 65%),
+    linear-gradient(145deg, rgba(42, 36, 33, 0.88) 0%, rgba(24, 20, 18, 0.76) 100%);
+  border-color: color-mix(in srgb, var(--brand-gold) 28%, rgba(255, 244, 222, 0.08));
+}
+
+.asas-dossier-id {
+  padding: 2px 9px;
+  border-radius: 6px;
+  background: var(--glass-tint-strong);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 28%, var(--hairline));
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.asas-dossier-rate-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.asas-dossier-rate {
+  text-align: center;
+  padding: 10px 18px;
+  background: var(--glass-inset);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 24%, var(--hairline));
+}
+
+.asas-dossier-rate span {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.asas-dossier-rate strong {
+  font-size: 20px;
+  color: var(--accent);
+}
+
+.asas-alert-banner {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.asas-alert-banner.danger {
+  background: var(--unpaid-bg);
+  border: 1px solid color-mix(in srgb, var(--unpaid) 34%, transparent);
+}
+
+.asas-pending-banner {
+  padding: 14px 18px;
+  background: linear-gradient(135deg, var(--partial-bg), color-mix(in srgb, var(--partial) 6%, var(--glass-tint)));
+  border: 1px solid color-mix(in srgb, var(--partial) 35%, var(--hairline));
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.asas-pending-banner-icon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--partial-bg);
+  color: var(--partial);
+  display: grid;
+  place-items: center;
+}
+
+.asas-pending-banner-title {
+  font-size: 14px;
+  color: var(--partial);
+  display: block;
+}
+
+.asas-pending-banner-sub {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.asas-pending-banner-cta {
+  display: flex;
+  gap: 8px;
+}
+
+.asas-announcements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 16px;
 }
 
 .asas-work-type-grid {
@@ -1419,6 +1722,14 @@ select.asas-input option {
 }
 
 .asas-employee-profile {
+  padding: 20px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
   background:
     radial-gradient(540px circle at 10% -25%, color-mix(in srgb, var(--brand-gold) 15%, transparent), transparent 65%),
     linear-gradient(155deg, rgba(252, 249, 245, 0.92) 0%, rgba(237, 231, 218, 0.68) 100%);
@@ -1430,6 +1741,51 @@ select.asas-input option {
     radial-gradient(540px circle at 10% -25%, color-mix(in srgb, var(--brand-gold) 16%, transparent), transparent 65%),
     linear-gradient(155deg, rgba(42, 36, 33, 0.88) 0%, rgba(24, 20, 18, 0.74) 100%);
   border-color: color-mix(in srgb, var(--brand-gold) 28%, rgba(255, 244, 222, 0.08));
+}
+
+.asas-employee-profile-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.asas-employee-profile-info {
+  min-width: 0;
+}
+
+.asas-employee-greeting {
+  font-size: clamp(19px, 1.5vw + 13px, 23px);
+  margin: 0 0 6px;
+  color: var(--text);
+}
+
+.asas-employee-profile-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.asas-employee-profile-badges .asas-readonly-id {
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+}
+
+.asas-employee-email {
+  font-size: 12px;
+  color: var(--text-3);
+  word-break: break-word;
+}
+
+.asas-employee-profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .asas-employee-avatar-wrap {
@@ -1928,9 +2284,26 @@ select.asas-input option {
   .asas-grid-halves {
     grid-template-columns: 1fr;
   }
+
+  .asas-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
+  .asas-topbar-wrap {
+    padding: 10px var(--page-pad) 0;
+  }
+
+  .asas-topbar {
+    padding-inline: 12px 10px;
+  }
+
+  .asas-content,
+  .asas-employee-page {
+    padding-bottom: 96px;
+  }
+
   .asas-sidebar-scrim {
     position: fixed;
     inset: 0;
@@ -2017,9 +2390,47 @@ select.asas-input option {
     display: none;
   }
 
+  .asas-heading {
+    align-items: stretch;
+  }
+
+  .asas-heading-actions {
+    width: 100%;
+  }
+
+  .asas-heading-actions > .asas-btn {
+    flex: 1 1 auto;
+  }
+
   .asas-stats-grid,
   .asas-employee-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .asas-stat-card {
+    padding: 14px;
+  }
+
+  .asas-employee-stats > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .asas-employee-profile {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .asas-employee-profile-actions {
+    width: 100%;
+  }
+
+  .asas-employee-profile-actions > * {
+    width: 100%;
+  }
+
+  .asas-hero-banner {
+    padding: 18px 16px;
   }
 
   .asas-office-buttons-row,
@@ -2035,11 +2446,49 @@ select.asas-input option {
     align-items: stretch;
   }
 
+  .asas-filter-fields > *,
   .asas-filter-emp-select,
   .asas-filter-search-wrap,
   .asas-accounts-search {
+    flex: 1 1 100%;
     min-width: 0;
+    max-width: none;
     width: 100%;
+  }
+
+  .asas-presets-bar {
+    gap: 6px;
+  }
+
+  .asas-preset-btn {
+    flex: 1 1 auto;
+  }
+
+  .asas-dossier-banner,
+  .asas-pending-banner {
+    padding: 14px 16px;
+  }
+
+  .asas-dossier-rate-wrap,
+  .asas-pending-banner-cta {
+    width: 100%;
+  }
+
+  .asas-dossier-rate {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .asas-pending-banner-cta > .asas-btn {
+    width: 100%;
+  }
+
+  .asas-table th,
+  .asas-table td {
+    padding: 10px 8px;
+    font-size: 12.5px;
   }
 
   .asas-modal-backdrop,
