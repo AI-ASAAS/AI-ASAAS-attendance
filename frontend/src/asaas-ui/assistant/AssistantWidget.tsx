@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Glass } from '../ui/Glass';
+import { kitText } from '../lib/i18n';
 import { Icon } from '../ui/Icon';
 import { AssistantRobot } from './AssistantAvatar';
 import { type AssistantConfig, AssistantPanel } from './AssistantPanel';
@@ -12,7 +13,7 @@ import { type AssistantConfig, AssistantPanel } from './AssistantPanel';
 export function AssistantWidget(config: AssistantConfig) {
   const [open, setOpen] = useState(false);
   const launcherRef = useRef<HTMLButtonElement>(null);
-  const title = config.title ?? 'مساعد أساس';
+  const title = config.title ?? kitText('assistantTitle');
 
   const close = () => {
     setOpen(false);
@@ -35,7 +36,7 @@ export function AssistantWidget(config: AssistantConfig) {
         data-open={open}
         aria-expanded={open}
         aria-controls="assistant-panel"
-        aria-label={open ? `إغلاق ${title}` : title}
+        aria-label={open ? `${kitText('close')}: ${title}` : title}
         title={title}
         onClick={() => (open ? close() : setOpen(true))}
       >

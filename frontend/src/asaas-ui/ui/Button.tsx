@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { cx } from '../lib/cx';
+import { kitText } from '../lib/i18n';
 import { Icon, type IconName } from './Icon';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -34,7 +35,7 @@ export function Button({
       {...props}
     >
       {icon && <Icon name={icon} />}
-      {loading ? 'جارٍ الحفظ…' : children}
+      {loading ? kitText('saving') : children}
     </button>
   );
 }

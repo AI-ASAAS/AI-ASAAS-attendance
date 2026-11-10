@@ -13,12 +13,15 @@ export { Modal } from './ui/Modal';
 export { MonthSwitcher } from './ui/MonthSwitcher';
 export { PasswordInput, PasswordStrength } from './ui/PasswordInput';
 export { Segmented } from './ui/Segmented';
+export { SiteHeader, type SiteHeaderProps, TabBar } from './ui/SiteHeader';
 export { ProgressBar, ProgressRing, Stat } from './ui/Stat';
 export { Avatar, type ContributionStatus, STATUS_META, StatusPill } from './ui/Status';
 export { ToastProvider, useToast } from './ui/Toast';
 export { Stretch, Swash, swashIndex } from './ui/Typography';
 
 export { cx } from './lib/cx';
+export { type KitLang, type KitTextKey, kitLang, kitText, setKitText } from './lib/i18n';
+export { strengthLabel, type StrengthLevel } from './lib/passwordStrength';
 export * from './lib/format';
 export { currentPeriod, periodBounds, shiftPeriod, today } from './lib/period';
 export { useTheme } from './lib/useTheme';

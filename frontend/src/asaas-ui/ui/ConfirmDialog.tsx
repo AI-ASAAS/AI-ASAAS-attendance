@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { kitText } from '../lib/i18n';
 import { Button } from './Button';
 import { FormError } from './Field';
 import { Modal } from './Modal';
@@ -16,7 +17,7 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({
   title,
   children,
-  confirmLabel = 'حذف',
+  confirmLabel = kitText('delete'),
   onConfirm,
   onClose,
   pending,
@@ -29,10 +30,10 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="danger" icon="trash" onClick={onConfirm} disabled={pending}>
-            {pending ? 'جارٍ الحذف…' : confirmLabel}
+            {pending ? kitText('deleting') : confirmLabel}
           </Button>
           <Button variant="ghost" onClick={onClose}>
-            إلغاء
+            {kitText('cancel')}
           </Button>
         </>
       }

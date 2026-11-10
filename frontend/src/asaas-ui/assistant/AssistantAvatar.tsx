@@ -5,6 +5,7 @@ import faceWaiting from '../assets/assistant/face-waiting.webp';
 import robotWave from '../assets/assistant/robot-wave.webp';
 import { cx } from '../lib/cx';
 import { firstName } from '../lib/format';
+import { kitText } from '../lib/i18n';
 
 /**
  * Asaas robot artwork (exported to WebP).
@@ -27,9 +28,9 @@ export function AssistantRobot({ className }: { className?: string }) {
   return <img src={robotWave} alt="" className={cx('assistant-robot', className)} draggable={false} />;
 }
 
-/** "صباح الخير" until noon, "مساء الخير" after, with the first name only. */
+/** "Good morning" until noon, "good evening" after, with the first name only, in the page language. */
 export function greeting(displayName: string, now = new Date()): string {
   const name = firstName(displayName);
-  const salutation = now.getHours() < 12 ? 'صباح الخير' : 'مساء الخير';
-  return name ? `${salutation} يا ${name}` : salutation;
+  const salutation = kitText(now.getHours() < 12 ? 'goodMorning' : 'goodEvening');
+  return name ? kitText('greetingName', { salutation, name }) : salutation;
 }

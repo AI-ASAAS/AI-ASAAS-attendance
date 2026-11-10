@@ -1,5 +1,6 @@
 import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/Button';
+import { kitText } from '../lib/i18n';
 import { Icon } from '../ui/Icon';
 import { AssistantFace, AssistantRobot, greeting } from './AssistantAvatar';
 
@@ -20,7 +21,7 @@ export interface AssistantConfig {
   ask: (messages: AssistantMessage[]) => Promise<AssistantAnswer>;
   /** The signed-in person: the greeting uses the first name; the chat is kept per id. */
   user: { id: string; displayName: string };
-  /** Shown in the header and on the launcher, e.g. "مساعد أساس". */
+  /** Shown in the header and on the launcher; defaults to "Asaas assistant" in the page language. */
   title?: string;
   subtitle?: string;
   /** Tappable first questions in the empty chat. */
@@ -64,7 +65,7 @@ const newId = () => crypto.randomUUID();
 
 /** The conversation: header, scrolling thread and composer, sized by its container. */
 export function AssistantPanel({ config, onClose }: { config: AssistantConfig; onClose: () => void }) {
-  const { ask, user, title = 'مساعد أساس', subtitle = 'اسأل وسأجيبك', suggestions = [] } = config;
+  const { ask, user, title = kitText('assistantTitle'), subtitle = kitText('assistantSubtitle'), suggestions = [] } = config;
   const key = storageKey(user.id);
   const [entries, setEntries] = useState<Entry[]>(() => load(key));
   const [draft, setDraft] = useState('');
@@ -88,7 +89,7 @@ export function AssistantPanel({ config, onClose }: { config: AssistantConfig; o
       const answer = await ask(history.slice(-HISTORY_LIMIT).map(({ role, content }) => ({ role, content })));
       setEntries((current) => [...current, { id: newId(), role: 'assistant', content: answer.reply, attachments: answer.attachments }]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الوصول للمساعد، حاول مرة أخرى');
+      setError(e instanceof Error ? e.message : kitText('assistantError'));
     } finally {
       setPending(false);
     }
@@ -131,8 +132,8 @@ export function AssistantPanel({ config, onClose }: { config: AssistantConfig; o
           <h2>{title}</h2>
           <p>{subtitle}</p>
         </div>
-        {entries.length > 0 && <Button variant="ghost" size="sm" icon="plus" label="محادثة جديدة" onClick={reset} disabled={pending} />}
-        <Button variant="ghost" size="sm" icon="close" label="إغلاق" onClick={onClose} />
+        {entries.length > 0 && <Button variant="ghost" size="sm" icon="plus" label={kitText('assistantNewChat')} onClick={reset} disabled={pending} />}
+        <Button variant="ghost" size="sm" icon="close" label={kitText('close')} onClick={onClose} />
       </header>
 
       <div ref={threadRef} className="assistant-panel__thread" aria-live="polite">
@@ -140,7 +141,7 @@ export function AssistantPanel({ config, onClose }: { config: AssistantConfig; o
           <div className="assistant-welcome">
             <AssistantRobot className="assistant-welcome__robot" />
             <h3>{greeting(user.displayName)}</h3>
-            <p className="assistant-welcome__lead">كيف أقدر أساعدك اليوم؟</p>
+            <p className="assistant-welcome__lead">{kitText('assistantLead')}</p>
             {config.intro && <p>{config.intro}</p>}
             {suggestions.length > 0 && (
               <div className="assistant-welcome__suggestions">
@@ -167,7 +168,7 @@ export function AssistantPanel({ config, onClose }: { config: AssistantConfig; o
         {pending && (
           <div className="bubble bubble--assistant">
             <AssistantFace size="sm" mood="waiting" />
-            <span className="typing" role="status" aria-label="المساعد يكتب">
+            <span className="typing" role="status" aria-label={kitText('assistantTyping')}>
               <i />
               <i />
               <i />
@@ -180,7 +181,7 @@ export function AssistantPanel({ config, onClose }: { config: AssistantConfig; o
             <Icon name="alert" />
             <span>{error}</span>
             <Button variant="glass" size="sm" onClick={() => request(entries)}>
-              إعادة المحاولة
+              {kitText('retry')}
             </Button>
           </div>
         )}
@@ -193,14 +194,14 @@ export function AssistantPanel({ config, onClose }: { config: AssistantConfig; o
           rows={1}
           value={draft}
           maxLength={MAX_QUESTION}
-          placeholder={config.placeholder ?? 'اكتب سؤالك…'}
-          aria-label="سؤالك للمساعد"
+          placeholder={config.placeholder ?? kitText('assistantPlaceholder')}
+          aria-label={kitText('assistantInput')}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
         />
-        <Button type="submit" variant="primary" icon="send" label="إرسال" className="composer__send" disabled={!draft.trim() || pending} />
+        <Button type="submit" variant="primary" icon="send" label={kitText('assistantSend')} className="composer__send" disabled={!draft.trim() || pending} />
       </form>
-      <p className="assistant-panel__disclaimer">{config.disclaimer ?? 'يجيب من بيانات الموقع فقط وقد يخطئ.'}</p>
+      <p className="assistant-panel__disclaimer">{config.disclaimer ?? kitText('assistantDisclaimer')}</p>
     </>
   );
 }

@@ -8,6 +8,7 @@ import {
   Glass,
   Card,
   Icon,
+  ProgressRing,
   Swash,
   Stretch,
   useTheme,
@@ -293,7 +294,7 @@ function Records({ rows = [], onEdit, canEdit }) {
                       {}
                     }
                   >
-                    <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : (isAbsent ? 'alert' : (isLeave ? 'calendar' : (isEarly ? 'alert' : 'logOut')))} style={{ width: 13, height: 13 }} />
+                    <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : (isAbsent ? 'alert' : (isLeave ? 'briefcase' : (isEarly ? 'alert' : 'logout')))} style={{ width: 13, height: 13 }} />
                     {statusLabel}
                   </span>
                 </td>
@@ -361,7 +362,7 @@ function AnnouncementsModal({ announcements, onClose, canManage, onEdit, onDelet
         <div className="asas-modal-body">
           {announcements.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '36px 10px', color: 'var(--text-3)' }}>
-              <Icon name="bell" style={{ width: 40, height: 40, margin: '0 auto 10px', opacity: 0.3 }} />
+              <Icon name="sparkle" style={{ width: 40, height: 40, margin: '0 auto 10px', opacity: 0.3 }} />
               <p>لا توجد تعميمات جديدة حالياً.</p>
             </div>
           ) : (
@@ -1815,27 +1816,16 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
               <p>{roles[user.role]}</p>
             </div>
           </div>
-          <div className="asas-sidebar-actions-row">
-            <button
-              type="button"
-              className="asas-btn sm asas-sidebar-theme-btn"
-              onClick={toggleTheme}
-              title={theme === 'dark' ? 'التحويل للمظهر الفاتح' : 'التحويل للمظهر الداكن'}
-              aria-label="تبديل مظهر النظام"
-            >
-              <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
-              <span>{theme === 'dark' ? 'فاتح' : 'داكن'}</span>
-            </button>
-            <button
-              type="button"
-              className="asas-btn sm asas-sidebar-logout"
-              onClick={logout}
-              title="تسجيل الخروج"
-            >
-              <Icon name="logout" />
-              <span>خروج</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            className="asas-btn sm asas-sidebar-logout"
+            style={{ width: '100%' }}
+            onClick={logout}
+            title="تسجيل الخروج"
+          >
+            <Icon name="logout" />
+            <span>خروج</span>
+          </button>
         </div>
       </aside>
 
@@ -1844,7 +1834,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
         <header className="asas-topbar">
           <div className="asas-topbar-title">
             <button className="asas-menu-btn" onClick={() => setOpen(!open)} aria-label="القائمة" title="فتح القائمة">
-              <Icon name="grid" />
+              <Icon name="menu" />
             </button>
             <div className="asas-topbar-brand" title="أساس - نظام الحضور والدوام السيادي">
               <div className="asas-topbar-mark" />
@@ -1947,7 +1937,11 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div className="asas-mark" />
+                  <ProgressRing value={data.present} max={Math.max(data.total, 1)} size={82}>
+                    <strong className="num" style={{ fontSize: 16 }}>
+                      {data.total ? Math.round((data.present / data.total) * 100) : 0}%
+                    </strong>
+                  </ProgressRing>
                 </div>
               </Glass>
 
@@ -2248,11 +2242,11 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                           Excel / CSV
                         </button>
                         <button className="asas-btn sm" disabled={busy} onClick={exportWord} title="تصدير كملف Word معتمد وفق القالب الرسمي">
-                          <Icon name="fileText" />
+                          <Icon name="file" />
                           Word (DOCX)
                         </button>
                         <button className="asas-btn sm" disabled={busy} onClick={exportTxt} title="تصدير كنص منسق">
-                          <Icon name="file" />
+                          <Icon name="download" />
                           تقرير TXT
                         </button>
                       </div>
@@ -2575,7 +2569,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                           <Glass className="asas-stat-card">
                             <div className="asas-stat-card-top">
                               <span>الإجازات والعطلات</span>
-                              <div className="asas-stat-icon-wrap"><Icon name="calendar" /></div>
+                              <div className="asas-stat-icon-wrap"><Icon name="briefcase" /></div>
                             </div>
                             <div className="asas-stat-value">
                               {individualData.summary.leave_days + individualData.summary.weekend_days} يوم
@@ -2589,7 +2583,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                         {/* Individual Day-by-Day Historical Timeline Table */}
                         <Card
                           title={`السجل التاريخي المفصل للموظف: ${individualData.employee.name} (الفترة: ${from} إلى ${to})`}
-                          icon="calendar"
+                          icon="list"
                         >
                           <div className="asas-table-wrap">
                             <table className="asas-table">
@@ -2746,9 +2740,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                       {[
                         ['all', `الكل (${allRecords.length})`, 'users'],
                         ['inside', `حاضرون الآن (${insideCount})`, 'checkCircle'],
-                        ['outside', `انصرفوا (${outsideCount})`, 'logOut'],
+                        ['outside', `انصرفوا (${outsideCount})`, 'logout'],
                         ['absent', `لم يسجلوا اليوم / غائبون (${absentCount})`, 'alert'],
-                        ['leave', `في إجازة (${leaveCount})`, 'calendar']
+                        ['leave', `في إجازة (${leaveCount})`, 'briefcase']
                       ].map(([fKey, fLabel, fIcon]) => (
                         <button
                           key={fKey}
@@ -2793,8 +2787,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   marginBottom: 16
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                      ⏳
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon name="clock" style={{ color: '#f59e0b' }} />
                     </div>
                     <div>
                       <strong style={{ fontSize: 14, color: '#f59e0b', display: 'block' }}>
@@ -2956,8 +2950,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                             {a.active ? (
                               <span className="asas-badge inside">نشط</span>
                             ) : (
-                              <span className="asas-badge pending" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.4)', fontWeight: 700 }}>
-                                ⏳ بانتظار الموافقة
+                              <span className="asas-badge pending" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.4)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                <Icon name="clock" style={{ width: 12, height: 12 }} />
+                                بانتظار الموافقة
                               </span>
                             )}
                           </td>
@@ -3297,7 +3292,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                               <p className="asas-muted" style={{ fontSize: 12 }}>يُعلق عند المخرج · مخصص حصرياً لتسجيل الانصراف والخروج (لا يقبل الدخول)</p>
                               <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
                                 <a className="asas-btn sm" href={exitUrl} target="_blank" rel="noreferrer" style={{ borderColor: 'var(--unpaid)', color: 'var(--unpaid)' }}>
-                                  <Icon name="logOut" />
+                                  <Icon name="logout" />
                                   فتح صفحة الخروج
                                 </a>
                                 <button className="asas-btn sm" onClick={() => setShowPrintModal('exit')}>
@@ -4307,7 +4302,6 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
       </div>
 
       <div className="asas-login">
-        <div className="asas-fixed-watermark" aria-hidden="true" />
         <div className="asas-luminous-halo" aria-hidden="true" />
         <section className="asas-login-hero">
           <Brand />
@@ -4476,8 +4470,9 @@ function Login({ onLogin, initialError, onRetry, theme, onToggleTheme, onOpenIns
                   )}
                 </div>
 
-                <div style={{ background: 'rgba(16, 185, 129, 0.08)', borderRadius: 10, padding: 10, border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: 11.5, color: 'var(--text-2)', marginBottom: 18, lineHeight: 1.5, textAlign: 'right' }}>
-                  🔒 <strong>تنبيه الأمان والاعتماد:</strong> سيتم تفعيل حسابك فور موافقة إدارة النظام في لوحة التحكم. يمكنك بعدها تسجيل الدخول بالرقم الوظيفي أو البريد.
+                <div style={{ background: 'rgba(16, 185, 129, 0.08)', borderRadius: 10, padding: 10, border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: 11.5, color: 'var(--text-2)', marginBottom: 18, lineHeight: 1.5, textAlign: 'right', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <Icon name="shieldCheck" style={{ width: 15, height: 15, color: '#10b981', flexShrink: 0, marginTop: 2 }} />
+                  <span><strong>تنبيه الأمان والاعتماد:</strong> سيتم تفعيل حسابك فور موافقة إدارة النظام في لوحة التحكم. يمكنك بعدها تسجيل الدخول بالرقم الوظيفي أو البريد.</span>
                 </div>
 
                 <button
@@ -5473,7 +5468,6 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
       {/* Profile Card */}
       <Glass className="asas-employee-profile" style={{ padding: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, position: 'relative', overflow: 'hidden' }}>
-        <div className="asas-card-watermark" aria-hidden="true" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', zIndex: 1 }}>
           <div className="asas-employee-avatar-wrap">
             <UserAvatar user={user} size="lg" onClick={onOpenProfile} />
@@ -5504,7 +5498,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <button className="asas-btn" onClick={onOpenProfile}>
-            <Icon name="key" />
+            <Icon name="user" />
             الملف الشخصي والأمان
           </button>
           <LiveClock iconSize={14} iconColor="var(--accent)" />
@@ -5521,7 +5515,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             className={`asas-employee-tab ${empPage === 'duty' ? 'active' : ''}`}
             onClick={() => setEmpPage('duty')}
           >
-            <Icon name="clock" />
+            <Icon name="shieldCheck" />
             <span className="asas-tab-text-full">حالة وتسجيل الحضور</span>
             <span className="asas-tab-text-short">تسجيل الحضور</span>
             <span className="asas-tab-text-micro">الحضور</span>
@@ -5537,7 +5531,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             className={`asas-employee-tab ${empPage === 'leave' ? 'active' : ''}`}
             onClick={() => { setEmpPage('leave'); loadLeaves(); }}
           >
-            <Icon name="receipt" />
+            <Icon name="briefcase" />
             <span className="asas-tab-text-full">طلب إجازة واستئذان</span>
             <span className="asas-tab-text-short">إجازة واستئذان</span>
             <span className="asas-tab-text-micro">إجازة</span>
@@ -5557,7 +5551,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           >
             <Icon name="calendar" />
             <span className="asas-tab-text-full">سجل الحضور والدوام</span>
-            <span className="asas-tab-text-short">السجل الحظوري</span>
+            <span className="asas-tab-text-short">السجل الحضوري</span>
             <span className="asas-tab-text-micro">السجل</span>
             {(data?.records || []).length > 0 && (
               <span className="asas-tab-badge">
@@ -5729,7 +5723,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ color: 'var(--text-3)' }}>الرمز المقترن:</span>
                     <span className={`asas-badge ${isEnter ? 'inside' : isExit ? 'urgent' : 'outside'}`} style={{ fontSize: 11 }}>
-                      <Icon name={isEnter ? 'logIn' : isExit ? 'logOut' : 'qrCode'} style={{ width: 13, height: 13 }} />
+                      <Icon name={isEnter ? 'logIn' : isExit ? 'logout' : 'qrCode'} style={{ width: 13, height: 13 }} />
                       {isEnter ? 'كود الحضور (دخول فقط)' : isExit ? 'كود الانصراف (خروج فقط)' : 'رمز الفرع'}
                     </span>
                   </div>
@@ -5799,8 +5793,8 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                     onClick={() => act('enter')}
                     title="تسجيل الحضور عبر بصمة الهاتف"
                   >
-                    <Icon name="logIn" style={{ width: 18, height: 18 }} />
-                    <span>تسجيل الحضور (بصمة 👆)</span>
+                    <Icon name="fingerprint" style={{ width: 18, height: 18 }} />
+                    <span>تسجيل الحضور بالبصمة</span>
                   </button>
 
                   <button
@@ -5810,8 +5804,8 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                     onClick={() => act('exit')}
                     title="تسجيل الانصراف عبر بصمة الهاتف"
                   >
-                    <Icon name="logOut" style={{ width: 18, height: 18 }} />
-                    <span>تسجيل الانصراف (بصمة 👆)</span>
+                    <Icon name="checkCircle" style={{ width: 18, height: 18 }} />
+                    <span>تسجيل الانصراف بالبصمة</span>
                   </button>
                 </div>
 
@@ -5939,7 +5933,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
       {/* SUBPAGE 3: Attendance History & Records */}
       {empPage === 'history' && (
-        <Card title="السجل الحظوري الموثق" icon="calendar">
+        <Card title="السجل الحضوري الموثق" icon="list">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid var(--hairline)' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
               إجمالي الفترات المسجلة: <strong>{(data?.records || []).length}</strong>

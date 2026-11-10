@@ -9,13 +9,12 @@
   isolation: isolate;
   border-radius: var(--radius-xl);
   background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 55%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(175%);
+  backdrop-filter: blur(24px) saturate(175%);
   box-shadow:
     inset 0 1px 0 0 var(--glass-rim),
     inset 0 -1px 0 0 var(--glass-rim-low),
     var(--glass-shadow);
-  transform: translateZ(0);
 }
 
 .glass::before {
@@ -52,9 +51,8 @@
 /* Thicker, more opaque glass for floating controls (nav, sheets, popovers). */
 .glass--thick {
   background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint-strong) 100%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
-  backdrop-filter: blur(14px) saturate(150%);
-  transform: translateZ(0);
+  -webkit-backdrop-filter: blur(36px) saturate(190%);
+  backdrop-filter: blur(36px) saturate(190%);
 }
 
 .glass--pill {
@@ -76,7 +74,6 @@
   overflow: hidden;
   pointer-events: none;
   contain: strict;
-  transform: translateZ(0);
 }
 
 /* Static soft-edged glows: the background never moves, so the tint seen
@@ -85,7 +82,6 @@
   position: absolute;
   border-radius: 50%;
   background: radial-gradient(closest-side, var(--orb-color) 0%, transparent 100%);
-  transform: translateZ(0);
 }
 
 .ambient__orb--1 {
@@ -126,20 +122,18 @@
 
 .ambient__mark {
   position: absolute;
-  width: min(58vw, 720px);
+  width: min(52vw, 640px);
   aspect-ratio: 331 / 400;
   left: -6vw;
   bottom: -10vw;
   background: url('/logo-dark.png') center / contain no-repeat;
   opacity: 0.045;
   transform: rotate(-8deg);
-  filter: none;
 }
 
 :root[data-theme='dark'] .ambient__mark {
   background-image: url('/logo-light.png');
   opacity: 0.035;
-  filter: none;
 }
 
 

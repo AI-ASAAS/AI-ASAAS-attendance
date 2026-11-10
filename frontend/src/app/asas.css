@@ -903,8 +903,10 @@ html, body {
   .asas-bell-btn,
   .asas-theme-btn,
   .asas-menu-btn {
-    width: 34px !important;
-    height: 34px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    width: 42px !important;
+    height: 42px !important;
   }
 }
 
@@ -1546,62 +1548,7 @@ select.asas-input option {
   display: none !important;
 }
 
-/* Sovereign Brand Watermark (Positioned subtly to the side per Asas Skills) */
-.asas-fixed-watermark,
-.asas-app::before,
-.asas-employee-page::before {
-  content: '' !important;
-  position: fixed !important;
-  pointer-events: none !important;
-  user-select: none !important;
-  z-index: 0 !important;
-  left: -5vw !important;
-  bottom: -8vw !important;
-  top: auto !important;
-  right: auto !important;
-  width: min(52vw, 600px) !important;
-  height: min(62vw, 720px) !important;
-  aspect-ratio: 331 / 400 !important;
-  background: url('/logo-dark.png') center / contain no-repeat !important;
-  opacity: 0.045 !important;
-  transform: rotate(-8deg) !important;
-  filter: none !important;
-  transition: opacity 0.3s ease !important;
-}
-
-:root[data-theme='dark'] .asas-fixed-watermark,
-:root[data-theme='dark'] .asas-app::before,
-:root[data-theme='dark'] .asas-employee-page::before {
-  background-image: url('/logo-light.png') !important;
-  opacity: 0.035 !important;
-  filter: none !important;
-}
-
-.asas-login::before {
-  content: '' !important;
-  position: fixed !important;
-  pointer-events: none !important;
-  user-select: none !important;
-  z-index: 0 !important;
-  right: -6vw !important;
-  bottom: -8vw !important;
-  top: auto !important;
-  left: auto !important;
-  width: min(55vw, 640px) !important;
-  height: min(65vw, 760px) !important;
-  aspect-ratio: 331 / 400 !important;
-  background: url('/logo-dark.png') center / contain no-repeat !important;
-  opacity: 0.05 !important;
-  transform: rotate(-8deg) !important;
-  filter: none !important;
-  transition: opacity 0.3s ease !important;
-}
-:root[data-theme='dark'] .asas-login::before {
-  background-image: url('/logo-light.png') !important;
-  opacity: 0.04 !important;
-  filter: none !important;
-}
-
+/* Sovereign Brand Watermark handled centrally by <Ambient /> (.ambient__mark) */
 .asas-login .asas-eyebrow {
   background: linear-gradient(135deg, #cfae72 0%, var(--brand-gold) 60%, #8f6626 100%);
   -webkit-background-clip: text;
@@ -1706,31 +1653,6 @@ select.asas-input option {
   z-index: 1;
 }
 
-/* Sovereign Brand Watermark (Login Box Card — Subtle & Soothing) */
-.asas-login-box::before {
-  content: '';
-  position: absolute;
-  top: -20px;
-  left: -20px;
-  width: 280px;
-  height: 280px;
-  background: url('/logo-dark.png') center / contain no-repeat;
-  opacity: 0.045;
-  pointer-events: none;
-  z-index: 0;
-  transform: rotate(-10deg);
-  mask-image: radial-gradient(circle at center, black 58%, transparent 88%);
-  -webkit-mask-image: radial-gradient(circle at center, black 58%, transparent 88%);
-  filter: none;
-  transition: opacity 0.3s ease;
-}
-
-:root[data-theme='dark'] .asas-login-box::before {
-  background-image: url('/logo-light.png');
-  opacity: 0.035;
-  filter: none;
-}
-
 .asas-login-mobile-brand {
   display: none;
   margin-bottom: 20px;
@@ -1827,7 +1749,9 @@ select.asas-input option {
 }
 
 @media (min-width: 1025px) {
-  .asas-menu-btn {
+  .asas-menu-btn,
+  .asas-topbar-brand,
+  .asas-topbar-divider {
     display: none !important;
   }
 }
@@ -2114,30 +2038,6 @@ select.asas-input option {
     position: relative !important;
     overflow: hidden !important;
   }
-  .asas-fixed-watermark,
-  .asas-login::before {
-    content: '';
-    position: fixed !important;
-    bottom: -12vw !important;
-    left: -8vw !important;
-    top: auto !important;
-    right: auto !important;
-    transform: rotate(-8deg) !important;
-    width: min(380px, 80vw) !important;
-    height: min(440px, 92vw) !important;
-    aspect-ratio: 331 / 400 !important;
-    background: url('/logo-dark.png') center / contain no-repeat !important;
-    opacity: 0.045 !important;
-    pointer-events: none !important;
-    z-index: 0 !important;
-    filter: none !important;
-  }
-  :root[data-theme='dark'] .asas-fixed-watermark,
-  :root[data-theme='dark'] .asas-login::before {
-    background-image: url('/logo-light.png') !important;
-    opacity: 0.035 !important;
-    filter: none !important;
-  }
   .asas-login-hero {
     display: none !important;
   }
@@ -2349,9 +2249,12 @@ select.asas-input option {
     display: none;
   }
   .asas-bell-btn,
-  .asas-theme-btn {
-    width: 36px;
-    height: 36px;
+  .asas-theme-btn,
+  .asas-menu-btn {
+    min-width: 42px;
+    min-height: 42px;
+    width: 42px;
+    height: 42px;
   }
 
   /* Modal Bottom Sheet on narrow phones */
@@ -3657,26 +3560,6 @@ select.asas-input option {
    ASAAS BRAND GUIDELINE & LIQUID-GLASS IDENTITY POLISH
    Watermark Precision, Liquid Glass, and Sovereign Design Scale
    ═══════════════════════════════════════════════════════════════════════════ */
-
-/* Subtle corner watermark on cards */
-.asas-card-watermark {
-  position: absolute;
-  bottom: -20px;
-  left: -20px;
-  width: 140px;
-  height: 140px;
-  background: url('/logo-dark.png') center / contain no-repeat;
-  opacity: 0.04;
-  pointer-events: none;
-  z-index: 0;
-  transform: rotate(-12deg);
-  mask-image: radial-gradient(circle at center, black 50%, transparent 80%);
-  -webkit-mask-image: radial-gradient(circle at center, black 50%, transparent 80%);
-}
-:root[data-theme='dark'] .asas-card-watermark {
-  background-image: url('/logo-light.png');
-  opacity: 0.03;
-}
 
 /* 4. Employee Profile Beacon */
 .asas-employee-avatar-wrap {

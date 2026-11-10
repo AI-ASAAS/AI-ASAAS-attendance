@@ -32,7 +32,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
         <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
@@ -41,11 +41,7 @@ export default function RootLayout({ children }) {
         <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
         <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `if(typeof window!=="undefined"&&location.protocol==="http:"&&location.hostname==="attendance.ai-asaas.com"){location.replace("https://"+location.host+location.pathname+location.search+location.hash);}`,
-          }}
-        />
+        <script src="/theme-init.js"></script>
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
       <body>

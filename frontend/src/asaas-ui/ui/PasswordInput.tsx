@@ -1,5 +1,6 @@
 import { type InputHTMLAttributes, useState } from 'react';
-import { passwordStrength, STRENGTH_LABELS } from '../lib/passwordStrength';
+import { kitText } from '../lib/i18n';
+import { passwordStrength, strengthLabel } from '../lib/passwordStrength';
 import { Icon } from './Icon';
 
 /** Password field with a show/hide toggle. */
@@ -12,9 +13,9 @@ export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>,
         type="button"
         className="password-input__toggle"
         onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+        aria-label={kitText(visible ? 'hidePassword' : 'showPassword')}
         aria-pressed={visible}
-        title={visible ? 'إخفاء' : 'إظهار'}
+        title={kitText(visible ? 'hide' : 'show')}
       >
         <Icon name={visible ? 'eyeOff' : 'eye'} />
       </button>
@@ -33,7 +34,7 @@ export function PasswordStrength({ password }: { password: string }) {
           <span key={step} className={step <= Math.max(level, 1) ? 'strength__seg is-on' : 'strength__seg'} />
         ))}
       </div>
-      <span className="strength__label">قوة كلمة المرور: {STRENGTH_LABELS[level]}</span>
+      <span className="strength__label">{kitText('passwordStrength')}: {strengthLabel(level)}</span>
     </div>
   );
 }

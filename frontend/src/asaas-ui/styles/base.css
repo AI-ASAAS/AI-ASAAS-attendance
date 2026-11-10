@@ -14,6 +14,8 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
+  /* Long words, links and e-mail addresses wrap instead of widening the page. */
+  overflow-wrap: break-word;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
@@ -67,6 +69,18 @@ textarea {
 
 button {
   cursor: pointer;
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Icons that point along the reading direction are drawn for Arabic; mirror them in English. */
+:root[dir='ltr'] .icon--dir {
+  transform: scaleX(-1);
 }
 
 a {
