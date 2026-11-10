@@ -9,6 +9,7 @@ import {
   Glass,
   Card,
   Icon,
+  ProgressBar,
   ProgressRing,
   Swash,
   Stretch,
@@ -234,7 +235,7 @@ function Brand() {
       <div className="asas-mark" />
       <div>
         <strong><Swash>أساس</Swash></strong>
-        <small>لذكاء أكثر سيادة · الحضور والدوام</small>
+        <small>نظام الحضور والدوام</small>
       </div>
     </div>
   );
@@ -1915,9 +1916,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
         <main className="asas-content">
           <div className="asas-heading">
             <div>
-              <p className="asas-eyebrow">منظومة أساس السيادية</p>
               <h1><Swash>{title}</Swash></h1>
-              <p className="asas-muted">إدارة فورية دقيقة، حوكمة مؤكدة، وقاعدة بيانات سحابية متزامنة لحظياً.</p>
+              <p className="asas-muted prose">متابعة الحضور الفوري، المواقع المعتمدة، وسجلات الدوام.</p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button className="asas-btn" onClick={() => load(true)} disabled={busy}>
@@ -1956,9 +1956,12 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
             <>
               <Glass className="asas-hero-banner">
                 <div>
-                  <p className="asas-eyebrow">منظومة العمل الذكية · لذكاء أكثر سيادة</p>
+                  <div className="asas-hero-company">
+                    <span className="asas-mark" aria-hidden="true" />
+                    <span>شركة أساس الذكاء الاصطناعي</span>
+                  </div>
                   <h2><AsasGreeting name={user.name} /></h2>
-                  <p className="prose">حضور مؤكد جغرافياً ومقيد بأجهزة الموظفين مع تحديث لحظي على السحابة وقواعد البيانات.</p>
+                  <p className="prose">حضور مؤكد جغرافياً ومقيد بالأجهزة المعتمدة مع مزامنة لحظية.</p>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
                     <button className="asas-btn primary" onClick={() => setTab('qr')}>
                       <Icon name="qrCode" />
@@ -1970,7 +1973,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                         if (installPrompt) installPrompt.prompt();
                         else setShowInstallModal(true);
                       }}
-                      style={{ background: 'var(--glass-tint)', borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 600 }}
+                      style={{ borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 600 }}
                     >
                       <Icon name="download" />
                       تحميل التطبيق على الجوال
@@ -1992,7 +1995,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     <span>إجمالي الموظفين</span>
                     <div className="asas-stat-icon-wrap"><Icon name="users" /></div>
                   </div>
-                  <div className="asas-stat-value">{formatNumber(data.total)}</div>
+                  <div className="asas-stat-value num">{formatNumber(data.total)}</div>
                   <div className="asas-stat-caption">حسابات نشطة في قاعدة البيانات</div>
                 </Glass>
 
@@ -2001,7 +2004,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     <span>حاضرون اليوم</span>
                     <div className="asas-stat-icon-wrap"><Icon name="checkCircle" /></div>
                   </div>
-                  <div className="asas-stat-value" style={{ color: 'var(--paid)' }}>{formatNumber(data.present)}</div>
+                  <div className="asas-stat-value num" style={{ color: 'var(--paid)' }}>{formatNumber(data.present)}</div>
                   <div className="asas-stat-caption">سجلوا دخولهم خلال الساعات الحالية</div>
                 </Glass>
 
@@ -2010,7 +2013,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     <span>داخل نطاق العمل</span>
                     <div className="asas-stat-icon-wrap"><Icon name="mapPin" /></div>
                   </div>
-                  <div className="asas-stat-value">{formatNumber(data.inside)}</div>
+                  <div className="asas-stat-value num">{formatNumber(data.inside)}</div>
                   <div className="asas-stat-caption">حسب قراءات GPS المؤكدة</div>
                 </Glass>
 
@@ -2019,7 +2022,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     <span>تأخيرات مرصودة</span>
                     <div className="asas-stat-icon-wrap"><Icon name="alert" /></div>
                   </div>
-                  <div className="asas-stat-value" style={{ color: data.late > 0 ? 'var(--partial)' : 'var(--text)' }}>{formatNumber(data.late)}</div>
+                  <div className="asas-stat-value num" style={{ color: data.late > 0 ? 'var(--partial)' : 'var(--text)' }}>{formatNumber(data.late)}</div>
                   <div className="asas-stat-caption">حالات تأخير بحاجة لمتابعة</div>
                 </Glass>
               </div>
@@ -2027,18 +2030,16 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
               <div className="asas-grid-halves">
                 <Card title="مؤشر نسبة الحضور" icon="trend">
                   <div style={{ padding: '12px 6px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                       <span className="asas-muted">نسبة حضور اليوم</span>
-                      <strong style={{ fontSize: 18, color: 'var(--accent)' }}>
+                      <strong className="num" style={{ fontSize: 18, color: 'var(--accent)' }}>
                         {data.total ? Math.round(data.present / data.total * 100) : 0}%
                       </strong>
                     </div>
-                    <div style={{ height: 8, borderRadius: 4, background: 'var(--glass-inset)', overflow: 'hidden' }}>
-                      <div style={{ width: `${data.total ? Math.min(100, data.present / data.total * 100) : 0}%`, height: '100%', background: 'linear-gradient(90deg, var(--brand-gold), #8f6a2e)', borderRadius: 4 }} />
-                    </div>
+                    <ProgressBar value={data.present} max={Math.max(data.total, 1)} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14, fontSize: 12, color: 'var(--text-3)' }}>
-                      <span>لم يسجلوا بعد: <strong>{Math.max(0, data.total - data.present)}</strong></span>
-                      <span>سجلوا حضوراً: <strong>{data.present}</strong></span>
+                      <span>لم يسجلوا بعد: <strong className="num">{formatNumber(Math.max(0, data.total - data.present))}</strong></span>
+                      <span>سجلوا حضوراً: <strong className="num">{formatNumber(data.present)}</strong></span>
                     </div>
                   </div>
                 </Card>

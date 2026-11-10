@@ -127,13 +127,13 @@ html, body {
   height: calc(100vh - 28px);
   height: calc(100dvh - 28px);
   margin: 14px 14px 14px 0;
-  border-radius: var(--radius-xl, 24px);
+  border-radius: var(--radius-xl);
   flex-shrink: 0;
-  background: linear-gradient(180deg, rgba(252, 249, 245, 0.94) 0%, rgba(244, 237, 225, 0.90) 100%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  backdrop-filter: blur(28px) saturate(180%);
+  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 55%);
+  -webkit-backdrop-filter: blur(36px) saturate(190%);
+  backdrop-filter: blur(36px) saturate(190%);
   border: 1px solid var(--glass-rim);
-  box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow);
+  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow);
   padding: 16px 14px;
   display: flex;
   flex-direction: column;
@@ -280,74 +280,76 @@ html, body {
 
 .asas-nav button.active,
 .asas-nav-item.active {
-  background: linear-gradient(270deg, rgba(186, 149, 85, 0.16) 0%, rgba(186, 149, 85, 0.03) 100%) !important;
+  background: linear-gradient(270deg, rgba(186, 149, 85, 0.16) 0%, transparent 100%) !important;
   color: var(--accent) !important;
   font-weight: 700 !important;
-  border: 1px solid rgba(186, 149, 85, 0.35) !important;
+  border: 1px solid rgba(186, 149, 85, 0.32) !important;
   border-right: 3.5px solid var(--brand-gold) !important;
   border-top-right-radius: 4px !important;
   border-bottom-right-radius: 4px !important;
-  box-shadow: 0 4px 14px -2px rgba(186, 149, 85, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.50) !important;
+  box-shadow: 0 4px 16px -4px rgba(186, 149, 85, 0.22), inset 0 1px 0 var(--glass-rim) !important;
 }
 
 .asas-nav button.active .asas-nav-icon,
 .asas-nav-item.active .asas-nav-icon {
-  background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.50) !important;
-  color: #ffffff !important;
+  background: radial-gradient(120% 140% at 50% -40%, rgba(255, 255, 255, 0.55), transparent 55%),
+              linear-gradient(180deg, #cfae72 0%, var(--brand-gold) 55%, #a07c3f 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  color: var(--on-accent) !important;
   transform: scale(1.05) !important;
-  box-shadow: 0 4px 14px -2px rgba(186, 149, 85, 0.50), inset 0 1px 0 rgba(255, 255, 255, 0.60) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 6px rgba(80, 55, 15, 0.25), 0 6px 18px -6px var(--accent-glow) !important;
 }
 .asas-nav button.active .asas-nav-icon svg,
 .asas-nav-item.active .asas-nav-icon svg {
-  color: #ffffff !important;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  color: var(--on-accent) !important;
+  filter: none;
 }
 
 /* Dark mode sidebar */
 :root[data-theme='dark'] .asas-sidebar {
-  background: linear-gradient(180deg, rgba(22, 18, 19, 0.95) 0%, rgba(16, 13, 14, 0.98) 100%) !important;
-  border: 1px solid rgba(186, 149, 85, 0.28) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.10), 0 12px 40px rgba(0, 0, 0, 0.70) !important;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--bg) 78%, rgba(255, 246, 230, 0.11)), color-mix(in srgb, var(--bg) 86%, rgba(255, 246, 230, 0.05))) !important;
+  border: 1px solid var(--glass-rim-low) !important;
+  box-shadow: inset 0 1px 0 var(--glass-sheen), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow) !important;
 }
 
 :root[data-theme='dark'] .asas-nav-icon {
-  background: rgba(186, 149, 85, 0.08);
-  border: 1px solid rgba(186, 149, 85, 0.18);
-  color: #efe9d8;
+  background: var(--glass-inset);
+  border: 1px solid var(--hairline);
+  color: var(--text-2);
 }
 
 :root[data-theme='dark'] .asas-nav button:hover,
 :root[data-theme='dark'] .asas-nav-item:hover {
-  background: rgba(186, 149, 85, 0.12);
-  color: #efe9d8;
-  border-color: rgba(186, 149, 85, 0.32);
+  background: rgba(216, 179, 111, 0.10);
+  color: var(--text);
+  border-color: rgba(216, 179, 111, 0.28);
 }
 :root[data-theme='dark'] .asas-nav button:hover .asas-nav-icon,
 :root[data-theme='dark'] .asas-nav-item:hover .asas-nav-icon {
-  background: rgba(186, 149, 85, 0.22);
-  border-color: rgba(186, 149, 85, 0.50);
-  color: #dfc289;
+  background: rgba(216, 179, 111, 0.18);
+  border-color: rgba(216, 179, 111, 0.42);
+  color: var(--accent);
 }
 
 :root[data-theme='dark'] .asas-nav button.active,
 :root[data-theme='dark'] .asas-nav-item.active {
-  background: linear-gradient(270deg, rgba(186, 149, 85, 0.24) 0%, rgba(186, 149, 85, 0.04) 100%) !important;
-  color: #dfc289 !important;
-  border-color: rgba(186, 149, 85, 0.40) !important;
-  border-right: 3.5px solid #dfc289 !important;
-  box-shadow: 0 4px 18px -4px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+  background: linear-gradient(270deg, rgba(216, 179, 111, 0.20) 0%, transparent 100%) !important;
+  color: var(--accent) !important;
+  border-color: rgba(216, 179, 111, 0.36) !important;
+  border-right: 3.5px solid var(--accent) !important;
+  box-shadow: 0 6px 20px -6px rgba(0, 0, 0, 0.50), inset 0 1px 0 var(--glass-sheen) !important;
 }
 :root[data-theme='dark'] .asas-nav button.active .asas-nav-icon,
 :root[data-theme='dark'] .asas-nav-item.active .asas-nav-icon {
-  background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%) !important;
-  color: #141111 !important;
-  border-color: rgba(255, 255, 255, 0.35) !important;
-  box-shadow: 0 4px 16px -2px rgba(186, 149, 85, 0.60), inset 0 1px 0 rgba(255, 255, 255, 0.50) !important;
+  background: radial-gradient(120% 140% at 50% -40%, rgba(255, 255, 255, 0.45), transparent 55%),
+              linear-gradient(180deg, #cfae72 0%, var(--brand-gold) 55%, #a07c3f 100%) !important;
+  color: var(--on-accent) !important;
+  border-color: rgba(255, 244, 222, 0.35) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -2px 6px rgba(80, 55, 15, 0.25), 0 6px 18px -6px var(--accent-glow) !important;
 }
 :root[data-theme='dark'] .asas-nav button.active .asas-nav-icon svg,
 :root[data-theme='dark'] .asas-nav-item.active .asas-nav-icon svg {
-  color: #141111 !important;
+  color: var(--on-accent) !important;
   filter: none !important;
 }
 
@@ -458,20 +460,20 @@ html, body {
   margin: 14px 14px 0 14px;
   padding: 0 18px;
   box-sizing: border-box;
-  border-radius: var(--radius-lg, 20px);
-  background: linear-gradient(135deg, rgba(255, 253, 249, 0.94) 0%, rgba(246, 239, 227, 0.90) 100%);
-  -webkit-backdrop-filter: blur(24px) saturate(175%);
-  backdrop-filter: blur(24px) saturate(175%);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 60%);
+  -webkit-backdrop-filter: blur(36px) saturate(190%);
+  backdrop-filter: blur(36px) saturate(190%);
   border: 1px solid var(--glass-rim);
-  box-shadow: 0 10px 30px -8px rgba(35, 31, 32, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow);
   transition: all 0.25s var(--ease-spring);
   transform: translateZ(0);
 }
 
 :root[data-theme='dark'] .asas-topbar {
-  background: linear-gradient(135deg, rgba(26, 22, 23, 0.96) 0%, rgba(18, 15, 16, 0.98) 100%) !important;
-  border: 1px solid rgba(186, 149, 85, 0.28) !important;
-  box-shadow: 0 10px 30px -6px rgba(0, 0, 0, 0.70), inset 0 1px 0 rgba(255, 244, 222, 0.12) !important;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--bg) 78%, rgba(255, 246, 230, 0.11)), color-mix(in srgb, var(--bg) 86%, rgba(255, 246, 230, 0.05))) !important;
+  border: 1px solid var(--glass-rim-low) !important;
+  box-shadow: inset 0 1px 0 var(--glass-sheen), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow) !important;
 }
 
 .asas-topbar-title {
@@ -537,18 +539,19 @@ html, body {
   border-radius: 11px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%);
-  border: 1px solid rgba(255, 255, 255, 0.50);
-  color: #ffffff;
-  box-shadow: 0 4px 14px -2px rgba(186, 149, 85, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.60);
+  background: radial-gradient(120% 140% at 50% -40%, rgba(255, 255, 255, 0.55), transparent 55%),
+              linear-gradient(180deg, #cfae72 0%, var(--brand-gold) 55%, #a07c3f 100%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: var(--on-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 6px rgba(80, 55, 15, 0.25), 0 6px 18px -6px var(--accent-glow);
   flex-shrink: 0;
   transition: all 0.25s var(--ease-spring);
 }
 .asas-topbar-icon-capsule svg {
   width: 18px;
   height: 18px;
-  color: #ffffff !important;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  color: var(--on-accent) !important;
+  filter: none;
 }
 
 .asas-topbar-title-text {
@@ -703,12 +706,12 @@ html, body {
     right: 10px;
     z-index: 50;
     height: 60px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, rgba(255, 253, 249, 0.96) 0%, rgba(246, 239, 227, 0.94) 100%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid rgba(186, 149, 85, 0.28);
-    box-shadow: 0 10px 32px -6px rgba(35, 31, 32, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    background: linear-gradient(165deg, color-mix(in srgb, var(--bg) 62%, var(--brand-paper)) 0%, var(--glass-tint-strong) 100%);
+    -webkit-backdrop-filter: blur(36px) saturate(190%);
+    backdrop-filter: blur(36px) saturate(190%);
+    border: 1px solid var(--glass-rim);
+    box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow);
     display: flex;
     align-items: center;
     justify-content: space-around;
@@ -719,9 +722,9 @@ html, body {
   }
 
   :root[data-theme='dark'] .asas-mobile-dock {
-    background: linear-gradient(135deg, rgba(24, 20, 21, 0.97) 0%, rgba(18, 15, 16, 0.98) 100%);
-    border: 1px solid rgba(186, 149, 85, 0.32);
-    box-shadow: 0 12px 35px -6px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 244, 222, 0.12);
+    background: linear-gradient(165deg, color-mix(in srgb, var(--bg) 78%, rgba(255, 246, 230, 0.11)), color-mix(in srgb, var(--bg) 86%, rgba(255, 246, 230, 0.05)));
+    border: 1px solid var(--glass-rim-low);
+    box-shadow: inset 0 1px 0 var(--glass-sheen), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow);
   }
 
   .asas-mobile-dock-item {
@@ -783,23 +786,16 @@ html, body {
     font-weight: 700;
   }
   .asas-mobile-dock-item.active .asas-mobile-dock-icon {
-    background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%);
-    border: 1px solid rgba(255, 255, 255, 0.50);
-    color: #ffffff;
+    background: radial-gradient(120% 140% at 50% -40%, rgba(255, 255, 255, 0.55), transparent 55%),
+                linear-gradient(180deg, #cfae72 0%, var(--brand-gold) 55%, #a07c3f 100%);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    color: var(--on-accent);
     transform: translateY(-2px) scale(1.06);
-    box-shadow: 0 4px 12px -2px rgba(186, 149, 85, 0.50), inset 0 1px 0 rgba(255, 255, 255, 0.60);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 6px rgba(80, 55, 15, 0.25), 0 6px 16px -6px var(--accent-glow);
   }
   .asas-mobile-dock-item.active .asas-mobile-dock-icon svg {
-    color: #ffffff !important;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
-  }
-
-  :root[data-theme='dark'] .asas-mobile-dock-item.active .asas-mobile-dock-icon {
-    color: #141111 !important;
-  }
-  :root[data-theme='dark'] .asas-mobile-dock-item.active .asas-mobile-dock-icon svg {
-    color: #141111 !important;
-    filter: none !important;
+    color: var(--on-accent) !important;
+    filter: none;
   }
 
   .asas-dock-badge-dot {
@@ -809,8 +805,8 @@ html, body {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #ef4444;
-    border: 1px solid #ffffff;
+    background: var(--unpaid);
+    border: 1px solid var(--on-accent);
   }
 }
 
@@ -990,30 +986,16 @@ html, body {
 }
 
 .asas-stat-card {
-  padding: 18px 20px;
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.90) 0%, rgba(248, 242, 230, 0.75) 100%);
-  border: 1px solid rgba(186, 149, 85, 0.22);
-  box-shadow: 0 8px 24px -6px rgba(35, 31, 32, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  gap: 8px;
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s var(--ease-spring), box-shadow 0.3s;
-}
-.asas-stat-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--brand-gold) 0%, var(--brand-sand) 100%);
-  opacity: 0.85;
+  transition: transform 0.3s var(--ease-spring), box-shadow 0.3s var(--ease-out);
 }
 .asas-stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--glass-shadow), 0 12px 32px -8px rgba(186, 149, 85, 0.25);
+  transform: translateY(-2px);
 }
 .asas-stat-card-top {
   display: flex;
@@ -1024,41 +1006,37 @@ html, body {
   color: var(--text-2);
 }
 .asas-stat-icon-wrap {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(186, 149, 85, 0.16) 0%, rgba(211, 198, 180, 0.25) 100%);
-  border: 1px solid rgba(186, 149, 85, 0.30);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 4px 12px -2px rgba(186, 149, 85, 0.15);
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--glass-inset);
+  box-shadow: inset 0 0 0 1px var(--hairline);
   display: grid;
   place-items: center;
-  color: var(--brand-gold);
-  transition: all 0.28s var(--ease-spring);
+  color: var(--accent);
+  transition: transform 0.28s var(--ease-spring), background 0.25s, color 0.25s;
 }
 .asas-stat-card:hover .asas-stat-icon-wrap {
-  transform: scale(1.1) rotate(4deg);
-  background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%);
-  color: #ffffff;
-  box-shadow: 0 6px 18px -2px rgba(186, 149, 85, 0.45);
+  transform: scale(1.06);
+  background: var(--gold-soft);
 }
 .asas-tile-icon {
   width: 32px;
   height: 32px;
   min-width: 32px;
   aspect-ratio: 1 / 1;
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.90) 0%, rgba(239, 233, 216, 0.60) 100%);
-  border: 1px solid rgba(186, 149, 85, 0.25);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 6px -1px rgba(35, 31, 32, 0.04);
+  border-radius: 10px;
+  background: var(--glass-inset);
+  box-shadow: inset 0 0 0 1px var(--hairline);
   display: grid;
   place-items: center;
-  color: var(--brand-gold);
+  color: var(--accent);
   flex-shrink: 0;
-  transition: transform 0.25s var(--ease-spring), color 0.2s;
+  transition: transform 0.25s var(--ease-spring), background 0.2s;
 }
 .asas-tile-icon:hover {
-  transform: scale(1.08);
-  color: #8f6a2e;
+  transform: scale(1.06);
+  background: var(--gold-soft);
 }
 .asas-tile-icon svg {
   width: 14px !important;
@@ -1079,23 +1057,40 @@ html, body {
 
 /* Banner Hero */
 .asas-hero-banner {
-  padding: 28px 32px;
+  padding: 26px 30px;
   position: relative;
   overflow: hidden;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 24px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(246, 238, 222, 0.90) 50%, rgba(238, 226, 204, 0.85) 100%);
-  border: 1px solid rgba(186, 149, 85, 0.30);
-  box-shadow: 0 16px 40px -12px rgba(35, 31, 32, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  background: radial-gradient(460px circle at 10% 0%, var(--gold-soft), transparent 60%),
+              linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 55%);
   border-radius: var(--radius-xl);
+}
+.asas-hero-company {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 14px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--glass-inset);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.asas-hero-company .asas-mark {
+  width: 20px;
+  height: 24px;
+  filter: none;
 }
 .asas-hero-banner h2 {
   font-family: var(--font-display);
   font-size: 24px;
   font-weight: 700;
-  margin: 6px 0;
+  margin: 4px 0 6px;
   color: var(--text);
 }
 .asas-hero-banner p {
@@ -1104,7 +1099,7 @@ html, body {
   color: var(--text-2);
   max-width: 540px;
   line-height: 1.6;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 /* Buttons */
@@ -1120,34 +1115,36 @@ html, body {
   font-weight: 600;
   font-size: 13.5px;
   white-space: nowrap;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92) 0%, rgba(246, 240, 230, 0.75) 100%);
+  background: var(--glass-tint-strong);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  backdrop-filter: blur(16px) saturate(170%);
   color: var(--text);
-  border: 1px solid rgba(186, 149, 85, 0.25);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 8px -2px rgba(35, 31, 32, 0.05);
-  transition: transform 0.25s var(--ease-spring), box-shadow 0.25s, background 0.25s;
+  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 0 0 1px var(--glass-rim-low), 0 4px 14px -6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s var(--ease-spring), box-shadow 0.3s var(--ease-out), background 0.25s;
   text-decoration: none;
 }
 .asas-btn:hover:not(:disabled) {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 1) 0%, rgba(239, 233, 216, 0.85) 100%);
-  border-color: rgba(186, 149, 85, 0.40);
-  transform: translateY(-1.5px);
-  box-shadow: 0 4px 14px -2px rgba(186, 149, 85, 0.22);
+  background: var(--glass-sheen);
+  transform: translateY(-1px);
 }
 .asas-btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 .asas-btn.primary {
-  color: #ffffff !important;
-  background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.35) !important;
-  box-shadow: 0 4px 16px -3px rgba(186, 149, 85, 0.50), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
-  text-shadow: 0 1px 1px rgba(35, 31, 32, 0.25) !important;
-  transition: all 0.25s var(--ease-spring) !important;
+  color: var(--on-accent) !important;
+  background: radial-gradient(120% 140% at 50% -40%, rgba(255, 255, 255, 0.55), transparent 55%),
+              linear-gradient(180deg, #cfae72 0%, var(--brand-gold) 55%, #a07c3f 100%) !important;
+  border: 0 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 6px rgba(80, 55, 15, 0.25), 0 8px 22px -8px var(--accent-glow) !important;
+  text-shadow: 0 1px 0 rgba(80, 55, 15, 0.18) !important;
+  transition: transform 0.3s var(--ease-spring), box-shadow 0.3s var(--ease-out) !important;
+}
+:root[data-theme='dark'] .asas-btn.primary {
+  text-shadow: none !important;
 }
 .asas-btn.primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e8cca0 0%, #c49f5f 50%, #a8813f 100%) !important;
-  box-shadow: 0 8px 24px -3px rgba(186, 149, 85, 0.60), inset 0 1px 0 rgba(255, 255, 255, 0.55) !important;
-  transform: translateY(-1.5px) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -2px 6px rgba(80, 55, 15, 0.25), 0 12px 30px -8px var(--accent-glow) !important;
+  transform: translateY(-1px) !important;
 }
 .asas-btn.danger {
   color: #fff;
@@ -1156,7 +1153,7 @@ html, body {
 }
 .asas-btn.gold {
   color: var(--on-accent);
-  background: var(--brand-gold);
+  background: var(--accent-fill);
 }
 .asas-btn svg {
   width: 17px;
@@ -1188,12 +1185,12 @@ html, body {
 }
 .asas-table th {
   padding: 14px 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(246, 240, 230, 0.65) 100%);
+  background: var(--glass-inset);
   color: var(--text-2);
   font-weight: 700;
   font-size: 12.5px;
   letter-spacing: 0.3px;
-  border-bottom: 1px solid rgba(186, 149, 85, 0.20);
+  border-bottom: 1px solid var(--hairline);
   white-space: nowrap;
 }
 .asas-table td {
@@ -1534,10 +1531,10 @@ select.asas-input option {
   direction: rtl;
   position: relative;
   z-index: 1;
-  background-color: var(--bg, #efe9d8);
+  background: transparent;
 }
 :root[data-theme='dark'] .asas-login {
-  background-color: #231f20 !important;
+  background: transparent !important;
 }
 
 .asas-luminous-halo {
@@ -1546,9 +1543,7 @@ select.asas-input option {
 
 /* Sovereign Brand Watermark handled centrally by <Ambient /> (.ambient__mark) */
 .asas-login .asas-eyebrow {
-  background: linear-gradient(135deg, #cfae72 0%, var(--brand-gold) 60%, #8f6626 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--accent);
   display: inline-block;
   font-weight: 800;
   letter-spacing: 0.6px;
@@ -1559,12 +1554,11 @@ select.asas-input option {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.65);
-  border-left: 1px solid rgba(186, 149, 85, 0.25);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  backdrop-filter: blur(28px) saturate(180%);
-  border-left: 1.5px solid rgba(255, 255, 255, 0.9);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.7);
+  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 65%);
+  -webkit-backdrop-filter: blur(24px) saturate(175%);
+  backdrop-filter: blur(24px) saturate(175%);
+  border-left: 1px solid var(--glass-rim);
+  box-shadow: inset -1px 0 0 var(--glass-rim-low);
   position: relative;
   overflow: hidden;
 }
@@ -1602,7 +1596,7 @@ select.asas-input option {
   margin: 16px 0;
 }
 .asas-login-hero h1 span {
-  background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%);
+  background: linear-gradient(135deg, #cfae72 0%, var(--brand-gold) 55%, #8f6626 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   display: inline-block;
@@ -1632,15 +1626,11 @@ select.asas-input option {
   max-width: 440px;
   padding: 36px 32px;
   border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(186, 149, 85, 0.28);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  backdrop-filter: blur(28px) saturate(190%);
-  border: 1.5px solid rgba(255, 255, 255, 0.95);
-  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.98),
-              inset 0 -1.5px 0 rgba(186, 149, 85, 0.25),
-              0 24px 60px -15px rgba(110, 80, 35, 0.18),
-              0 4px 16px rgba(110, 80, 35, 0.08);
+  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 60%);
+  -webkit-backdrop-filter: blur(28px) saturate(185%);
+  backdrop-filter: blur(28px) saturate(185%);
+  border: 1px solid var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow);
   position: relative;
   overflow: hidden;
 }
@@ -1721,27 +1711,26 @@ select.asas-input option {
 .asas-menu-btn {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 12px;
   display: none;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(186, 149, 85, 0.25);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(239, 233, 216, 0.65) 100%);
-  color: var(--brand-gold);
+  border: 1px solid var(--glass-rim-low);
+  background: var(--glass-tint-strong);
+  color: var(--accent);
   cursor: pointer;
   padding: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.90), 0 2px 6px -1px rgba(35, 31, 32, 0.05);
-  transition: all 0.25s var(--ease-spring);
+  box-shadow: inset 0 1px 0 var(--glass-rim), 0 4px 12px -4px rgba(0, 0, 0, 0.14);
+  transition: transform 0.25s var(--ease-spring), background 0.2s;
 }
 .asas-menu-btn:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(211, 198, 180, 0.55) 100%);
-  border-color: rgba(186, 149, 85, 0.45);
-  transform: scale(1.05);
+  background: var(--glass-sheen);
+  transform: scale(1.04);
 }
 :root[data-theme='dark'] .asas-menu-btn {
-  background: linear-gradient(135deg, rgba(45, 40, 41, 0.88) 0%, rgba(30, 26, 27, 0.95) 100%);
-  border-color: rgba(186, 149, 85, 0.30);
-  color: #dfc289;
+  background: var(--glass-tint-strong);
+  border-color: var(--glass-rim-low);
+  color: var(--accent);
 }
 
 @media (min-width: 1025px) {
@@ -1781,22 +1770,22 @@ select.asas-input option {
 .asas-employee-header {
   padding: 14px 22px !important;
   border-radius: var(--radius-xl) !important;
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.85) 0%, rgba(248, 242, 232, 0.78) 100%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-  backdrop-filter: blur(20px) saturate(160%) !important;
-  border: 1px solid var(--glass-rim) !important;
-  box-shadow: inset 0 1px 0 var(--glass-rim), var(--glass-shadow) !important;
+  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 55%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(175%) !important;
+  backdrop-filter: blur(24px) saturate(175%) !important;
+  border: 1px solid var(--glass-rim-low) !important;
+  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow) !important;
 }
 
 .asas-employee-profile {
   padding: 24px !important;
   border-radius: var(--radius-xl) !important;
-  background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.70) 0%, transparent 60%),
-              linear-gradient(165deg, rgba(255, 255, 255, 0.85) 0%, rgba(248, 242, 232, 0.75) 100%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-  backdrop-filter: blur(20px) saturate(160%) !important;
-  border: 1px solid var(--glass-rim) !important;
-  box-shadow: inset 0 1px 0 var(--glass-rim), var(--glass-shadow) !important;
+  background: radial-gradient(460px circle at 10% 0%, var(--gold-soft), transparent 60%),
+              linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 55%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(175%) !important;
+  backdrop-filter: blur(24px) saturate(175%) !important;
+  border: 1px solid var(--glass-rim-low) !important;
+  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow) !important;
 }
 
 .asas-employee-stats {
@@ -1821,13 +1810,12 @@ select.asas-input option {
   gap: 6px;
   width: 100%;
   box-sizing: border-box;
-  background: rgba(235, 227, 215, 0.75);
+  background: var(--glass-inset);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   backdrop-filter: blur(20px) saturate(160%);
   padding: 5px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--glass-rim);
-  box-shadow: 0 6px 20px rgba(110, 80, 35, 0.08), inset 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: inset 0 0 0 1px var(--hairline), var(--glass-shadow);
 }
 
 .asas-employee-tab {
@@ -1847,7 +1835,7 @@ select.asas-input option {
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.22s var(--ease-out);
   white-space: nowrap;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -1865,7 +1853,7 @@ select.asas-input option {
 
 .asas-employee-tab:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--glass-inset);
 }
 
 .asas-employee-tab:active {
@@ -1873,23 +1861,25 @@ select.asas-input option {
 }
 
 .asas-employee-tab.active {
-  background: linear-gradient(135deg, #dfc289 0%, #ba9555 50%, #9e7534 100%) !important;
-  color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.40) !important;
-  box-shadow: 0 4px 16px -2px rgba(186, 149, 85, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.50) !important;
+  background: radial-gradient(120% 140% at 50% -40%, rgba(255, 255, 255, 0.55), transparent 55%),
+              linear-gradient(180deg, #cfae72 0%, var(--brand-gold) 55%, #a07c3f 100%) !important;
+  color: var(--on-accent) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 6px rgba(80, 55, 15, 0.25), 0 8px 22px -8px var(--accent-glow) !important;
   font-weight: 700;
 }
 .asas-employee-tab.active svg {
-  color: #ffffff !important;
-  transform: scale(1.1);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  color: var(--on-accent) !important;
+  transform: scale(1.06);
+  filter: none;
 }
 
 :root[data-theme='dark'] .asas-employee-tab.active {
-  background: rgba(186, 149, 85, 0.16) !important;
-  color: #ba9555 !important;
-  border-color: rgba(186, 149, 85, 0.36) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 244, 222, 0.22) !important;
+  background: radial-gradient(120% 140% at 50% -40%, rgba(255, 255, 255, 0.45), transparent 55%),
+              linear-gradient(180deg, #cfae72 0%, var(--brand-gold) 55%, #a07c3f 100%) !important;
+  color: var(--on-accent) !important;
+  border-color: rgba(255, 244, 222, 0.30) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 6px rgba(80, 55, 15, 0.25), 0 8px 22px -8px var(--accent-glow) !important;
 }
 
 /* Micro badges & indicators inside the tab */
@@ -2110,19 +2100,19 @@ select.asas-input option {
     font-size: 13.5px;
     margin-bottom: 14px;
   }
-  .asas-hero-banner > div:first-child > div {
+  .asas-hero-banner > div:first-child > div:last-child {
     display: flex;
     flex-direction: column;
     width: 100%;
     gap: 8px;
   }
-  .asas-hero-banner > div:first-child > div .asas-btn {
+  .asas-hero-banner > div:first-child > div:last-child .asas-btn {
     width: 100%;
     justify-content: center;
   }
-  .asas-hero-banner .asas-mark {
-    width: 54px !important;
-    height: 60px !important;
+  .asas-hero-company .asas-mark {
+    width: 20px !important;
+    height: 24px !important;
   }
 
   /* Stat tiles on mobile: clean 2x2 grid */
@@ -2379,148 +2369,127 @@ select.asas-input option {
 
 :root[data-theme='dark'] .glass,
 :root[data-theme='dark'] .card {
-  background: rgba(22, 18, 19, 0.86) !important;
-  border: 1px solid rgba(186, 149, 85, 0.22) !important;
-  box-shadow: inset 0 1px 0 0 rgba(255, 244, 222, 0.08), inset 0 -1px 0 0 rgba(186, 149, 85, 0.06), 0 14px 40px -14px rgba(0, 0, 0, 0.70) !important;
+  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 55%) !important;
+  border: 1px solid var(--glass-rim-low) !important;
+  box-shadow: inset 0 1px 0 var(--glass-sheen), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow) !important;
   color: var(--text) !important;
 }
 
 :root[data-theme='dark'] .glass--thick,
 :root[data-theme='dark'] .asas-modal,
 :root[data-theme='dark'] .modal {
-  background: rgba(22, 18, 19, 0.96) !important;
-  border: 1.5px solid rgba(186, 149, 85, 0.28) !important;
-  box-shadow: 0 24px 64px -10px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 244, 222, 0.10) !important;
-}
-
-:root[data-theme='dark'] .asas-employee-header {
-  background: rgba(22, 18, 19, 0.88) !important;
-  border: 1px solid rgba(186, 149, 85, 0.22) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.08), 0 12px 36px -12px rgba(0, 0, 0, 0.65) !important;
-}
-
-:root[data-theme='dark'] .asas-employee-profile {
-  background: rgba(22, 18, 19, 0.88) !important;
-  border: 1px solid rgba(186, 149, 85, 0.22) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.08), 0 14px 40px -14px rgba(0, 0, 0, 0.65) !important;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--bg) 78%, rgba(255, 246, 230, 0.11)), color-mix(in srgb, var(--bg) 86%, rgba(255, 246, 230, 0.06))) !important;
+  border: 1px solid var(--glass-rim-low) !important;
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-sheen) !important;
 }
 
 :root[data-theme='dark'] .asas-employee-tabs {
-  background: rgba(18, 14, 15, 0.88) !important;
-  border: 1px solid rgba(186, 149, 85, 0.20) !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.50), inset 0 1px 2px rgba(0, 0, 0, 0.40) !important;
-}
-
-:root[data-theme='dark'] .asas-employee-tab.active {
-  background: rgba(186, 149, 85, 0.18) !important;
-  color: #dfc289 !important;
-  border-color: rgba(186, 149, 85, 0.45) !important;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 244, 222, 0.12) !important;
+  background: var(--glass-inset) !important;
+  box-shadow: inset 0 0 0 1px var(--hairline), var(--glass-shadow) !important;
 }
 
 :root[data-theme='dark'] .asas-hero-banner {
-  background: rgba(22, 18, 19, 0.88) !important;
-  border: 1px solid rgba(186, 149, 85, 0.22) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.08), 0 16px 48px -12px rgba(0, 0, 0, 0.65) !important;
+  background: radial-gradient(460px circle at 10% 0%, var(--gold-soft), transparent 60%),
+              linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 55%) !important;
+  border: 1px solid var(--glass-rim-low) !important;
+  box-shadow: inset 0 1px 0 var(--glass-sheen), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow) !important;
 }
 
 :root[data-theme='dark'] .asas-stat-card {
-  background: rgba(22, 18, 19, 0.86) !important;
-  border: 1px solid rgba(186, 149, 85, 0.20) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.06), 0 8px 24px -6px rgba(0, 0, 0, 0.55) !important;
+  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 55%) !important;
+  border: 1px solid var(--glass-rim-low) !important;
+  box-shadow: inset 0 1px 0 var(--glass-sheen), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow) !important;
 }
 
 :root[data-theme='dark'] .asas-tile-icon {
-  background: rgba(186, 149, 85, 0.10) !important;
-  border-color: rgba(186, 149, 85, 0.22) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.06) !important;
+  background: var(--glass-inset) !important;
+  border-color: var(--hairline) !important;
+  box-shadow: none !important;
 }
 
 :root[data-theme='dark'] .asas-table-wrap,
 :root[data-theme='dark'] .table-wrap {
-  background: rgba(22, 18, 19, 0.88) !important;
-  border: 1px solid rgba(186, 149, 85, 0.20) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.06), 0 16px 40px -12px rgba(0, 0, 0, 0.60) !important;
+  background: var(--glass-tint) !important;
+  border: 1px solid var(--hairline) !important;
+  box-shadow: var(--glass-shadow) !important;
 }
 
 :root[data-theme='dark'] .asas-table th,
 :root[data-theme='dark'] .table th {
-  background: rgba(28, 22, 23, 0.90) !important;
-  color: #f6f0e5 !important;
-  border-bottom: 1px solid rgba(186, 149, 85, 0.20) !important;
+  background: var(--glass-inset) !important;
+  color: var(--text) !important;
+  border-bottom: 1px solid var(--hairline) !important;
 }
 
 :root[data-theme='dark'] .asas-table td,
 :root[data-theme='dark'] .table td {
-  border-bottom: 1px solid rgba(246, 240, 229, 0.07) !important;
+  border-bottom: 1px solid var(--hairline) !important;
   color: var(--text) !important;
 }
 
 :root[data-theme='dark'] .asas-table tbody tr:hover,
 :root[data-theme='dark'] .table tbody tr:hover {
-  background: rgba(186, 149, 85, 0.08) !important;
+  background: var(--glass-inset) !important;
 }
 
 :root[data-theme='dark'] .asas-announcement-card,
 :root[data-theme='dark'] .asas-qr-card {
-  background: rgba(22, 18, 19, 0.86) !important;
-  border: 1px solid rgba(186, 149, 85, 0.20) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 222, 0.06), 0 8px 24px -6px rgba(0, 0, 0, 0.55) !important;
+  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 55%) !important;
+  border: 1px solid var(--glass-rim-low) !important;
+  box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow) !important;
 }
 
 :root[data-theme='dark'] .asas-input,
 :root[data-theme='dark'] .input {
-  background: rgba(24, 20, 21, 0.80) !important;
-  color: #ffffff !important;
-  box-shadow: inset 0 0 0 1px rgba(186, 149, 85, 0.28) !important;
+  background: var(--glass-inset) !important;
+  color: var(--text) !important;
+  box-shadow: inset 0 0 0 1px var(--hairline) !important;
 }
 
 :root[data-theme='dark'] .asas-input:focus,
 :root[data-theme='dark'] .input:focus {
-  background: rgba(28, 24, 25, 0.95) !important;
-  box-shadow: inset 0 0 0 1.5px #ba9555, 0 0 0 4px rgba(186, 149, 85, 0.35) !important;
+  background: var(--glass-tint-strong) !important;
+  box-shadow: inset 0 0 0 1.5px var(--accent-fill), 0 0 0 4px var(--accent-glow) !important;
 }
 
 :root[data-theme='dark'] select.asas-input option,
 :root[data-theme='dark'] select.input option {
-  background: #231f20 !important;
-  color: #efe9d8 !important;
+  background: var(--bg) !important;
+  color: var(--text) !important;
 }
 
 :root[data-theme='dark'] .asas-btn:not(.primary):not(.danger),
 :root[data-theme='dark'] .btn--glass {
-  background: rgba(186, 149, 85, 0.12) !important;
-  color: #ffffff !important;
-  border-color: rgba(186, 149, 85, 0.30) !important;
-  box-shadow: inset 0 1px 0 rgba(186, 149, 85, 0.22), 0 4px 14px -6px rgba(0, 0, 0, 0.45) !important;
+  background: var(--glass-tint-strong) !important;
+  color: var(--text) !important;
+  box-shadow: inset 0 1px 0 var(--glass-rim-low), inset 0 0 0 1px var(--hairline), 0 4px 14px -6px rgba(0, 0, 0, 0.45) !important;
 }
 
 :root[data-theme='dark'] .asas-btn:not(.primary):not(.danger):hover:not(:disabled),
 :root[data-theme='dark'] .btn--glass:hover:not(:disabled) {
-  background: rgba(186, 149, 85, 0.20) !important;
-  border-color: rgba(186, 149, 85, 0.50) !important;
+  background: var(--glass-sheen) !important;
 }
 
 :root[data-theme='dark'] .asas-notice {
-  background: rgba(186, 149, 85, 0.08) !important;
-  border-color: rgba(186, 149, 85, 0.22) !important;
+  background: var(--glass-inset) !important;
+  border-color: var(--hairline) !important;
   color: var(--text-2) !important;
 }
 
 :root[data-theme='dark'] .asas-notice.error {
-  background: rgba(176, 52, 44, 0.25) !important;
-  border-color: rgba(244, 135, 123, 0.45) !important;
-  color: #fca5a5 !important;
+  background: var(--unpaid-bg) !important;
+  border-color: var(--unpaid) !important;
+  color: var(--unpaid) !important;
 }
 
 :root[data-theme='dark'] .asas-badge.outside {
-  background: rgba(186, 149, 85, 0.12) !important;
-  color: #efe9d8 !important;
+  background: var(--glass-inset) !important;
+  color: var(--text-2) !important;
 }
 
 :root[data-theme='dark'] .asas-clock-pill {
-  background: rgba(186, 149, 85, 0.10) !important;
-  box-shadow: inset 0 0 0 1px rgba(186, 149, 85, 0.25) !important;
+  background: var(--glass-inset) !important;
+  box-shadow: inset 0 0 0 1px var(--hairline) !important;
 }
 
 :root[data-theme='dark'] .asas-login {
@@ -2926,19 +2895,19 @@ select.asas-input option {
   color: var(--brand-gold);
 }
 .asas-auth-tab-btn.active {
-  color: #ffffff !important;
-  background: radial-gradient(120% 140% at 50% -40%, rgba(255, 255, 255, 0.45), transparent 55%),
+  color: var(--on-accent) !important;
+  background: radial-gradient(120% 140% at 50% -40%, rgba(255, 255, 255, 0.55), transparent 55%),
               linear-gradient(180deg, #cfae72 0%, var(--brand-gold) 55%, #a07c3f 100%) !important;
-  box-shadow: 0 4px 14px -3px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 6px rgba(80, 55, 15, 0.25), 0 8px 22px -8px var(--accent-glow) !important;
 }
 .asas-auth-tab-btn.active .asas-auth-tab-icon {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.45);
-  color: #ffffff !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.20);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: var(--on-accent) !important;
+  box-shadow: none;
 }
 .asas-auth-tab-btn.active .asas-auth-tab-icon svg {
-  color: #ffffff !important;
+  color: var(--on-accent) !important;
 }
 .asas-auth-tab-btn:active {
   transform: scale(0.98);
@@ -3410,20 +3379,19 @@ select.asas-input option {
   70% { transform: scale(2.2); opacity: 0; }
   100% { transform: scale(2.4); opacity: 0; }
 }
-.asas-stat-card {
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.82) 0%, rgba(248, 243, 235, 0.72) 100%);
+.asas-employee-stats .asas-stat-card {
+  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint) 55%);
   padding: 16px 18px;
   border-radius: var(--radius-lg);
   text-align: center;
-  border: 1px solid var(--glass-rim);
-  box-shadow: inset 0 1px 0 var(--glass-rim), 0 6px 20px -6px rgba(110, 80, 35, 0.10);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  backdrop-filter: blur(18px) saturate(160%);
-  transition: transform 0.25s var(--ease-spring), box-shadow 0.25s, border-color 0.25s ease;
+  border: 1px solid var(--glass-rim-low);
+  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -1px 0 var(--glass-rim-low), var(--glass-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(175%);
+  backdrop-filter: blur(24px) saturate(175%);
+  transition: transform 0.25s var(--ease-spring), box-shadow 0.25s var(--ease-out);
 }
-.asas-stat-card:hover {
+.asas-employee-stats .asas-stat-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(186, 149, 85, 0.35);
 }
 .asas-action-btn-checkin {
   height: 52px;
@@ -3501,32 +3469,30 @@ select.asas-input option {
   margin: 0 !important;
   flex-shrink: 0 !important;
   border-radius: 50% !important;
-  border: 1px solid rgba(186, 149, 85, 0.25) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(239, 233, 216, 0.65) 100%) !important;
-  color: var(--brand-gold) !important;
+  border: 1px solid var(--glass-rim-low) !important;
+  background: var(--glass-tint-strong) !important;
+  color: var(--accent) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   cursor: pointer !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 6px -1px rgba(35, 31, 32, 0.04) !important;
-  transition: all 0.25s var(--ease-spring) !important;
+  box-shadow: inset 0 1px 0 var(--glass-rim), 0 4px 12px -4px rgba(0, 0, 0, 0.14) !important;
+  transition: transform 0.25s var(--ease-spring), background 0.2s !important;
 }
 
 :root[data-theme='dark'] .asas-topbar .asas-theme-btn,
 :root[data-theme='dark'] .asas-employee-header .asas-theme-btn,
 :root[data-theme='dark'] .asas-login-top-bar .asas-theme-btn {
-  border-color: rgba(186, 149, 85, 0.30) !important;
-  background: linear-gradient(135deg, rgba(45, 40, 41, 0.90) 0%, rgba(30, 26, 27, 0.95) 100%) !important;
-  color: #dfc289 !important;
+  border-color: var(--glass-rim-low) !important;
+  background: var(--glass-tint-strong) !important;
+  color: var(--accent) !important;
 }
 
 .asas-topbar .asas-theme-btn:hover,
 .asas-employee-header .asas-theme-btn:hover,
 .asas-login-top-bar .asas-theme-btn:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(211, 198, 180, 0.55) 100%) !important;
-  border-color: rgba(186, 149, 85, 0.50) !important;
-  transform: rotate(20deg) scale(1.08) !important;
-  box-shadow: 0 4px 14px -2px rgba(186, 149, 85, 0.30) !important;
+  background: var(--glass-sheen) !important;
+  transform: rotate(15deg) scale(1.06) !important;
 }
 
 .asas-theme-btn-inner {
@@ -3549,8 +3515,8 @@ select.asas-input option {
     padding: 4px !important;
   }
   .asas-login-top-bar .asas-theme-btn {
-    width: 38px !important;
-    height: 38px !important;
+    width: 44px !important;
+    height: 44px !important;
   }
   .asas-theme-btn-inner svg {
     width: 18px !important;
