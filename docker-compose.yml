@@ -1,26 +1,6 @@
 name: asas
 
 services:
-  db:
-    build:
-      context: ./database
-      dockerfile: Dockerfile
-    container_name: asas-postgres
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: asas
-    volumes:
-      - asas_pgdata:/var/lib/postgresql
-    ports:
-      - "5434:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d asas"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: ./backend
@@ -30,19 +10,18 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 5000
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/asas
-      DB_SSL: "false"
-      QR_SECRET: 9989c9183fbb75956504d4abf7cd869e927c173b4d93a7fbe11626e43cb7d5f4
+      SQLITE_PATH: /app/database/asas.db
+      QR_SECRET: ${QR_SECRET:-9989c9183fbb75956504d4abf7cd869e927c173b4d93a7fbe11626e43cb7d5f4}
       WEB_ORIGIN: "*"
       NODE_ENV: production
-      APP_URL: https://attendance.ai-asaas.com
-      GOOGLE_CLIENT_ID: 331442639841-s48n1ir37vnn9nckg6ogn1hv8fl9fiq3.apps.googleusercontent.com
-      GOOGLE_CLIENT_SECRET: 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
+      APP_URL: ${APP_URL:-https://attendance.ai-asaas.com}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-331442639841-s48n1ir37vnn9nckg6ogn1hv8fl9fiq3.apps.googleusercontent.com}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-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}
+    volumes:
+      - ./database:/app/database
+      - ./backups:/app/backups
     ports:
       - "5000:5000"
-    depends_on:
-      db:
-        condition: service_healthy
 
   frontend:
     build:
@@ -55,7 +34,6 @@ services:
       NODE_ENV: production
     ports:
       - "3000:3000"
-      - "80:3000"
     depends_on:
       - backend
 
@@ -66,8 +44,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "5000:5000"
-      - "5080:5080"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - asas_caddy_data:/data
@@ -76,6 +52,5 @@ services:
       - "host.docker.internal:host-gateway"
 
 volumes:
-  asas_pgdata:
   asas_caddy_data:
   asas_caddy_config:

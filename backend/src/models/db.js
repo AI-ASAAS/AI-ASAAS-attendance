@@ -1,18 +1,17 @@
-const { Pool } = require('pg');
-const { logger } = require('../utils/logger');
+'use strict';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-  max: 10,
-  idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 5_000,
-});
-
-pool.on('connect', () => logger.info('✅ DB connection acquired from pool'));
-pool.on('error',   (err) => logger.error('❌ Idle DB client error:', err.message));
+/**
+ * AI-ASAAS Database Access Layer
+ * Delegates all queries to SQLite database engine in config/database.js
+ * Retains full backward compatibility with pool.query(sql, params) and pool.end()
+ */
+const db = require('../config/database');
 
 module.exports = {
-  query: (text, params) => pool.query(text, params),
-  pool,
+  query: (text, params) => db.query(text, params),
+  transaction: (fn) => db.transaction(fn),
+  pool: db.pool,
+  getDbPath: db.getDbPath,
+  backupTo: db.backupTo,
 };
+

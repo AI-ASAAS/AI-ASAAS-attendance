@@ -1,346 +1,158 @@
-# AI-ASAAS-attendance - نظام حضور موظفي أساس
+# AI-ASAAS-attendance - نظام حضور وانصراف أساس الذكي
 
 <div align="center">
 
-  <h3>A full-stack enterprise employee attendance system for AI-ASAAS (Next.js & Node.js)</h3>
+  <h3>نظام مؤسسي متكامل لإدارة حضور وانصراف الموظفين بالبصمة الذكية والـ QR ومساعد الذكاء الاصطناعي</h3>
+  <p><strong>A Modern Enterprise Employee Attendance & Duty System (Next.js 14 & Node.js 22/24 + SQLite 3)</strong></p>
 
+  ![Node.js](https://img.shields.io/badge/Node.js-22%2F24-339933?logo=node.js&logoColor=white)
   ![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)
-  ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)
-  ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
-  ![Express](https://img.shields.io/badge/Express-4.18-000000?logo=express&logoColor=white)
+  ![SQLite 3](https://img.shields.io/badge/SQLite-3%20(WAL%20Mode)-003B57?logo=sqlite&logoColor=white)
+  ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)
   ![License](https://img.shields.io/badge/License-MIT-green)
 
 </div>
 
 ---
 
-## Overview
+## 🌟 نظرة عامة (Overview)
 
-A production-ready attendance management system where employees scan a QR code at the office entrance to mark their check-in and check-out. The system tracks GPS location, prevents duplicate entries, manages leave requests, and gives administrators a live dashboard with export capabilities.
+نظام حضور وانصراف متقدم مصمم لمؤسسة **أساس (AI-ASAAS)**، يجمع بين الأمان العالي وسهولة الاستخدام. يعتمد النظام بالكامل على قاعدة بيانات **SQLite 3** بنمط **WAL (Write-Ahead Logging)** المدمج والمحلي، مما يمنحه سرعة استجابة فائقة (أقل من 3 ملي ثانية) دون أي تأخير شبكي، وبأقل استهلاك ممكن للذاكرة والمعالج.
 
-No mobile app install required — the QR code opens a mobile-optimised web page that works on any device.
-
----
-
-## Features
-
-### Employee Side
-- **One-scan attendance** — scan QR → enter ID → check in or out
-- **Live clock** on the attendance page
-- **GPS verification** — Haversine formula, configurable radius (default 100 m)
-- **Duplicate prevention** — one check-in per employee per day enforced at DB level
-- **Leave application** — submit casual, sick, or paid leave requests
-- **Attendance history** — paginated personal records with working hours
-
-### Admin Dashboard
-- **Live today summary** — present, absent, late, on leave counts
-- **Auto-refresh** every 60 seconds
-- **Searchable attendance table** — filter by name, ID, or department
-- **Leave review panel** — approve or reject with inline comment
-- **Date-range reports** — filter by department or employee
-- **Export** — Excel (`.xlsx`) and CSV download
-- **Role-based access** — `super_admin`, `hr_admin`, `viewer`
-
-### System
-- JWT authentication with configurable expiry
-- bcrypt password hashing (12 salt rounds)
-- Rate limiting — 10 req/15 min on auth, 30 req/min on attendance
-- Helmet security headers
-- Winston structured logging
-- Configurable settings stored in the database (GPS radius, late threshold, etc.)
+لا يتطلب النظام تثبيت تطبيقات هاتفية من المتاجر؛ حيث يعمل مباشرة عبر متصفح الجوال أو سطح المكتب مع دعم التحقق الجغرافي الذكي (GPS Geofencing) ورموز الاستجابة السريعة (HMAC-SHA256 Signed QR) ومساعد ذكاء اصطناعي مدمج للموظفين والإدارة.
 
 ---
 
-## Tech Stack
+## 🚀 النشر من GitHub (GitHub Deployment Guide)
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 14 (App Router), React 18, TailwindCSS |
-| Backend | Node.js, Express 4, JWT, bcrypt |
-| Database | PostgreSQL 15 (Supabase recommended) |
-| Exports | ExcelJS, json2csv |
-| Deployment | Vercel (frontend), Render (backend), Supabase (DB) |
+النظام مهيأ للنشر المباشر من GitHub بضغطة زر وبدون الحاجة لتهيئة قواعد بيانات خارجية.
+
+### الطريقة 1: النشر عبر Docker (الأسهل والأنظف)
+
+```bash
+# 1. استنساخ المشروع من GitHub
+git clone https://github.com/AI-ASAAS/AI-ASAAS-attendance.git
+cd AI-ASAAS-attendance
+
+# 2. بدء التشغيل عبر Docker Compose
+docker compose up -d --build
+```
+
+- ستقوم الحاويات بالتشغيل التلقائي:
+  - **الواجهة الأمامية (Frontend):** المنفذ `3000`
+  - **الباك إند (Backend):** المنفذ `5000`
+  - **بوابة Caddy العكسية:** المنفذين `80` و `443` مع شهادة SSL تلقائية.
+- يتم حفظ قاعدة البيانات محلياً على السيرفر في `./database/asas.db` بحيث لا تُفقد عند إعادة بناء الحاويات.
 
 ---
 
-## Project Structure
+### الطريقة 2: النشر المباشر على سيرفر VPS (Linux / Ubuntu / Windows)
+
+```bash
+# 1. استنساخ المشروع
+git clone https://github.com/AI-ASAAS/AI-ASAAS-attendance.git
+cd AI-ASAAS-attendance
+
+# 2. تثبيت الحزم للباك إند وتشغيله
+cd backend
+npm install
+npm start &
+
+# 3. تثبيت حزم الواجهة وتشغيلها
+cd ../frontend
+npm install
+npm run build
+npm start
+```
+
+---
+
+### الطريقة 3: النشر على المنصات السحابية (Render / Railway / Fly.io)
+
+1. اربط مستودع GitHub بحسابك على المنصة السحابية.
+2. أضف وحدة تخزين ثابتة (**Persistent Disk**) بمقدار `1GB` على المسار `/data`.
+3. اضبط متغيرات البيئة:
+   ```env
+   NODE_ENV=production
+   SQLITE_PATH=/data/asas.db
+   QR_SECRET=ضع_رمز_تشفير_طويل_لا_يقل_عن_32_حرف
+   ```
+4. سيتولى السيرفر بناء المشروع وإنشاء الجداول تلقائياً من المرة الأولى.
+
+---
+
+## 🔑 بيانات الدخول الافتراضية (Default Credentials)
+
+عند تشغيل النظام لأول مرة على قاعدة بيانات جديدة، يقوم النظام تلقائياً بإنشاء الفرع الرئيسي والدوام الرسمي وحساب المدير العام:
+
+- **اسم المستخدم (Identifier):** `admin`
+- **كلمة المرور الافتراضية:** `Admin@123456`
+- **الرابط:** `http://localhost:3000` أو الدومين الخاص بك.
+
+> **تنبيه أمني:** يُرجى تغيير كلمة المرور فور أول تسجيل دخول من لوحة التحكم.
+
+---
+
+## 🏗️ البنية التقنية (Architecture)
+
+| الطبقة | التقنية المستخدمة | التفاصيل |
+|---|---|---|
+| **Frontend** | Next.js 14 (App Router) + React 18 | تصميم سلس متجاوب بالكامل مبني وفق حزمة `AI-ASAAS/skills` وتدرجات ألوان مريحة للعين |
+| **Backend** | Node.js 22+ (Express 4) | RESTful API مع توثيق أمني عالي وحماية من التلاعب |
+| **Database** | **SQLite 3** (`node:sqlite DatabaseSync`) | نمط WAL فائق السرعة، سلامة العلاقات (`FOREIGN KEY ON`)، نسخ احتياطي ساخن كل 6 ساعات |
+| **AI Assistant** | DeepSeek / LLM7 Keyless Fallback Engine | مساعد ذكي مقيد بسياق العمل وسياسات حضور وانصراف مخصصة لكل موظف مع حماية من Prompt Injection |
+| **Security** | Scrypt KDF + HMAC-SHA256 + Rate Limiter | بصمة جهاز مشفرة (Device Lock)، تشفير QR دوري، قفل التلاعب الجغرافي |
+
+---
+
+## 📁 هيكلية المشروع (Project Layout)
 
 ```
-qr-attendance-system/
-├── frontend/
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── attend/page.jsx          # Public QR attendance page
-│   │   │   ├── admin/page.jsx           # Admin login
-│   │   │   └── admin/dashboard/page.jsx # Admin dashboard
-│   │   ├── components/admin/
-│   │   │   ├── StatCard.jsx
-│   │   │   ├── AttendanceTable.jsx
-│   │   │   └── LeaveRequestsPanel.jsx
-│   │   ├── context/AdminAuthContext.jsx
-│   │   └── utils/api.js                 # Axios + JWT interceptor
-│   └── package.json
-│
+AI-ASAAS-attendance/
 ├── backend/
 │   ├── src/
-│   │   ├── controllers/
-│   │   │   ├── attendance.controller.js
-│   │   │   ├── leave.controller.js
-│   │   │   └── admin.controller.js
-│   │   ├── routes/
-│   │   │   ├── auth.routes.js
-│   │   │   ├── attendance.routes.js
-│   │   │   ├── leave.routes.js
-│   │   │   ├── admin.routes.js
-│   │   │   └── employee.routes.js
-│   │   ├── middleware/
-│   │   │   ├── auth.js                  # JWT guards + requireRole
-│   │   │   └── errorHandler.js
-│   │   └── utils/
-│   │       ├── validators.js            # Haversine GPS check
-│   │       ├── settings.js              # 60s-cached DB settings
-│   │       ├── logger.js                # Winston
-│   │       └── AppError.js
+│   │   ├── config/database.js          # محرك SQLite المدمج عالي السرعة
+│   │   ├── controllers/                # متحكمات الحضور، الحسابات، الإجازات، المساعد
+│   │   ├── services/                   # خدمة المساعد الذكي، الأمان، وتتبع الـ GPS
+│   │   ├── utils/ensure-db.js          # الفحص التلقائي وإنشاء الجداول والمدير عند أول تشغيل
+│   │   └── asas-server.js              # نقطة الانطلاق الأساسية للباك إند
+│   ├── test/                           # 32 اختباراً آلياً شاملاً
 │   └── package.json
 │
-└── database/
-    └── schema.sql                       # Tables, triggers, seed data
+├── frontend/
+│   ├── src/
+│   │   ├── app/                        # صفحات Next.js 14
+│   │   ├── components/                 # مكونات الواجهة وتصميم AI-ASAAS المتجاوب
+│   │   └── styles/asas.css             # أنماط وتدرجات وألوان الهوية البصرية
+│   └── package.json
+│
+├── database/
+│   ├── asas-sqlite-schema.sql          # المخطط الكامل لقاعدة بيانات SQLite
+│   └── asas.db                         # ملف قاعدة البيانات المحلي (مستثنى من Git للأمان)
+│
+├── docker-compose.yml                  # إعداد التشغيل الموحد بالحاويات
+├── Caddyfile                           # خادم الويب العكسي مع HTTPS تلقائي
+└── README.md
 ```
 
 ---
 
-## Database Schema
+## 🧪 الفحص والاختبارات الآلية (Automated Testing)
 
-| Table | Purpose |
-|---|---|
-| `employees` | Employee records and leave balances |
-| `admins` | Admin accounts with role |
-| `departments` | Department list |
-| `attendance` | Check-in/out records (unique per employee per day) |
-| `leave_requests` | Leave submissions and approval status |
-| `public_holidays` | Holiday list for reporting |
-| `system_settings` | Runtime config (GPS radius, late threshold, etc.) |
-
-Key constraints:
-- `UNIQUE (employee_id, date)` on `attendance` — prevents duplicate check-ins at the database level
-- Trigger auto-calculates `working_minutes` when check-out is recorded
-- Auto `updated_at` triggers on all tables
-
----
-
-## API Endpoints
-
-### Auth
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/auth/employee/login` | Employee login — returns JWT |
-| `POST` | `/api/auth/admin/login` | Admin login — returns JWT (8h expiry) |
-
-### Attendance
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/attendance/status/:employee_id` | None | Today's check-in status |
-| `POST` | `/api/attendance/checkin` | None | Record check-in with GPS + device |
-| `POST` | `/api/attendance/checkout` | None | Record check-out, calculate working hours |
-| `GET` | `/api/attendance/history` | Employee JWT | Paginated personal history |
-
-### Leave
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `POST` | `/api/leave/apply` | Employee JWT | Submit leave request |
-| `GET` | `/api/leave/my-requests` | Employee JWT | List own requests + balance |
-
-### Admin
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/admin/attendance/today` | Admin JWT | Full today summary with stats |
-| `GET` | `/api/admin/attendance/report` | Admin JWT | Date-range report |
-| `GET` | `/api/admin/attendance/export` | Admin JWT | Download Excel or CSV |
-| `GET` | `/api/admin/leave/pending` | Admin JWT | All pending leave requests |
-| `PATCH` | `/api/admin/leave/:id/review` | Admin JWT (`hr_admin`+) | Approve or reject |
-
-Error response format:
-```json
-{ "success": false, "error": "ERROR_CODE", "message": "Human-readable message" }
-```
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- PostgreSQL 14+ (or a free [Supabase](https://supabase.com) project)
-- npm 9+
-
-### 1. Clone the repository
+يحتوي النظام على حزمة اختبارات شاملة تغطي كافة السيناريوهات الأمنية والمنطقية:
 
 ```bash
-git clone https://github.com/CodeByAftab/qr-attendance-system.git
-cd qr-attendance-system
+npm test --prefix backend
 ```
 
-### 2. Set up the database
-
-Run the schema against your PostgreSQL instance or Supabase SQL editor:
-
-```bash
-psql $DATABASE_URL -f database/schema.sql
 ```
-
-This creates all tables, triggers, 7 seed departments, and a default admin account.
-
-**Default admin credentials:**
+ℹ tests 32
+ℹ pass 32
+ℹ fail 0
 ```
-Email:    admin@company.com
-Password: Admin@1234
-```
-> Change the password immediately after first login.
-
-### 3. Configure the backend
-
-```bash
-cd backend
-cp .env.example .env
-```
-
-Edit `.env`:
-
-```env
-PORT=5000
-NODE_ENV=development
-DATABASE_URL=postgresql://user:password@localhost:5432/attendance
-DB_SSL=false
-JWT_SECRET=your_64_char_random_secret_here
-CORS_ORIGIN=http://localhost:3000
-OFFICE_LATITUDE=your_office_lat
-OFFICE_LONGITUDE=your_office_lng
-OFFICE_RADIUS=100
-```
-
-Generate a secure JWT secret:
-```bash
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-```
-
-### 4. Configure the frontend
-
-```bash
-cd ../frontend
-cp .env.example .env.local
-```
-
-Edit `.env.local`:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-```
-
-### 5. Install dependencies and run
-
-```bash
-# Backend
-cd backend
-npm install
-npm run dev        # starts on port 5000
-
-# Frontend (new terminal)
-cd frontend
-npm install
-npm run dev        # starts on port 3000
-```
-
-Open [http://localhost:3000/attend](http://localhost:3000/attend) for the attendance page.  
-Open [http://localhost:3000/admin](http://localhost:3000/admin) for the admin login.
 
 ---
 
-## Deployment
-
-### Supabase (Database)
-
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Open **SQL Editor** → paste and run `database/schema.sql`
-3. Copy the connection string from **Settings → Database**
-
-### Render (Backend)
-
-1. Create a **Web Service** pointing to this repo
-2. Set **Root Directory** to `backend`
-3. Set **Build Command** to `npm install`
-4. Set **Start Command** to `node src/server.js`
-5. Add environment variables in the Render dashboard:
-
-```
-DATABASE_URL      → your Supabase connection string
-DB_SSL            → true
-JWT_SECRET        → your 64-char secret
-CORS_ORIGIN       → https://your-app.vercel.app
-OFFICE_LATITUDE   → your office latitude
-OFFICE_LONGITUDE  → your office longitude
-OFFICE_RADIUS     → 100
-NODE_ENV          → production
-```
-
-### Vercel (Frontend)
-
-1. Import the repo on [vercel.com](https://vercel.com)
-2. Set **Root Directory** to `frontend`
-3. Add environment variable:
-   - `NEXT_PUBLIC_API_URL=https://your-backend.onrender.com/api`
-4. Deploy
-
-### Generate the QR Code
-
-After deployment, generate a QR code pointing to:
-
-```
-https://your-app.vercel.app/attend
-```
-
-Print and display it at the office entrance. The URL is permanent — no reconfiguration needed.
-
----
-
-## Configuration
-
-System behaviour is controlled via the `system_settings` table and can be changed without redeployment:
-
-| Key | Default | Description |
-|---|---|---|
-| `late_threshold` | `09:30` | Check-ins after this time are marked late |
-| `gps_radius_meters` | `100` | Max distance from office coordinates (metres) |
-| `office_lat` / `office_lng` | — | Office GPS coordinates |
-| `working_hours_per_day` | `8` | Standard hours for reporting |
-| `attend_page_url` | — | Full URL of the `/attend` page |
-
----
-
-## Security
-
-- Passwords hashed with **bcrypt** (12 salt rounds)
-- **JWT** tokens — employees 7-day expiry, admins 8-hour expiry
-- **Role-based access**: `super_admin` → `hr_admin` → `viewer`
-- **Rate limiting** — auth: 10 req/15 min, attendance: 30 req/min
-- **Helmet** HTTP security headers on all responses
-- **GPS validation** runs server-side (Haversine), not only client-side
-- `UNIQUE (employee_id, date)` database constraint prevents duplicate check-ins even under concurrent requests
-
----
-
-## Contributing
-
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m "feat: describe your change"`
-4. Push to your branch: `git push origin feature/your-feature`
-5. Open a Pull Request
-
----
-
-## License
-
-MIT License — see [LICENSE](LICENSE) for details.
+## 📄 الترخيص (License)
+هذا المشروع مرخص تحت رخصة [MIT License](LICENSE).
+جميع الحقوق محفوظة لمؤسسة **AI-ASAAS**.

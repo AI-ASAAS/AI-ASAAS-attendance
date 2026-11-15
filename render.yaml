@@ -5,6 +5,10 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: node src/asas-server.js
+    disk:
+      name: asas-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -12,11 +16,9 @@ services:
         value: 5000
       - key: HOST
         value: 0.0.0.0
-      - key: DB_SSL
-        value: true
-      - key: DATABASE_URL
-        sync: false
+      - key: SQLITE_PATH
+        value: /data/asas.db
       - key: QR_SECRET
         generateValue: true
       - key: WEB_ORIGIN
-        sync: false
+        value: "*"

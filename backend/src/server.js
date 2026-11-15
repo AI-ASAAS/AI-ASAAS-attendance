@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 5000;
 
 async function start() {
   try {
-    await db.query("SELECT NOW()");
+    await db.query("SELECT 1");
     console.log("✅ Database connected");
 
     // AUTO CREATE ADMIN
