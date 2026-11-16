@@ -1136,6 +1136,38 @@ select.asas-input option {
   color: var(--text);
 }
 
+/* ───────── Responsive Accounts Container ───────── */
+.asas-accounts-container {
+  width: 100%;
+}
+
+.asas-accounts-cards-view {
+  display: none;
+}
+
+.asas-accounts-table-view {
+  display: block;
+}
+
+.asas-accounts-container.view-cards .asas-accounts-table-view {
+  display: none !important;
+}
+
+.asas-accounts-container.view-cards .asas-accounts-cards-view {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+  gap: 14px !important;
+}
+
+.asas-accounts-container.view-table .asas-accounts-table-view {
+  display: block !important;
+  width: 100%;
+}
+
+.asas-accounts-container.view-table .asas-accounts-cards-view {
+  display: none !important;
+}
+
 /* Compact Employee Cards Grid */
 .asas-accounts-grid {
   display: grid;
@@ -3273,6 +3305,7 @@ select.asas-input option {
   }
 
   /* Responsive Cards Auto-Activation on Mobile (<= 640px) */
+  .asas-accounts-container:not(.view-table) .asas-accounts-table-view,
   .asas-records-container:not(.view-table) .asas-records-table-view,
   .asas-collective-container:not(.view-table) .asas-collective-table-view,
   .asas-leave-container:not(.view-table) .asas-leave-table-view,
@@ -3281,6 +3314,7 @@ select.asas-input option {
     display: none;
   }
 
+  .asas-accounts-container:not(.view-table) .asas-accounts-cards-view,
   .asas-records-container:not(.view-table) .asas-records-cards-view,
   .asas-collective-container:not(.view-table) .asas-collective-cards-view,
   .asas-leave-container:not(.view-table) .asas-leave-cards-view,

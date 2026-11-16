@@ -302,18 +302,19 @@ function Field({ label, children, ...props }) {
   );
 }
 
-function Records({ rows = [], onEdit, canEdit, showViewToggle = true }) {
-  const [viewMode, setViewMode] = useState('auto');
+function Records({ rows = [], onEdit, canEdit, viewMode: externalViewMode, showViewToggle = true }) {
+  const [internalViewMode, setInternalViewMode] = useState('auto');
+  const viewMode = externalViewMode !== undefined ? externalViewMode : internalViewMode;
   const list = Array.isArray(rows) ? rows : [];
   if (!list.length) return <Empty />;
   return (
     <div className={`asas-records-container ${viewMode !== 'auto' ? `view-${viewMode}` : ''}`}>
-      {showViewToggle && list.length > 0 && (
+      {showViewToggle && externalViewMode === undefined && list.length > 0 && (
         <div className="asas-records-view-toggle">
           <Segmented
             label="نمط عرض السجلات"
             value={viewMode}
-            onChange={setViewMode}
+            onChange={setInternalViewMode}
             options={[
               { value: 'auto', label: 'تلقائي' },
               { value: 'table', label: 'جدول' },
@@ -1323,8 +1324,10 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const [accountFilter, setAccountFilter] = useState('all');
   const [accountPage, setAccountPage] = useState(1);
   const [accountPageSize, setAccountPageSize] = useState(10);
-  const [accountViewMode, setAccountViewMode] = useState('table');
+  const [accountViewMode, setAccountViewMode] = useState('auto');
   const [collectiveViewMode, setCollectiveViewMode] = useState('auto');
+  const [dashboardViewMode, setDashboardViewMode] = useState('auto');
+  const [liveRecordsViewMode, setLiveRecordsViewMode] = useState('auto');
   const [selectedAccountDetails, setSelectedAccountDetails] = useState(null);
   const [recordFilter, setRecordFilter] = useState('all');
   const [recordsTabMode, setRecordsTabMode] = useState('collective');
@@ -2342,13 +2345,31 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 title={`سجل حضور وانصراف الموظفين اليوم (${(data.records || []).length} موظف)`} 
                 icon="calendar" 
                 actions={
-                  <button className="asas-btn sm" onClick={() => setTab('records')}>
-                    <Icon name="list" />
-                    جميع السجلات والتقارير
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Segmented
+                      label="نمط عرض سجلات اليوم"
+                      value={dashboardViewMode}
+                      onChange={setDashboardViewMode}
+                      options={[
+                        { value: 'auto', label: 'تلقائي' },
+                        { value: 'table', label: 'جدول' },
+                        { value: 'cards', label: 'بطاقات' }
+                      ]}
+                    />
+                    <button className="asas-btn sm" onClick={() => selectAdminTab('records')}>
+                      <Icon name="list" />
+                      جميع السجلات والتقارير
+                    </button>
+                  </div>
                 }
               >
-                <Records rows={data.records || []} onEdit={r => edit('records', r)} canEdit={can('attendance.edit')} />
+                <Records 
+                  rows={data.records || []} 
+                  onEdit={r => edit('records', r)} 
+                  canEdit={can('attendance.edit')} 
+                  viewMode={dashboardViewMode}
+                  showViewToggle={false}
+                />
               </Card>
             </>
           )}
@@ -3200,8 +3221,29 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                       />
                     </div>
 
-                    <Card title={`سجل الحركات والتفاصيل المباشرة (${filteredRecords.length} من إجمالي ${allRecords.length} حركة)`} icon="calendar">
-                      <Records rows={filteredRecords} onEdit={r => edit('records', r)} canEdit={can('attendance.edit')} />
+                    <Card 
+                      title={`سجل الحركات والتفاصيل المباشرة (${filteredRecords.length} من إجمالي ${allRecords.length} حركة)`} 
+                      icon="calendar"
+                      actions={
+                        <Segmented
+                          label="نمط عرض الحركات"
+                          value={liveRecordsViewMode}
+                          onChange={setLiveRecordsViewMode}
+                          options={[
+                            { value: 'auto', label: 'تلقائي' },
+                            { value: 'table', label: 'جدول' },
+                            { value: 'cards', label: 'بطاقات' }
+                          ]}
+                        />
+                      }
+                    >
+                      <Records 
+                        rows={filteredRecords} 
+                        onEdit={r => edit('records', r)} 
+                        canEdit={can('attendance.edit')} 
+                        viewMode={liveRecordsViewMode}
+                        showViewToggle={false}
+                      />
                     </Card>
                   </>
                 )}
@@ -3278,21 +3320,15 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   />
 
                   <div className="asas-view-toggle">
-                    <Button
-                      variant={accountViewMode === 'table' ? 'primary' : 'ghost'}
-                      size="sm"
-                      icon="list"
-                      label="عرض كجدول"
-                      title="عرض كجدول"
-                      onClick={() => setAccountViewMode('table')}
-                    />
-                    <Button
-                      variant={accountViewMode === 'cards' ? 'primary' : 'ghost'}
-                      size="sm"
-                      icon="grid"
-                      label="عرض كبطاقات مدمجة"
-                      title="عرض كبطاقات مدمجة"
-                      onClick={() => setAccountViewMode('cards')}
+                    <Segmented
+                      label="نمط عرض الموظفين"
+                      value={accountViewMode}
+                      onChange={setAccountViewMode}
+                      options={[
+                        { value: 'auto', label: 'تلقائي' },
+                        { value: 'table', label: 'جدول' },
+                        { value: 'cards', label: 'بطاقات' }
+                      ]}
                     />
                   </div>
                 </div>
@@ -3320,8 +3356,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
 
                 return (
                   <>
-                    {accountViewMode === 'table' ? (
-                      <div className="asas-table-wrap">
+                    <div className={`asas-accounts-container ${accountViewMode !== 'auto' ? `view-${accountViewMode}` : ''}`}>
+                      {/* 1. TABLE VIEW (Desktop / Tablet) */}
+                      <div className="asas-accounts-table-view asas-table-wrap">
                         <table className="asas-table">
                           <thead>
                             <tr>
@@ -3482,8 +3519,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                           </tbody>
                         </table>
                       </div>
-                    ) : (
-                      <div className="asas-accounts-grid">
+
+                      {/* 2. CARDS VIEW (Phone first, liquid-glass) */}
+                      <div className="asas-accounts-cards-view asas-accounts-grid">
                         {currentAccounts.map(a => (
                           <Glass key={a.id} className={`asas-account-card ${!a.active ? 'asas-card-pending' : ''}`}>
                             <div className="asas-account-card-head">
@@ -3594,7 +3632,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                           </Glass>
                         ))}
                       </div>
-                    )}
+                    </div>
 
                     {/* Smart Pagination Bar */}
                     {totalCount > 0 && (
@@ -5825,6 +5863,7 @@ function sendSystemNotification(title, body) {
 
 function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProfile, onOpenInstall, installPrompt, defaultAction = 'auto', theme, onToggleTheme }) {
   const [empPage, setEmpPage] = useState('duty');
+  const [empHistoryViewMode, setEmpHistoryViewMode] = useState('auto');
   const [data, setData] = useState(null);
   const activeUser = data?.account || user;
   const isRemote = Boolean(activeUser?.is_remote);
@@ -6919,17 +6958,38 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
       {/* SUBPAGE 3: Attendance History & Records */}
       {empPage === 'history' && (
-        <Card title="السجل الحضوري الموثق" icon="list">
+        <Card 
+          title="السجل الحضوري الموثق" 
+          icon="list"
+          actions={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Segmented
+                label="نمط عرض السجل"
+                value={empHistoryViewMode}
+                onChange={setEmpHistoryViewMode}
+                options={[
+                  { value: 'auto', label: 'تلقائي' },
+                  { value: 'table', label: 'جدول' },
+                  { value: 'cards', label: 'بطاقات' }
+                ]}
+              />
+              <button className="asas-btn sm" onClick={() => load(false)} disabled={busy}>
+                <Icon name="refresh" />
+                تحديث
+              </button>
+            </div>
+          }
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid var(--hairline)' }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
               إجمالي الفترات المسجلة: <strong>{(data?.records || []).length}</strong>
             </span>
-            <button className="asas-btn sm" onClick={() => load(false)} disabled={busy}>
-              <Icon name="refresh" />
-              تحديث السجل
-            </button>
           </div>
-          <Records rows={(data?.records || []).map(r => ({ ...r, name: user.name, identifier: user.identifier }))} />
+          <Records 
+            rows={(data?.records || []).map(r => ({ ...r, name: user.name, identifier: user.identifier }))} 
+            viewMode={empHistoryViewMode}
+            showViewToggle={false}
+          />
         </Card>
       )}
 
