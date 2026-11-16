@@ -1364,15 +1364,17 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showDutyReminderModal, setShowDutyReminderModal] = useState(false);
   const [triggeringReminder, setTriggeringReminder] = useState(false);
+  const [reminderTarget, setReminderTarget] = useState('inside');
   const [installPrompt, setInstallPrompt] = useState(null);
 
   const handleTriggerManualReminder = async () => {
     setTriggeringReminder(true);
     try {
-      const res = await api('/admin/remind-duty', 'POST');
+      const res = await api('/admin/remind-duty', 'POST', { target: reminderTarget });
       playChime('success');
       setMessage(res?.message || 'تم إرسال تذكير الدوام بنجاح ✅');
       load(true);
+      setShowDutyReminderModal(false);
     } catch (err) {
       setError(err?.message || 'تعذر إرسال تذكير الدوام');
     } finally {
@@ -2210,16 +2212,21 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
 
             <div className="asas-topbar-actions">
               <LiveClock iconSize={14} iconColor="var(--accent)" />
-              <button
-                type="button"
-                className="btn btn--outline btn--sm asas-duty-reminder-topbar-btn"
+              <Button
+                variant="glass"
+                size="sm"
+                icon="clock"
+                className="asas-topbar-reminder-btn"
                 onClick={() => setShowDutyReminderModal(true)}
-                title="تذكير الدوام وإثبات الحضور الدوري (كل ساعتين)"
-                aria-label="تذكير الدوام"
+                title="تذكير الدوام وإثبات الحضور (كل ساعتين)"
               >
-                <Icon name="clock" style={{ width: 14, height: 14, color: 'var(--accent)' }} />
-                <span className="asas-topbar-btn-text">تذكير الدوام</span>
-              </button>
+                <span className="asas-reminder-btn-label">تذكير الدوام</span>
+                {Boolean(data?.inside > 0) && (
+                  <span className="sm-badge sm-badge--teal num" style={{ marginInlineStart: 4, padding: '1px 6px', fontSize: 11 }}>
+                    {data.inside}
+                  </span>
+                )}
+              </Button>
               <button
                 type="button"
                 className="btn btn--ghost btn--sm btn--icon asas-bell-btn"
@@ -4505,44 +4512,64 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
 
       {showDutyReminderModal && (
         <Modal
-          title="نظام تذكير الدوام الدوري (كل ساعتين)"
+          title={
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="clock" style={{ color: 'var(--accent)' }} />
+              <Swash>تذكير الدوام الدوري</Swash>
+            </div>
+          }
           onClose={() => setShowDutyReminderModal(false)}
+          footer={
+            <div className="cluster" style={{ width: '100%', justifyContent: 'space-between' }}>
+              <Button variant="ghost" onClick={() => setShowDutyReminderModal(false)}>
+                إلغاء
+              </Button>
+              <Button
+                variant="primary"
+                icon="clock"
+                loading={triggeringReminder}
+                onClick={handleTriggerManualReminder}
+              >
+                {`إرسال التذكير الآن (${reminderTarget === 'inside' ? (data?.inside || 0) : (data?.total || 0)} موظف)`}
+              </Button>
+            </div>
+          }
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Active Stats Card */}
-            <div style={{ background: 'var(--surface-sunken)', borderRadius: 12, padding: 14, border: '1px solid var(--hairline)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-              <div>
-                <span style={{ fontSize: 12.5, color: 'var(--ink-muted)', display: 'block' }}>الموظفون على رأس العمل الآن:</span>
-                <strong style={{ fontSize: 22, color: 'var(--paid)' }}>
-                  {formatNumber(data?.inside || 0)} موظف
+            {/* Segmented Target Switcher */}
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                فئة المستهدفين بالإرسال:
+              </label>
+              <Segmented
+                label="فئة المستهدفين"
+                value={reminderTarget}
+                onChange={setReminderTarget}
+                options={[
+                  { value: 'inside', label: 'المتواجدون على رأس العمل', count: data?.inside || 0 },
+                  { value: 'all', label: 'كافة الموظفين المسجلين', count: data?.total || 0 }
+                ]}
+              />
+            </div>
+
+            {/* Asas Glass Card */}
+            <Glass className="card" style={{ padding: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>الموظفون المستهدفون بالإرسال:</span>
+                <strong className="num" style={{ fontSize: 20, color: 'var(--paid)' }}>
+                  {formatNumber(reminderTarget === 'inside' ? (data?.inside || 0) : (data?.total || 0))} موظف
                 </strong>
               </div>
-              <span className={`sm-badge ${systemSettings.duty_reminder_enabled !== false ? 'sm-badge--teal' : 'sm-badge--muted'}`}>
-                {systemSettings.duty_reminder_enabled !== false ? 'التذكير التلقائي مفعّل ✅' : 'التذكير التلقائي معطل ⏸️'}
-              </span>
-            </div>
-
-            {/* Action: Send Instant Reminder Blast */}
-            <div style={{ background: 'linear-gradient(135deg, rgba(181, 144, 69, 0.08) 0%, transparent 100%)', borderRadius: 12, padding: 16, border: '1px solid rgba(181, 144, 69, 0.35)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <Icon name="clock" style={{ width: 18, height: 18, color: 'var(--accent)' }} />
-                <strong style={{ fontSize: 14.5 }}>إرسال تذكير فوري لجميع المتواجدين بالدوام الآن</strong>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--hairline)', paddingTop: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>حالة التذكير التلقائي:</span>
+                <span className={`pill ${systemSettings.duty_reminder_enabled !== false ? 'pill--paid' : 'pill--partial'}`}>
+                  <Icon name={systemSettings.duty_reminder_enabled !== false ? 'checkCircle' : 'clock'} />
+                  {systemSettings.duty_reminder_enabled !== false ? 'مفعّل تلقائياً' : 'معطل مؤقتاً'}
+                </span>
               </div>
-              <p style={{ fontSize: 12.5, color: 'var(--ink-muted)', margin: '0 0 14px', lineHeight: 1.5 }}>
-                إرسال تنبيه لحظي ورنة تنبيه لجميع الموظفين المتواجدين داخل الدوام لتأكيد استمرار حضورهم وتفقد حالة مناوباتهم.
-              </p>
-              <button
-                type="button"
-                className="btn btn--solid btn--primary"
-                style={{ width: '100%', height: 42, justifyContent: 'center', fontWeight: 700 }}
-                onClick={handleTriggerManualReminder}
-                disabled={triggeringReminder}
-              >
-                {triggeringReminder ? 'جاري إرسال التذكير...' : '⚡ إرسال تذكير الدوام الآن لجميع الحاضرين'}
-              </button>
-            </div>
+            </Glass>
 
-            {/* Configuration: Interval & Auto Switch */}
+            {/* Automation Frequency & Toggle */}
             <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                 <label className="asas-check" style={{ margin: 0, fontWeight: 600, fontSize: 13.5 }}>
@@ -4561,7 +4588,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   التذكير التلقائي أثناء الدوام
                 </label>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>التذكير كل:</span>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>تكرار التذكير:</span>
                   <select
                     className="asas-select"
                     style={{ width: 'auto', padding: '4px 8px', fontSize: 13 }}
@@ -4582,15 +4609,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   </select>
                 </div>
               </div>
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-muted)', lineHeight: 1.45 }}>
-                يقوم النظام بإرسال إشعار متصفح ورنة صوتية للموظف تلقائياً بعد مرور كل ساعتين من تواجده في الدوام لإثبات استمرار الحضور.
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
+                يرسل النظام إشعارات لحظية وتنبيهات صوتية للأجهزة المتصلة لتأكيد استمرار حضور الموظف بدقة.
               </p>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--hairline)', paddingTop: 12 }}>
-              <Button variant="outline" size="sm" onClick={() => setShowDutyReminderModal(false)}>
-                إغلاق
-              </Button>
             </div>
           </div>
         </Modal>
@@ -6411,7 +6432,35 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
     const curUser = data?.account || user;
     if (!curUser || !curUser.id) return;
 
-    // Check system interval from settings (default 2 hours = 120 min)
+    // 1. Live reminder alert from admin blast or server event
+    if (data?.duty_reminder_alert) {
+      const alertId = data.duty_reminder_alert.id;
+      const ackAlertKey = `asas_duty_reminder_alert_ack_${curUser.id}_${alertId}`;
+      const snoozeAlertKey = `asas_duty_reminder_alert_snooze_${curUser.id}_${alertId}`;
+      const lastAlertAck = localStorage.getItem(ackAlertKey);
+      const snoozeUntil = Number(localStorage.getItem(snoozeAlertKey) || 0);
+
+      if (!lastAlertAck && Date.now() > snoozeUntil) {
+        setDutyReminder(prev => {
+          if (prev?.open && prev?.alertId === alertId) return prev;
+          playDutyReminderChime();
+          sendSystemNotification(
+            '⏰ تذكير إثبات واستمرار الحضور',
+            `تنبيه تذكير رسمي من الإدارة (${curUser.name}): يرجى تأكيد استمرار تواجدك وتفقد حالة الدوام.`,
+            { tag: `asas-duty-alert-${alertId}` }
+          );
+          return {
+            open: true,
+            alertId,
+            hoursOnDuty: data.duty_reminder_alert.hours_on_duty || 2,
+            type: 'admin_blast'
+          };
+        });
+        return;
+      }
+    }
+
+    // 2. Check automated periodic duty timer (default 2 hours = 120 min)
     const intervalHours = Number(curUser.duty_reminder_interval_hours || 2);
     const intervalMs = intervalHours * 3600 * 1000;
 
@@ -6464,18 +6513,23 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
   useEffect(() => {
     checkDutyReminder();
-    const reminderInterval = setInterval(checkDutyReminder, 30000);
+    const reminderInterval = setInterval(checkDutyReminder, 15000);
     return () => clearInterval(reminderInterval);
   }, [checkDutyReminder]);
 
   const handleConfirmPresence = async () => {
     setConfirmingPresence(true);
     try {
-      const res = await api('/attendance/heartbeat', 'POST', { reminder_type: 'two_hour_interval' });
+      const res = await api('/attendance/heartbeat', 'POST', { reminder_type: dutyReminder?.type || 'two_hour_interval' });
       if (dutyReminder && typeof localStorage !== 'undefined') {
         const curUser = data?.account || user;
-        const ackKey = `asas_duty_reminder_ack_${curUser.id}_${dutyReminder.intervalsCount}_${dutyReminder.recordId}`;
-        localStorage.setItem(ackKey, String(Date.now()));
+        if (dutyReminder.alertId) {
+          localStorage.setItem(`asas_duty_reminder_alert_ack_${curUser.id}_${dutyReminder.alertId}`, String(Date.now()));
+        }
+        if (dutyReminder.recordId && dutyReminder.intervalsCount) {
+          const ackKey = `asas_duty_reminder_ack_${curUser.id}_${dutyReminder.intervalsCount}_${dutyReminder.recordId}`;
+          localStorage.setItem(ackKey, String(Date.now()));
+        }
       }
       playChime('success');
       setMessage(res?.message || 'تم تأكيد استمرار حضورك بنجاح ✅');
@@ -6493,8 +6547,13 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
   const handleSnoozeReminder = () => {
     if (dutyReminder && typeof localStorage !== 'undefined') {
       const curUser = data?.account || user;
-      const snoozeKey = `asas_duty_reminder_snooze_${curUser.id}_${dutyReminder.intervalsCount}_${dutyReminder.recordId}`;
-      localStorage.setItem(snoozeKey, String(Date.now() + 15 * 60 * 1000));
+      if (dutyReminder.alertId) {
+        localStorage.setItem(`asas_duty_reminder_alert_snooze_${curUser.id}_${dutyReminder.alertId}`, String(Date.now() + 15 * 60 * 1000));
+      }
+      if (dutyReminder.recordId && dutyReminder.intervalsCount) {
+        const snoozeKey = `asas_duty_reminder_snooze_${curUser.id}_${dutyReminder.intervalsCount}_${dutyReminder.recordId}`;
+        localStorage.setItem(snoozeKey, String(Date.now() + 15 * 60 * 1000));
+      }
     }
     setDutyReminder(null);
   };
@@ -7424,54 +7483,48 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         </div>
       )}
 
-      {/* ─── 2-Hour Duty Attendance Reminder Modal ─── */}
+      {/* ─── Duty Attendance Reminder Modal (Official Asas UI) ─── */}
       {dutyReminder && dutyReminder.open && (
-        <div className="asas-modal-backdrop" style={{ zIndex: 10000 }}>
-          <div className="asas-reminder-modal-box">
-            <div className="asas-reminder-modal-icon-wrap" aria-hidden="true">
-              ⏰
+        <Modal
+          title={
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="clock" style={{ color: 'var(--accent)' }} />
+              <Swash>تذكير إثبات واستمرار الحضور</Swash>
             </div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>
-              تذكير إثبات واستمرار الحضور
-            </h3>
-            <p style={{ fontSize: 13.5, color: 'var(--ink-muted)', margin: '0 0 20px', lineHeight: 1.6 }}>
-              مرحباً <strong>{user?.name}</strong>، لقد مضت <strong>{dutyReminder.hoursOnDuty || 2} ساعات</strong> على تواجدك في الدوام اليوم. يرجى تأكيد استمرار تواجدك لمواصلة احتساب ساعاتك بنزاهة ودقة.
+          }
+          onClose={handleSnoozeReminder}
+          footer={
+            <div className="cluster" style={{ width: '100%', justifyContent: 'space-between', gap: 8 }}>
+              <Button variant="ghost" size="sm" onClick={handleSnoozeReminder}>
+                تأجيل مؤقت
+              </Button>
+              <div className="cluster" style={{ gap: 8 }}>
+                <Button variant="glass" size="sm" icon="logout" onClick={() => { setDutyReminder(null); act('exit'); }}>
+                  تسجيل الانصراف
+                </Button>
+                <Button variant="primary" size="sm" icon="check" loading={confirmingPresence} onClick={handleConfirmPresence}>
+                  تأكيد استمرار الحضور
+                </Button>
+              </div>
+            </div>
+          }
+        >
+          <div style={{ padding: '8px 0', lineHeight: 1.8 }}>
+            <p style={{ margin: '0 0 14px', fontSize: 14.5, color: 'var(--text)' }}>
+              مرحباً <strong>{user?.name}</strong>، نود تذكيرك بتأكيد تواجدك على رأس العمل لتوثيق استمرار ساعات دوامك بدقة ونزاهة واحتساب استحقاقاتك كاملاً.
             </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button
-                type="button"
-                className="btn btn--solid btn--primary"
-                style={{ height: 44, fontSize: 14.5, fontWeight: 700, justifyContent: 'center' }}
-                onClick={handleConfirmPresence}
-                disabled={confirmingPresence}
-              >
-                {confirmingPresence ? 'جاري التوثيق...' : '✅ تأكيد استمرار الحضور الآن'}
-              </button>
-
-              <button
-                type="button"
-                className="btn btn--outline"
-                style={{ height: 40, fontSize: 13.5, justifyContent: 'center' }}
-                onClick={() => {
-                  setDutyReminder(null);
-                  act('exit');
-                }}
-              >
-                🚪 تسجيل الانصراف والخروج
-              </button>
-
-              <button
-                type="button"
-                className="btn btn--ghost"
-                style={{ fontSize: 12.5, color: 'var(--ink-muted)', justifyContent: 'center' }}
-                onClick={handleSnoozeReminder}
-              >
-                إغلاق مؤقتاً والتذكير بعد ربع ساعة
-              </button>
-            </div>
+            <Glass className="card" style={{ padding: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>المدة المسجلة بالدوام:</span>
+                <strong className="num" style={{ color: 'var(--paid)', fontSize: 16 }}>{dutyReminder.hoursOnDuty || 2} ساعات متواصلة</strong>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--hairline)', paddingTop: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>حالة المناوبة:</span>
+                <span className="pill pill--paid"><Icon name="checkCircle" /> على رأس العمل</span>
+              </div>
+            </Glass>
           </div>
-        </div>
+        </Modal>
       )}
       </div>
 

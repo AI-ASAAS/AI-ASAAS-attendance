@@ -1072,7 +1072,29 @@ app.get('/api/attendance/me',employee,wrap(async(req,res)=>{
    const res = resolveRecordStatus(r);
    return { ...r, ...res, counted_minutes: countedMinutes(r) };
  });
- respond(res,{records:enhancedRecords,shift,branch,account:safeAccount(req.user),automatic_status});
+
+ const latestReminder = (await db.query(`
+   SELECT id, captured_at, details FROM attendance_events
+   WHERE (employee_id = $1 OR employee_id IS NULL)
+     AND kind = 'duty_reminder'
+     AND datetime(captured_at) >= datetime('now', '-2 hours')
+   ORDER BY id DESC LIMIT 1
+ `, [req.user.id])).rows[0];
+
+ let dutyReminderAlert = null;
+ if (latestReminder) {
+   try {
+     dutyReminderAlert = {
+       id: latestReminder.id,
+       captured_at: latestReminder.captured_at,
+       ...JSON.parse(latestReminder.details || '{}')
+     };
+   } catch (_) {
+     dutyReminderAlert = { id: latestReminder.id, captured_at: latestReminder.captured_at };
+   }
+ }
+
+ respond(res,{records:enhancedRecords,shift,branch,account:safeAccount(req.user),automatic_status,duty_reminder_alert:dutyReminderAlert});
 }));
 // Offline evidence is never promoted directly to approved attendance.
 app.post('/api/attendance/offline',employee,wrap(async(req,res)=>{
@@ -1363,27 +1385,41 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
  const now = new Date();
  const nowIso = now.toISOString();
  const broad = ['super_admin','hr_admin'].includes(req.user.role);
- const activeInside = (await db.query(`
-   SELECT r.id, r.employee_id, r.shift_start, r.first_in, r.branch_id,
-          a.name, a.email, a.identifier, b.name as branch_name
-   FROM duty_records r
-   JOIN accounts a ON a.id = r.employee_id
-   LEFT JOIN branches b ON b.id = r.branch_id
-   WHERE r.state = 'inside' AND ($1=1 OR a.branch_id=$2)
- `, [broad, req.user.branch_id])).rows;
+ const target = req.body?.target || 'inside';
+
+ let targets = [];
+ if (target === 'all') {
+   targets = (await db.query(`
+     SELECT a.id as employee_id, a.name, a.email, a.identifier, b.name as branch_name, r.id as record_id, r.first_in
+     FROM accounts a
+     LEFT JOIN branches b ON b.id = a.branch_id
+     LEFT JOIN duty_records r ON r.employee_id = a.id AND r.state = 'inside'
+     WHERE a.role = 'employee' AND a.active = TRUE AND ($1=1 OR a.branch_id=$2)
+   `, [broad, req.user.branch_id])).rows;
+ } else {
+   targets = (await db.query(`
+     SELECT r.id as record_id, r.employee_id, r.shift_start, r.first_in, r.branch_id,
+            a.name, a.email, a.identifier, b.name as branch_name
+     FROM duty_records r
+     JOIN accounts a ON a.id = r.employee_id
+     LEFT JOIN branches b ON b.id = r.branch_id
+     WHERE r.state = 'inside' AND ($1=1 OR a.branch_id=$2)
+   `, [broad, req.user.branch_id])).rows;
+ }
 
  let count = 0;
- for (const record of activeInside) {
+ for (const record of targets) {
    const firstInTime = record.first_in ? new Date(record.first_in).getTime() : now.getTime();
    const hoursOnDuty = Math.max(1, Math.round((now.getTime() - firstInTime) / 3600000));
 
    await db.query(`
      INSERT INTO attendance_events(record_id, employee_id, kind, captured_at, details)
      VALUES($1, $2, 'duty_reminder', $3, $4)
-   `, [record.id, record.employee_id, nowIso, JSON.stringify({
+   `, [record.record_id || null, record.employee_id, nowIso, JSON.stringify({
      source: 'admin_manual_blast',
      admin_name: req.user.name,
      hours_on_duty: hoursOnDuty,
+     target,
      triggered_at: nowIso
    })]);
 
@@ -1397,13 +1433,13 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
    count++;
  }
 
- await audit(db, req.user, 'duty.reminder_blast', null, `إرسال تذكير دوام فوري لـ ${count} موظف متواجد على رأس العمل`);
+ await audit(db, req.user, 'duty.reminder_blast', null, `إرسال تذكير دوام فوري لـ ${count} موظف (${target === 'all' ? 'كافة الموظفين' : 'الحاضرون بالدوام'})`);
  respond(res, {
    success: true,
    reminded_count: count,
    message: count > 0 
-     ? `تم إرسال تذكير الدوام بنجاح لـ ${count} موظف متواجد على رأس العمل حالياً ✅`
-     : 'لا يوجد أي موظف مسجل داخل الدوام حالياً لإرسال التذكير له.'
+     ? `تم إرسال تذكير الدوام بنجاح لـ ${count} موظف (${target === 'all' ? 'كافة الموظفين' : 'المتواجدين بالدوام'}) ✅`
+     : 'لم يتم العثور على موظفين مطابقين لإرسال التذكير.'
  });
 }));
 app.get('/api/admin/reports.csv',admin,allow('reports.export'),wrap(async(req,res)=>{
