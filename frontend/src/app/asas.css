@@ -383,8 +383,9 @@ h3 { font-size: clamp(14.5px, 0.4vw + 13px, 16.5px); }
 .asas-clock-pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 5px 12px;
+  padding: 5px 10px;
   border-radius: var(--radius-pill);
   background: var(--glass-inset);
   color: var(--text-2);
@@ -392,21 +393,41 @@ h3 { font-size: clamp(14.5px, 0.4vw + 13px, 16.5px); }
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
-  flex: none;
-  flex-shrink: 0;
+  flex: 0 0 148px;
+  width: 148px;
+  min-width: 148px;
+  max-width: 148px;
+  box-sizing: border-box;
   user-select: none;
+}
+
+.asas-clock-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
 }
 
 .asas-clock-pill strong,
 .asas-clock-digits {
   display: inline-block;
-  min-width: 80px;
+  width: 82px;
+  min-width: 82px;
+  max-width: 82px;
   text-align: center;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
   font-family: var(--font);
   direction: ltr;
   unicode-bidi: isolate;
+}
+
+.site-header__actions .btn,
+.asas-topbar-actions .btn,
+.asas-header-logout-btn,
+.asas-bell-btn {
+  flex-shrink: 0;
 }
 
 .asas-bell-btn {
@@ -2431,14 +2452,20 @@ select.asas-input option {
   }
 
   .asas-clock-pill {
-    padding: 4px 8px;
+    flex: 0 0 138px;
+    width: 138px;
+    min-width: 138px;
+    max-width: 138px;
+    padding: 4px 6px;
     font-size: 12px;
     gap: 4px;
   }
 
   .asas-clock-pill strong,
   .asas-clock-digits {
-    min-width: 72px;
+    width: 76px;
+    min-width: 76px;
+    max-width: 76px;
   }
 
   .asas-content,
@@ -2540,6 +2567,10 @@ select.asas-input option {
   }
 
   .asas-clock-pill {
+    flex: 0 0 94px;
+    width: 94px;
+    min-width: 94px;
+    max-width: 94px;
     padding: 3px 6px;
     font-size: 11px;
     gap: 3px;
@@ -2547,7 +2578,9 @@ select.asas-input option {
 
   .asas-clock-pill strong,
   .asas-clock-digits {
-    min-width: 60px;
+    width: 66px;
+    min-width: 66px;
+    max-width: 66px;
     font-size: 11px;
   }
 

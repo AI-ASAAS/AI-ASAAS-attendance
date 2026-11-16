@@ -137,9 +137,9 @@ const LiveClock = React.memo(function LiveClock({ iconColor = 'var(--accent)', i
   useEffect(() => {
     const update = () => {
       try {
-        setTime(new Intl.DateTimeFormat('ar-YE', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Aden' }).format(new Date()));
+        setTime(new Intl.DateTimeFormat('ar-YE-u-nu-latn', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Aden' }).format(new Date()));
       } catch (_) {
-        setTime(new Date().toLocaleTimeString('ar-YE'));
+        setTime(new Date().toLocaleTimeString('ar-YE-u-nu-latn', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
       }
     };
     update();
@@ -149,7 +149,10 @@ const LiveClock = React.memo(function LiveClock({ iconColor = 'var(--accent)', i
   return (
     <div className="asas-clock-pill" aria-label={`الوقت: ${time || '—'}`}>
       <Icon name="clock" style={{ width: iconSize, height: iconSize, color: iconColor, flexShrink: 0 }} />
-      <span><span className="asas-clock-label">{label}</span><strong className="num asas-clock-digits">{time || '—'}</strong></span>
+      <span className="asas-clock-content">
+        <span className="asas-clock-label">{label}</span>
+        <strong className="num asas-clock-digits">{time || '—'}</strong>
+      </span>
     </div>
   );
 });
