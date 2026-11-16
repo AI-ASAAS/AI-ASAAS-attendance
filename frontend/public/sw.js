@@ -1,5 +1,5 @@
 // public/sw.js — AI-ASAAS Sovereign Attendance Service Worker
-const CACHE_NAME = 'asas-attendance-v5.1';
+const CACHE_NAME = 'asas-attendance-v5.2';
 const ASSETS_TO_CACHE = [
   '/',
   '/asas',
@@ -33,6 +33,58 @@ self.addEventListener('activate', (event) => {
     )
   );
   self.clients.claim();
+});
+
+// ─── Push Notifications: Handle Incoming Web Push ─────────────
+self.addEventListener('push', (event) => {
+  let payload = {
+    title: '⏰ نظام أساس للحضور والدوام',
+    body: 'تذكير: يرجى تفقد حالة دوامك وتسجيل الحضور.',
+    icon: '/icon-192.png',
+    badge: '/favicon.png',
+    tag: 'asas-duty-reminder',
+    url: '/asas'
+  };
+
+  try {
+    if (event.data) {
+      const data = event.data.json();
+      payload = { ...payload, ...data };
+    }
+  } catch (_) {
+    if (event.data) payload.body = event.data.text();
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: payload.icon || '/icon-192.png',
+      badge: payload.badge || '/favicon.png',
+      tag: payload.tag || 'asas-duty-reminder',
+      renotify: true,
+      vibrate: [200, 100, 200],
+      data: { url: payload.url || '/asas' }
+    })
+  );
+});
+
+// ─── Notification Click: Focus / Open Window ──────────────────
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const urlToOpen = event.notification.data?.url || '/asas';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url && client.url.includes('/asas') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
 });
 
 // ─── Fetch: network-first, with instant cache fallback ─────────

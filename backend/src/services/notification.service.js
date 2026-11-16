@@ -218,11 +218,54 @@ async function notifyAnnouncement(account, announcement) {
   return sendMail({ to: account.email, subject, html, text: `${announcement.title}\n\n${announcement.content}` });
 }
 
+// ─── 6. Periodic Duty Attendance Reminder Email (Every 2 Hours) ───────────
+async function notifyDutyReminder(account, branchName, hoursOnDuty) {
+  if (!account.email) return;
+  const hours = Number(hoursOnDuty || 2);
+  const subject = `⏰ [أساس] تذكير إثبات واستمرار الحضور (${hours} ساعة على بدء الدوام)`;
+  const appUrl = process.env.APP_URL || 'http://127.0.0.1:7442/asas';
+  const html = `
+    <div dir="rtl" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e0dacb; border-radius: 12px; overflow: hidden;">
+      <div style="background: #231f20; padding: 22px; text-align: center; color: #ffffff;">
+        <span style="background: #b59045; color: #ffffff; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 8px;">تذكير الدوام الدوري ⏰</span>
+        <h2 style="margin: 0; font-size: 20px; color: #d2c5ac;">تذكير إثبات واستمرار الحضور</h2>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #a39c8f;">نظام أساس للحضور والانصراف</p>
+      </div>
+      <div style="padding: 24px; color: #231f20; line-height: 1.7;">
+        <p style="font-size: 15px;">عزيزي الموظف <strong>${account.name}</strong>،</p>
+        <p>نود تذكيرك بأنه قد مضت <strong>${hours} ساعات</strong> على تواجدك في الدوام اليوم في <strong>${branchName || 'مقر العمل المعتمد'}</strong>.</p>
+        
+        <div style="background: #fbf7ee; border: 1px solid #ebdcc0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 4px 0;">⏱️ <strong>ساعات الدوام المسجلة:</strong> ${hours} ساعات دوام متواصل</p>
+          <p style="margin: 4px 0;">📌 <strong>الحالة الحالية:</strong> على رأس العمل (مناوبة نشطة)</p>
+          <p style="margin: 4px 0; font-size: 13px; color: #775b24;">يرجى فتح النظام لتأكيد استمرار حضورك وتفقد حالة مناوبتك لضمان احتساب ساعاتك بنزاهة ودقة.</p>
+        </div>
+
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${appUrl}" style="background: #2d6a4f; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 14px;">
+            فتح نظام أساس لتأكيد الحضور
+          </a>
+        </div>
+      </div>
+      <div style="background: #f8f7f4; padding: 12px; text-align: center; font-size: 11px; color: #8a8275; border-top: 1px solid #ebdcc0;">
+        نظام أساس لإدارة الحضور والموارد البشرية · توقيت صنعاء الرسمي
+      </div>
+    </div>
+  `;
+  return sendMail({
+    to: account.email,
+    subject,
+    html,
+    text: `تذكير إثبات الحضور: مضت ${hours} ساعات على تواجدك في الدوام. يرجى فتح النظام لتأكيد استمرار حضورك.`
+  });
+}
+
 module.exports = {
   sendMail,
   notifyAccountCreated,
   notifyCheckIn,
   notifyCheckOut,
   notifyLeaveUpdate,
-  notifyAnnouncement
+  notifyAnnouncement,
+  notifyDutyReminder
 };

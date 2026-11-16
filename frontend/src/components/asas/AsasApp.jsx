@@ -1370,6 +1370,13 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       setInstallPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handler);
+
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => {
+        console.warn('Service worker registration note:', err?.message);
+      });
+    }
+
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
   const [systemSettings, setSystemSettings] = useState({
@@ -1377,6 +1384,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
     timezone: 'Asia/Aden',
     max_gps_accuracy: 250,
     email_notifications: false,
+    duty_reminder_enabled: true,
+    duty_reminder_interval_hours: 2,
     support_contact: '+967 770000000',
     assistant_enabled: true,
     assistant_daily_quota_employee: 20,
@@ -4246,6 +4255,36 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     تفعيل إشعارات البريد الإلكتروني للمدراء عند تسجيل الحضور والغياب
                   </label>
 
+                  <div style={{ marginTop: 12, padding: '14px', background: 'var(--surface-sunken)', borderRadius: 10, border: '1px solid var(--hairline)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <label className="asas-check" style={{ margin: 0, fontWeight: 600 }}>
+                        <input
+                          type="checkbox"
+                          checked={systemSettings.duty_reminder_enabled !== false}
+                          onChange={e => setSystemSettings({ ...systemSettings, duty_reminder_enabled: e.target.checked })}
+                        />
+                        🔔 تفعيل نظام الإشعارات وتذكير الدوام الدوري أثناء العمل
+                      </label>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}>التذكير كل:</span>
+                        <select
+                          className="asas-select"
+                          style={{ width: 'auto', minWidth: 120, padding: '4px 10px', fontSize: 13 }}
+                          value={systemSettings.duty_reminder_interval_hours || 2}
+                          onChange={e => setSystemSettings({ ...systemSettings, duty_reminder_interval_hours: Number(e.target.value) })}
+                        >
+                          <option value={1}>ساعة واحدة</option>
+                          <option value={2}>ساعتان (افتراضي وموصى به)</option>
+                          <option value={3}>3 ساعات</option>
+                          <option value={4}>4 ساعات</option>
+                        </select>
+                      </div>
+                    </div>
+                    <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+                      يرسل تنبيهات متصفح وإشعارات فورية للموظف أثناء تواجده في الدوام لتأكيد استمرار حضوره وتفقد حالته.
+                    </p>
+                  </div>
+
                   <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: 18, marginTop: 8, display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                       <strong style={{ fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -5859,15 +5898,51 @@ function playChime(type) {
   } catch (_) {}
 }
 
-function sendSystemNotification(title, body) {
+function playDutyReminderChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, now);
+    osc.frequency.setValueAtTime(880.0, now + 0.12);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.28, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.6);
+  } catch (_) {}
+}
+
+function sendSystemNotification(title, body, options = {}) {
   try {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, {
+      const opts = {
         body,
-        icon: '/favicon.ico',
-        tag: 'asas-geofence',
-        renotify: true
-      });
+        icon: '/icon-192.png',
+        badge: '/favicon.png',
+        tag: options.tag || 'asas-geofence',
+        renotify: true,
+        vibrate: [200, 100, 200],
+        data: { url: '/asas' },
+        ...options
+      };
+      if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then(reg => {
+          if (reg && reg.showNotification) {
+            reg.showNotification(title, opts);
+          } else {
+            new Notification(title, opts);
+          }
+        }).catch(() => {
+          new Notification(title, opts);
+        });
+      } else {
+        new Notification(title, opts);
+      }
     }
   } catch (_) {}
 }
@@ -5921,7 +5996,12 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         const perm = await Notification.requestPermission();
         setNotifPermission(perm);
         if (perm === 'granted') {
-          sendSystemNotification('تم تفعيل إشعارات أساس الذكية', 'ستصلك تنبيهات فورية عند تسجيل الحضور والانصراف ومراقبة النطاق.');
+          playDutyReminderChime();
+          sendSystemNotification(
+            'تم تفعيل إشعارات أساس الذكية 🔔',
+            'ستصلك تنبيهات الحضور الفورية وتذكير التحضير كل ساعتين أثناء الدوام تلقائياً على هذا الجهاز.',
+            { tag: 'asas-welcome-notif' }
+          );
         }
       } catch (_) {}
     }
@@ -6201,6 +6281,104 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
 
   const todayRecord = data?.records?.[0];
   const isInside = todayRecord?.state === 'inside';
+
+  // ─── 2-Hour Periodic Duty Attendance Reminder Engine ──────────────────────
+  const [dutyReminder, setDutyReminder] = useState(null);
+  const [confirmingPresence, setConfirmingPresence] = useState(false);
+  const [reminderConfirmedToast, setReminderConfirmedToast] = useState(false);
+
+  const checkDutyReminder = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const curUser = data?.account || user;
+    if (!curUser || !curUser.id) return;
+
+    // Check system interval from settings (default 2 hours = 120 min)
+    const intervalHours = Number(curUser.duty_reminder_interval_hours || 2);
+    const intervalMs = intervalHours * 3600 * 1000;
+
+    const currentRecord = data?.records?.find(r => {
+      try {
+        const recDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden' }).format(new Date(r.shift_start));
+        const nowDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden' }).format(new Date());
+        return recDate === nowDate;
+      } catch { return false; }
+    }) || data?.records?.[0];
+
+    const isInsideNow = currentRecord && currentRecord.state === 'inside';
+
+    if (isInsideNow && currentRecord.first_in) {
+      const firstInMs = new Date(currentRecord.first_in).getTime();
+      const nowMs = Date.now();
+      const elapsedMs = nowMs - firstInMs;
+
+      if (elapsedMs >= intervalMs) {
+        const intervalsCount = Math.floor(elapsedMs / intervalMs);
+        const hoursOnDuty = intervalsCount * intervalHours;
+        const ackKey = `asas_duty_reminder_ack_${curUser.id}_${intervalsCount}_${currentRecord.id}`;
+        const snoozeKey = `asas_duty_reminder_snooze_${curUser.id}_${intervalsCount}_${currentRecord.id}`;
+
+        const lastAck = localStorage.getItem(ackKey);
+        const snoozeUntil = Number(localStorage.getItem(snoozeKey) || 0);
+
+        if (!lastAck && nowMs > snoozeUntil) {
+          setDutyReminder(prev => {
+            if (prev?.open && prev?.intervalsCount === intervalsCount) return prev;
+            playDutyReminderChime();
+            sendSystemNotification(
+              '⏰ تذكير إثبات واستمرار الحضور',
+              `مضت ${hoursOnDuty} ساعات على تواجدك في الدوام اليوم (${curUser.name}). يرجى تأكيد استمرار تواجدك وتفقد حالة دوامك.`,
+              { tag: `asas-duty-reminder-${intervalsCount}` }
+            );
+            return {
+              open: true,
+              hoursOnDuty,
+              intervalHours,
+              recordId: currentRecord.id,
+              intervalsCount,
+              type: 'on_duty'
+            };
+          });
+        }
+      }
+    }
+  }, [data, user]);
+
+  useEffect(() => {
+    checkDutyReminder();
+    const reminderInterval = setInterval(checkDutyReminder, 30000);
+    return () => clearInterval(reminderInterval);
+  }, [checkDutyReminder]);
+
+  const handleConfirmPresence = async () => {
+    setConfirmingPresence(true);
+    try {
+      const res = await api('/attendance/heartbeat', 'POST', { reminder_type: 'two_hour_interval' });
+      if (dutyReminder && typeof localStorage !== 'undefined') {
+        const curUser = data?.account || user;
+        const ackKey = `asas_duty_reminder_ack_${curUser.id}_${dutyReminder.intervalsCount}_${dutyReminder.recordId}`;
+        localStorage.setItem(ackKey, String(Date.now()));
+      }
+      playChime('success');
+      setMessage(res?.message || 'تم تأكيد استمرار حضورك بنجاح ✅');
+      setDutyReminder(null);
+      setReminderConfirmedToast(true);
+      setTimeout(() => setReminderConfirmedToast(false), 6000);
+      load(true);
+    } catch (err) {
+      setError(err?.message || 'تعذر تأكيد الحضور، يرجى إعادة المحاولة');
+    } finally {
+      setConfirmingPresence(false);
+    }
+  };
+
+  const handleSnoozeReminder = () => {
+    if (dutyReminder && typeof localStorage !== 'undefined') {
+      const curUser = data?.account || user;
+      const snoozeKey = `asas_duty_reminder_snooze_${curUser.id}_${dutyReminder.intervalsCount}_${dutyReminder.recordId}`;
+      localStorage.setItem(snoozeKey, String(Date.now() + 15 * 60 * 1000));
+    }
+    setDutyReminder(null);
+  };
 
   // Live Geofence Monitor & Auto Check-in/out Scanner
   const [geofenceStatus, setGeofenceStatus] = useState({
@@ -6550,6 +6728,15 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                   </span>
                 )}
                 {user.email && <span className="asas-employee-email">{user.email}</span>}
+                <span
+                  className={`sm-badge ${notifPermission === 'granted' ? 'sm-badge--teal' : 'sm-badge--muted'}`}
+                  style={{ cursor: notifPermission !== 'granted' ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                  onClick={notifPermission !== 'granted' ? requestNotifPermission : undefined}
+                  title={notifPermission === 'granted' ? 'إشعارات النظام مفعلة - سيتم تذكيرك بالتحضير كل ساعتين أثناء الدوام' : 'انقر لتفعيل إشعارات النظام وتذكير الدوام'}
+                >
+                  <Icon name="bell" style={{ width: 12, height: 12 }} />
+                  {notifPermission === 'granted' ? 'التذكير الدوري مفعّل (كل ساعتين)' : 'تفعيل الإشعارات والتذكير'}
+                </span>
               </div>
             </div>
           </div>
@@ -6560,6 +6747,42 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             </Button>
           </div>
         </Glass>
+
+        {/* Notification Permission Activation Banner */}
+        {notifPermission !== 'granted' && (
+          <div className="asas-reminder-banner">
+            <div className="asas-reminder-banner-content">
+              <div className="asas-reminder-icon-circle" aria-hidden="true">
+                🔔
+              </div>
+              <div>
+                <div className="asas-reminder-banner-title">تفعيل إشعارات الحضور وتذكير الدوام الدوري</div>
+                <div className="asas-reminder-banner-desc">
+                  فعّل الإشعارات لتصلك تنبيهات الحضور الفورية وتذكير التحضير كل ساعتين أثناء الدوام تلقائياً على هذا الجهاز.
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="solid"
+              size="sm"
+              icon="bell"
+              label="تفعيل الإشعارات الآن"
+              onClick={requestNotifPermission}
+              style={{ whiteSpace: 'nowrap' }}
+            />
+          </div>
+        )}
+
+        {/* Reminder Confirmed Toast Banner */}
+        {reminderConfirmedToast && (
+          <div className="asas-banner alert alert--success" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Icon name="check" style={{ width: 18, height: 18, color: 'var(--success)' }} />
+              <span>تم توثيق وتأكيد استمرار حضورك بنجاح ✅ وسيتم تذكيرك تلقائياً بعد ساعتين.</span>
+            </div>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setReminderConfirmedToast(false)}>✕</button>
+          </div>
+        )}
 
       {isInAppBrowser && (
         <div style={{
@@ -7077,6 +7300,56 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                   <span>تم تفعيل الموقع — إعادة المحاولة الآن</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 2-Hour Duty Attendance Reminder Modal ─── */}
+      {dutyReminder && dutyReminder.open && (
+        <div className="asas-modal-backdrop" style={{ zIndex: 10000 }}>
+          <div className="asas-reminder-modal-box">
+            <div className="asas-reminder-modal-icon-wrap" aria-hidden="true">
+              ⏰
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>
+              تذكير إثبات واستمرار الحضور
+            </h3>
+            <p style={{ fontSize: 13.5, color: 'var(--ink-muted)', margin: '0 0 20px', lineHeight: 1.6 }}>
+              مرحباً <strong>{user?.name}</strong>، لقد مضت <strong>{dutyReminder.hoursOnDuty || 2} ساعات</strong> على تواجدك في الدوام اليوم. يرجى تأكيد استمرار تواجدك لمواصلة احتساب ساعاتك بنزاهة ودقة.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                type="button"
+                className="btn btn--solid btn--primary"
+                style={{ height: 44, fontSize: 14.5, fontWeight: 700, justifyContent: 'center' }}
+                onClick={handleConfirmPresence}
+                disabled={confirmingPresence}
+              >
+                {confirmingPresence ? 'جاري التوثيق...' : '✅ تأكيد استمرار الحضور الآن'}
+              </button>
+
+              <button
+                type="button"
+                className="btn btn--outline"
+                style={{ height: 40, fontSize: 13.5, justifyContent: 'center' }}
+                onClick={() => {
+                  setDutyReminder(null);
+                  act('exit');
+                }}
+              >
+                🚪 تسجيل الانصراف والخروج
+              </button>
+
+              <button
+                type="button"
+                className="btn btn--ghost"
+                style={{ fontSize: 12.5, color: 'var(--ink-muted)', justifyContent: 'center' }}
+                onClick={handleSnoozeReminder}
+              >
+                إغلاق مؤقتاً والتذكير بعد ربع ساعة
+              </button>
             </div>
           </div>
         </div>

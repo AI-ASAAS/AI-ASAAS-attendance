@@ -316,6 +316,8 @@ app.get('/api/settings',wrap(async(req,res)=>{
   timezone: settingsMap.timezone || 'Asia/Aden',
   max_gps_accuracy: Number(settingsMap.max_gps_accuracy || 250),
   support_contact: settingsMap.support_contact || '+967 770000000',
+  duty_reminder_enabled: settingsMap.duty_reminder_enabled !== 'false',
+  duty_reminder_interval_hours: Number(settingsMap.duty_reminder_interval_hours || 2),
   branches,
  });
 }));
@@ -1079,6 +1081,24 @@ app.post('/api/attendance/offline',employee,wrap(async(req,res)=>{
  await db.query("INSERT INTO attendance_events(employee_id,kind,request_id,details) VALUES($1,'offline_pending_review',$2,$3) ON CONFLICT(employee_id,request_id) DO NOTHING",[req.user.id,req.body.request_id,JSON.stringify(detail)]);
  respond(res,{pending_review:true});
 }));
+app.post('/api/attendance/heartbeat',employee,wrap(async(req,res)=>{
+ const now = new Date();
+ const result = await db.transaction(async c => {
+  const record = (await c.query("SELECT * FROM duty_records WHERE employee_id=$1 AND state='inside' ORDER BY shift_start DESC LIMIT 1",[req.user.id])).rows[0];
+  if (!record) {
+   return { active: false, message: 'لا توجد مناوبة نشطة حالياً لتأكيدها' };
+  }
+  await c.query("UPDATE duty_records SET last_seen=$1, gps_state='inside' WHERE id=$2", [now, record.id]);
+  await c.query("INSERT INTO attendance_events(record_id, employee_id, kind, captured_at, details) VALUES($1, $2, 'presence_confirmed', $3, $4)", [
+   record.id,
+   req.user.id,
+   now.toISOString(),
+   JSON.stringify({ source: 'duty_reminder_heartbeat', confirmed_at: now.toISOString(), reminder_type: req.body?.reminder_type || 'two_hour_interval' })
+  ]);
+  return { active: true, confirmed: true, message: 'تم تأكيد استمرار حضورك بنجاح ✅', confirmed_at: now.toISOString() };
+ });
+ respond(res, result);
+}));
 
 async function recordsFor(user,from,to){
  const broad=['super_admin','hr_admin'].includes(user.role);
@@ -1252,6 +1272,8 @@ app.get('/api/admin/settings',admin,wrap(async(req,res)=>{
   timezone: settingsMap.timezone || 'Asia/Aden',
   max_gps_accuracy: Number(settingsMap.max_gps_accuracy || 250),
   email_notifications: settingsMap.email_notifications === 'true',
+  duty_reminder_enabled: settingsMap.duty_reminder_enabled !== 'false',
+  duty_reminder_interval_hours: Number(settingsMap.duty_reminder_interval_hours || 2),
   support_contact: settingsMap.support_contact || '+967 770000000',
   assistant_enabled: assistantGlobals.enabled,
   assistant_daily_quota_employee: assistantGlobals.dailyQuotaEmployee,
@@ -1278,6 +1300,8 @@ app.put('/api/admin/settings',admin,allow('locations.write'),wrap(async(req,res)
   timezone,
   max_gps_accuracy,
   email_notifications,
+  duty_reminder_enabled,
+  duty_reminder_interval_hours,
   support_contact,
   assistant_enabled,
   assistant_daily_quota_employee,
@@ -1296,6 +1320,8 @@ app.put('/api/admin/settings',admin,allow('locations.write'),wrap(async(req,res)
   if(timezone !== undefined) await upsertSetting(c, 'timezone', string(timezone, 100));
   if(max_gps_accuracy !== undefined) await upsertSetting(c, 'max_gps_accuracy', integer(max_gps_accuracy, 10, 1000));
   if(email_notifications !== undefined) await upsertSetting(c, 'email_notifications', email_notifications ? 'true' : 'false');
+  if(duty_reminder_enabled !== undefined) await upsertSetting(c, 'duty_reminder_enabled', duty_reminder_enabled ? 'true' : 'false');
+  if(duty_reminder_interval_hours !== undefined) await upsertSetting(c, 'duty_reminder_interval_hours', integer(Number(duty_reminder_interval_hours), 1, 12));
   if(support_contact !== undefined) await upsertSetting(c, 'support_contact', string(support_contact, 100));
   if(assistant_enabled !== undefined) await upsertSetting(c, 'assistant_enabled', assistant_enabled ? 'true' : 'false');
   if(assistant_daily_quota_employee !== undefined) await upsertSetting(c, 'assistant_daily_quota_employee', integer(Number(assistant_daily_quota_employee), 1, 500));

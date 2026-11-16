@@ -3457,3 +3457,118 @@ select.asas-input option {
     padding: 4mm 6mm !important;
   }
 }
+
+/* ─── AI-ASAAS Modern Notification & 2-Hour Duty Reminder System ─── */
+.asas-reminder-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(181, 144, 69, 0.08) 0%, rgba(35, 31, 32, 0.03) 100%);
+  border: 1px solid rgba(181, 144, 69, 0.35);
+  border-radius: var(--radius-lg, 12px);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(8px);
+  animation: asasFadeInDown 0.3s ease-out;
+}
+
+[data-theme='dark'] .asas-reminder-banner {
+  background: linear-gradient(135deg, rgba(181, 144, 69, 0.15) 0%, rgba(20, 20, 22, 0.6) 100%);
+  border-color: rgba(181, 144, 69, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.asas-reminder-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.asas-reminder-icon-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(181, 144, 69, 0.15);
+  color: var(--accent, #b59045);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  animation: asasPulseIcon 2.4s infinite ease-in-out;
+}
+
+.asas-reminder-banner-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink, #1c1917);
+  margin-bottom: 2px;
+}
+
+.asas-reminder-banner-desc {
+  font-size: 12.5px;
+  color: var(--ink-muted, #78716c);
+  line-height: 1.45;
+}
+
+.asas-reminder-modal-box {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--hairline, #e7e5e4);
+  border-radius: var(--radius-lg, 16px);
+  padding: 26px 22px;
+  max-width: 440px;
+  width: 90%;
+  margin: auto;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.18);
+  text-align: center;
+  position: relative;
+  animation: asasScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.asas-reminder-modal-icon-wrap {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(181, 144, 69, 0.2) 0%, rgba(45, 106, 79, 0.15) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  box-shadow: 0 0 20px rgba(181, 144, 69, 0.25);
+  animation: asasBounceSoft 2s infinite ease-in-out;
+}
+
+@keyframes asasPulseIcon {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(181, 144, 69, 0.4); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(181, 144, 69, 0); }
+}
+
+@keyframes asasBounceSoft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes asasScaleIn {
+  0% { opacity: 0; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes asasFadeInDown {
+  0% { opacity: 0; transform: translateY(-8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 640px) {
+  .asas-reminder-banner {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: right;
+  }
+  .asas-reminder-banner .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

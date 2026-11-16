@@ -27,3 +27,17 @@ test('Super Admin Identifier Renumbering: verifies super_admin check and duplica
   assert.match(content, /SELECT id FROM accounts WHERE identifier=\$1 AND id<>\$2/);
   assert.match(content, /previous_identifier:account\.identifier/);
 });
+
+test('Duty Attendance Reminder System: verifies heartbeat endpoint, duty-maintenance reminders, and notification service', () => {
+  const appContent = fs.readFileSync(require.resolve('../src/secure-app'), 'utf8');
+  assert.match(appContent, /app\.post\('\/api\/attendance\/heartbeat'/);
+  assert.match(appContent, /duty_reminder_enabled/);
+  assert.match(appContent, /duty_reminder_interval_hours/);
+
+  const maintenanceContent = fs.readFileSync(require.resolve('../src/services/duty-maintenance'), 'utf8');
+  assert.match(maintenanceContent, /checkDutyReminders/);
+  assert.match(maintenanceContent, /duty_reminder/);
+
+  const notifService = require('../src/services/notification.service');
+  assert.equal(typeof notifService.notifyDutyReminder, 'function');
+});
