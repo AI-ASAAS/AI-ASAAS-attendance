@@ -1362,7 +1362,23 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const [newCustomPerm, setNewCustomPerm] = useState('');
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showDutyReminderModal, setShowDutyReminderModal] = useState(false);
+  const [triggeringReminder, setTriggeringReminder] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
+
+  const handleTriggerManualReminder = async () => {
+    setTriggeringReminder(true);
+    try {
+      const res = await api('/admin/remind-duty', 'POST');
+      playChime('success');
+      setMessage(res?.message || 'تم إرسال تذكير الدوام بنجاح ✅');
+      load(true);
+    } catch (err) {
+      setError(err?.message || 'تعذر إرسال تذكير الدوام');
+    } finally {
+      setTriggeringReminder(false);
+    }
+  };
 
   useEffect(() => {
     const handler = (e) => {
@@ -2194,6 +2210,16 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
 
             <div className="asas-topbar-actions">
               <LiveClock iconSize={14} iconColor="var(--accent)" />
+              <button
+                type="button"
+                className="btn btn--outline btn--sm asas-duty-reminder-topbar-btn"
+                onClick={() => setShowDutyReminderModal(true)}
+                title="تذكير الدوام وإثبات الحضور الدوري (كل ساعتين)"
+                aria-label="تذكير الدوام"
+              >
+                <Icon name="clock" style={{ width: 14, height: 14, color: 'var(--accent)' }} />
+                <span className="asas-topbar-btn-text">تذكير الدوام</span>
+              </button>
               <button
                 type="button"
                 className="btn btn--ghost btn--sm btn--icon asas-bell-btn"
@@ -4475,6 +4501,99 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           onClose={() => setShowInstallModal(false)}
           installPrompt={installPrompt}
         />
+      )}
+
+      {showDutyReminderModal && (
+        <Modal
+          title="نظام تذكير الدوام الدوري (كل ساعتين)"
+          onClose={() => setShowDutyReminderModal(false)}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Active Stats Card */}
+            <div style={{ background: 'var(--surface-sunken)', borderRadius: 12, padding: 14, border: '1px solid var(--hairline)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+              <div>
+                <span style={{ fontSize: 12.5, color: 'var(--ink-muted)', display: 'block' }}>الموظفون على رأس العمل الآن:</span>
+                <strong style={{ fontSize: 22, color: 'var(--paid)' }}>
+                  {formatNumber(data?.inside || 0)} موظف
+                </strong>
+              </div>
+              <span className={`sm-badge ${systemSettings.duty_reminder_enabled !== false ? 'sm-badge--teal' : 'sm-badge--muted'}`}>
+                {systemSettings.duty_reminder_enabled !== false ? 'التذكير التلقائي مفعّل ✅' : 'التذكير التلقائي معطل ⏸️'}
+              </span>
+            </div>
+
+            {/* Action: Send Instant Reminder Blast */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(181, 144, 69, 0.08) 0%, transparent 100%)', borderRadius: 12, padding: 16, border: '1px solid rgba(181, 144, 69, 0.35)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <Icon name="clock" style={{ width: 18, height: 18, color: 'var(--accent)' }} />
+                <strong style={{ fontSize: 14.5 }}>إرسال تذكير فوري لجميع المتواجدين بالدوام الآن</strong>
+              </div>
+              <p style={{ fontSize: 12.5, color: 'var(--ink-muted)', margin: '0 0 14px', lineHeight: 1.5 }}>
+                إرسال تنبيه لحظي ورنة تنبيه لجميع الموظفين المتواجدين داخل الدوام لتأكيد استمرار حضورهم وتفقد حالة مناوباتهم.
+              </p>
+              <button
+                type="button"
+                className="btn btn--solid btn--primary"
+                style={{ width: '100%', height: 42, justifyContent: 'center', fontWeight: 700 }}
+                onClick={handleTriggerManualReminder}
+                disabled={triggeringReminder}
+              >
+                {triggeringReminder ? 'جاري إرسال التذكير...' : '⚡ إرسال تذكير الدوام الآن لجميع الحاضرين'}
+              </button>
+            </div>
+
+            {/* Configuration: Interval & Auto Switch */}
+            <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                <label className="asas-check" style={{ margin: 0, fontWeight: 600, fontSize: 13.5 }}>
+                  <input
+                    type="checkbox"
+                    checked={systemSettings.duty_reminder_enabled !== false}
+                    onChange={async (e) => {
+                      const val = e.target.checked;
+                      setSystemSettings(prev => ({ ...prev, duty_reminder_enabled: val }));
+                      try {
+                        await api('/admin/settings', 'PUT', { duty_reminder_enabled: val });
+                        load(true);
+                      } catch (_) {}
+                    }}
+                  />
+                  التذكير التلقائي أثناء الدوام
+                </label>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>التذكير كل:</span>
+                  <select
+                    className="asas-select"
+                    style={{ width: 'auto', padding: '4px 8px', fontSize: 13 }}
+                    value={systemSettings.duty_reminder_interval_hours || 2}
+                    onChange={async (e) => {
+                      const val = Number(e.target.value);
+                      setSystemSettings(prev => ({ ...prev, duty_reminder_interval_hours: val }));
+                      try {
+                        await api('/admin/settings', 'PUT', { duty_reminder_interval_hours: val });
+                        load(true);
+                      } catch (_) {}
+                    }}
+                  >
+                    <option value={1}>كل ساعة</option>
+                    <option value={2}>كل ساعتين (الافتراضي)</option>
+                    <option value={3}>كل 3 ساعات</option>
+                    <option value={4}>كل 4 ساعات</option>
+                  </select>
+                </div>
+              </div>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-muted)', lineHeight: 1.45 }}>
+                يقوم النظام بإرسال إشعار متصفح ورنة صوتية للموظف تلقائياً بعد مرور كل ساعتين من تواجده في الدوام لإثبات استمرار الحضور.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--hairline)', paddingTop: 12 }}>
+              <Button variant="outline" size="sm" onClick={() => setShowDutyReminderModal(false)}>
+                إغلاق
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {selectedAccountDetails && (

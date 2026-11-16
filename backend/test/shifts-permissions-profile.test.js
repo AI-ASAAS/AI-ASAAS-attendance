@@ -31,6 +31,7 @@ test('Super Admin Identifier Renumbering: verifies super_admin check and duplica
 test('Duty Attendance Reminder System: verifies heartbeat endpoint, duty-maintenance reminders, and notification service', () => {
   const appContent = fs.readFileSync(require.resolve('../src/secure-app'), 'utf8');
   assert.match(appContent, /app\.post\('\/api\/attendance\/heartbeat'/);
+  assert.match(appContent, /app\.post\('\/api\/admin\/remind-duty'/);
   assert.match(appContent, /duty_reminder_enabled/);
   assert.match(appContent, /duty_reminder_interval_hours/);
 

@@ -1359,6 +1359,53 @@ app.get('/api/admin/dashboard',admin,wrap(async(req,res)=>{
   }))
  });
 }));
+app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
+ const now = new Date();
+ const nowIso = now.toISOString();
+ const broad = ['super_admin','hr_admin'].includes(req.user.role);
+ const activeInside = (await db.query(`
+   SELECT r.id, r.employee_id, r.shift_start, r.first_in, r.branch_id,
+          a.name, a.email, a.identifier, b.name as branch_name
+   FROM duty_records r
+   JOIN accounts a ON a.id = r.employee_id
+   LEFT JOIN branches b ON b.id = r.branch_id
+   WHERE r.state = 'inside' AND ($1=1 OR a.branch_id=$2)
+ `, [broad, req.user.branch_id])).rows;
+
+ let count = 0;
+ for (const record of activeInside) {
+   const firstInTime = record.first_in ? new Date(record.first_in).getTime() : now.getTime();
+   const hoursOnDuty = Math.max(1, Math.round((now.getTime() - firstInTime) / 3600000));
+
+   await db.query(`
+     INSERT INTO attendance_events(record_id, employee_id, kind, captured_at, details)
+     VALUES($1, $2, 'duty_reminder', $3, $4)
+   `, [record.id, record.employee_id, nowIso, JSON.stringify({
+     source: 'admin_manual_blast',
+     admin_name: req.user.name,
+     hours_on_duty: hoursOnDuty,
+     triggered_at: nowIso
+   })]);
+
+   if (record.email) {
+     notifications.notifyDutyReminder(
+       { name: record.name, email: record.email, identifier: record.identifier },
+       record.branch_name,
+       hoursOnDuty
+     ).catch(err => console.error('[Notification Error] Manual duty reminder failed:', err.message));
+   }
+   count++;
+ }
+
+ await audit(db, req.user, 'duty.reminder_blast', null, `إرسال تذكير دوام فوري لـ ${count} موظف متواجد على رأس العمل`);
+ respond(res, {
+   success: true,
+   reminded_count: count,
+   message: count > 0 
+     ? `تم إرسال تذكير الدوام بنجاح لـ ${count} موظف متواجد على رأس العمل حالياً ✅`
+     : 'لا يوجد أي موظف مسجل داخل الدوام حالياً لإرسال التذكير له.'
+ });
+}));
 app.get('/api/admin/reports.csv',admin,allow('reports.export'),wrap(async(req,res)=>{
  const [from,to]=dateRange(req);
  const cell=v=>'"'+String(v??'').replace(/^[=+@\-\t\r]/,"'$&").replaceAll('"','""')+'"';
