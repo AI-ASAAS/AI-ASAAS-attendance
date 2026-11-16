@@ -2022,7 +2022,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 variant="ghost"
                 size="sm"
                 icon="menu"
-                label="فتح القائمة الجانبية"
+                label="الأقسام"
+                title="الأقسام"
                 className="asas-menu-btn"
                 aria-expanded={sidebarOpen}
                 onClick={() => setSidebarOpen(true)}
@@ -3702,6 +3703,14 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
             </a>
           )}
           <a
+            href="#leave"
+            aria-current={tab === 'leave' ? 'page' : undefined}
+            onClick={(e) => { e.preventDefault(); selectAdminTab('leave'); }}
+          >
+            <Icon name="receipt" />
+            الإجازات
+          </a>
+          <a
             href="#settings"
             aria-current={tab === 'settings' ? 'page' : undefined}
             onClick={(e) => { e.preventDefault(); selectAdminTab('settings'); }}
@@ -3709,14 +3718,6 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
             <Icon name="settings" />
             الإعدادات
           </a>
-          <button
-            type="button"
-            aria-expanded={sidebarOpen}
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Icon name="menu" />
-            الأقسام
-          </button>
         </TabBar>
       </div>
 
