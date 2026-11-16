@@ -328,7 +328,7 @@ function Records({ rows = [], onEdit, canEdit, viewMode: externalViewMode, showV
         <table className="asas-table">
           <thead>
             <tr>
-              {['الموظف', 'الفرع', 'الدوام', 'أول دخول', 'آخر خروج', 'الحالة التلقائية', 'سبب الخروج التلقائي', 'الاحتساب', ...(canEdit ? ['إجراء'] : [])].map(x => <th key={x}>{x}</th>)}
+              {['الموظف', 'الفرع', 'التاريخ', 'أول دخول', 'آخر خروج', 'الحالة', 'طريقة / سبب الخروج', 'الاحتساب', ...(canEdit ? ['إجراء'] : [])].map(x => <th key={x}>{x}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -338,33 +338,36 @@ function Records({ rows = [], onEdit, canEdit, viewMode: externalViewMode, showV
               const isLeave = r.state === 'leave';
               const isEarly = r.status_key === 'early_exit';
               const isLate = r.status_key && typeof r.status_key === 'string' && r.status_key.startsWith('late');
-              const statusLabel = r.status_label || (
-                isInside ? 'حاضر في الموعد' :
-                isAbsent ? 'لم يسجل اليوم (غائب)' :
-                isLeave ? 'في إجازة رسمية' :
-                'تم الانصراف'
-              );
+              const statusLabel = isInside ? (isLate ? 'حاضر (متأخر)' : 'حاضر') :
+                isAbsent ? 'غائب' :
+                isLeave ? 'إجازة' :
+                (isEarly ? 'منصرف مبكراً' : 'منصرف');
               const rawExitReason = r.exit_reason_label || (
-                isInside ? 'قيد الدوام (على رأس العمل)' :
+                isInside ? 'على رأس العمل' :
                 isAbsent ? 'لم يحضر اليوم' :
                 isLeave ? 'إجازة معتمدة' :
                 ({
-                  geofence: 'مغادرة نطاق الموقع تلقائياً (GPS)',
-                  manual: 'انتهاء ساعات الدوام الرسمي في الموعد',
-                  scheduled: 'انتهاء فترة المناوبة المجدولة تلقائياً',
+                  geofence: 'مغادرة النطاق (GPS)',
+                  manual: 'انصراف نظامي في الموعد',
+                  scheduled: 'انتهاء فترة المناوبة',
                   admin_correction: 'تصحيح إداري'
-                }[r.exit_reason] || r.exit_reason || 'انتهاء الدوام الرسمي')
+                }[r.exit_reason] || r.exit_reason || 'انصراف نظامي')
               );
               const exitReasonLabel = String(rawExitReason || '—');
 
               return (
                 <tr key={r.id || ('emp-' + (r.employee_id || idx))}>
                   <td>
-                    <strong>{r.name}</strong>
-                    <small style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{r.identifier}</small>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <UserAvatar user={{ name: r.name, avatar: r.avatar }} size="sm" />
+                      <div>
+                        <strong>{r.name}</strong>
+                        <small style={{ fontFamily: 'monospace', color: 'var(--accent)', display: 'block' }}>#{r.identifier}</small>
+                      </div>
+                    </div>
                   </td>
                   <td>{r.branch_name || 'الفرع الرئيسي'}</td>
-                  <td>{date(r.shift_start)}</td>
+                  <td><span className="num" dir="ltr">{date(r.shift_start)}</span></td>
                   <td>
                     {r.first_in ? (
                       <span className="num" style={{ color: 'var(--paid)', fontWeight: 600 }}>{time(r.first_in)}</span>
@@ -385,14 +388,9 @@ function Records({ rows = [], onEdit, canEdit, viewMode: externalViewMode, showV
                   </td>
                   <td>
                     <span 
-                      className={`asas-badge ${isInside ? 'inside' : 'outside'}`}
-                      style={
-                        isAbsent ? { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' } :
-                        isLeave ? { background: 'var(--glass-inset)', color: 'var(--chart-out)', border: '1px solid var(--chart-out)' } :
-                        {}
-                      }
+                      className={`asas-badge ${isInside ? 'inside' : (isAbsent ? 'outside' : (isLeave ? 'pending' : 'outside'))} sm-badge`}
                     >
-                      <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : (isAbsent ? 'alert' : (isLeave ? 'briefcase' : (isEarly ? 'alert' : 'logout')))} style={{ width: 13, height: 13 }} />
+                      <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : (isAbsent ? 'alert' : (isLeave ? 'briefcase' : (isEarly ? 'alert' : 'logout')))} style={{ width: 11, height: 11 }} />
                       {statusLabel}
                     </span>
                   </td>
@@ -400,22 +398,27 @@ function Records({ rows = [], onEdit, canEdit, viewMode: externalViewMode, showV
                     <span style={{
                       fontSize: 12,
                       color: isInside ? 'var(--text-3)' : (isAbsent ? 'var(--unpaid)' : (exitReasonLabel.includes('مبكر') ? 'var(--unpaid)' : 'var(--paid)')),
-                      fontWeight: 600
-                    }}>
+                      fontWeight: 600,
+                      maxWidth: 160,
+                      display: 'inline-block',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }} title={exitReasonLabel}>
                       {exitReasonLabel}
                     </span>
                   </td>
                   <td>
                     {isAbsent ? (
-                      <span style={{ color: 'var(--unpaid)', fontSize: 12, fontWeight: 500 }}>0 دقيقة (غائب)</span>
+                      <span style={{ color: 'var(--unpaid)', fontSize: 12, fontWeight: 500 }}>0 دقيقة</span>
                     ) : isLeave ? (
-                      <span style={{ color: 'var(--chart-out)', fontSize: 12, fontWeight: 500 }}>إجازة معتمدة</span>
+                      <span style={{ color: 'var(--chart-out)', fontSize: 12, fontWeight: 500 }}>إجازة</span>
                     ) : r.counted_minutes == null ? (
-                      <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}>مفتوح (قيد الاحتساب)</span>
+                      <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}>قيد العمل</span>
                     ) : (
                       <>
-                        <strong className="num">{formatNumber(r.counted_minutes)} دقيقة</strong>
-                        <small>{r.deduct_away ? 'مع خصم المغادرة' : 'دون خصم المغادرة'}</small>
+                        <strong className="num">{formatNumber(r.counted_minutes)} د</strong>
+                        <small style={{ display: 'block' }}>{r.deduct_away ? 'مع خصم الخروج' : 'صافي'}</small>
                       </>
                     )}
                   </td>
@@ -429,7 +432,7 @@ function Records({ rows = [], onEdit, canEdit, viewMode: externalViewMode, showV
                       ) : (
                         <button className="asas-btn sm primary" onClick={() => onEdit(r)} title="تسجيل حضور يدوي للموظف الغائب">
                           <Icon name="checkCircle" />
-                          تحضير يدوي
+                          تحضير
                         </button>
                       )}
                     </td>
@@ -442,29 +445,45 @@ function Records({ rows = [], onEdit, canEdit, viewMode: externalViewMode, showV
       </div>
 
       {/* 2. CARDS VIEW (Phone first, liquid-glass) */}
-      <div className="asas-records-cards-view">
+      <div className="asas-records-cards-view asas-records-grid">
         {list.map((r, idx) => {
           const isInside = r.state === 'inside';
           const isAbsent = r.state === 'absent';
           const isLeave = r.state === 'leave';
           const isEarly = r.status_key === 'early_exit';
           const isLate = r.status_key && typeof r.status_key === 'string' && r.status_key.startsWith('late');
-          const statusLabel = r.status_label || (
-            isInside ? 'حاضر في الموعد' :
-            isAbsent ? 'لم يسجل اليوم (غائب)' :
-            isLeave ? 'في إجازة رسمية' :
-            'تم الانصراف'
+          const statusBadge = isInside ? (
+            <span className="asas-badge inside sm-badge">
+              <Icon name={isLate ? 'alert' : 'checkCircle'} style={{ width: 11, height: 11 }} />
+              {isLate ? 'حاضر (متأخر)' : 'حاضر'}
+            </span>
+          ) : isAbsent ? (
+            <span className="asas-badge outside sm-badge">
+              <Icon name="alert" style={{ width: 11, height: 11 }} />
+              غائب
+            </span>
+          ) : isLeave ? (
+            <span className="asas-badge pending sm-badge">
+              <Icon name="briefcase" style={{ width: 11, height: 11 }} />
+              إجازة
+            </span>
+          ) : (
+            <span className="asas-badge outside sm-badge">
+              <Icon name="logout" style={{ width: 11, height: 11 }} />
+              {isEarly ? 'منصرف مبكراً' : 'منصرف'}
+            </span>
           );
+
           const rawExitReason = r.exit_reason_label || (
-            isInside ? 'قيد الدوام (على رأس العمل)' :
-            isAbsent ? 'لم يحضر اليوم' :
-            isLeave ? 'إجازة معتمدة' :
+            isInside ? 'على رأس العمل حالياً' :
+            isAbsent ? 'لم يسجل حضور اليوم' :
+            isLeave ? 'إجازة رسمية معتمدة' :
             ({
-              geofence: 'مغادرة نطاق الموقع تلقائياً (GPS)',
-              manual: 'انتهاء ساعات الدوام الرسمي في الموعد',
-              scheduled: 'انتهاء فترة المناوبة المجدولة تلقائياً',
+              geofence: 'مغادرة نطاق الموقع (GPS)',
+              manual: 'انصراف نظامي في الموعد',
+              scheduled: 'انتهاء فترة المناوبة تلقائياً',
               admin_correction: 'تصحيح إداري'
-            }[r.exit_reason] || r.exit_reason || 'انتهاء الدوام الرسمي')
+            }[r.exit_reason] || r.exit_reason || 'انصراف نظامي')
           );
           const exitReasonLabel = String(rawExitReason || '—');
 
@@ -472,29 +491,19 @@ function Records({ rows = [], onEdit, canEdit, viewMode: externalViewMode, showV
             <Glass key={r.id || ('card-' + (r.employee_id || idx))} className="asas-record-card">
               <div className="asas-record-card-head">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-                  <div className="asas-record-avatar">
-                    {(r.name || 'م')[0]}
-                  </div>
-                  <div style={{ minWidth: 0 }}>
+                  <UserAvatar user={{ name: r.name, avatar: r.avatar }} size="md" />
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <strong className="asas-record-emp-name">{r.name}</strong>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, color: 'var(--text-3)' }}>
-                      <span className="num" style={{ color: 'var(--accent)', fontWeight: 600 }}>#{r.identifier}</span>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
+                      <span className="asas-readonly-id num">#{r.identifier}</span>
                       <span>•</span>
-                      <span>{r.branch_name || 'الفرع الرئيسي'}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.branch_name || 'الفرع الرئيسي'}</span>
                     </div>
                   </div>
                 </div>
-                <span 
-                  className={`asas-badge ${isInside ? 'inside' : 'outside'}`}
-                  style={
-                    isAbsent ? { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' } :
-                    isLeave ? { background: 'var(--glass-inset)', color: 'var(--chart-out)', border: '1px solid var(--chart-out)' } :
-                    {}
-                  }
-                >
-                  <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : (isAbsent ? 'alert' : (isLeave ? 'briefcase' : (isEarly ? 'alert' : 'logout')))} style={{ width: 12, height: 12 }} />
-                  {statusLabel}
-                </span>
+                <div className="asas-record-card-status">
+                  {statusBadge}
+                </div>
               </div>
 
               <div className="asas-record-card-body">
@@ -514,14 +523,14 @@ function Records({ rows = [], onEdit, canEdit, viewMode: externalViewMode, showV
                   <div className="asas-record-time-box">
                     <span className="asas-record-time-label">الاحتساب</span>
                     <strong className="num" style={{ color: 'var(--accent)', fontSize: 12 }}>
-                      {isAbsent ? '0 د' : isLeave ? 'إجازة' : r.counted_minutes == null ? 'قيد العمل' : `${r.counted_minutes} د`}
+                      {isAbsent ? '0 د' : isLeave ? 'إجازة' : r.counted_minutes == null ? 'قيد العمل' : `${formatNumber(r.counted_minutes)} د`}
                     </strong>
                   </div>
                 </div>
 
-                <div className="asas-record-reason-row">
-                  <span style={{ color: 'var(--text-3)' }}>سبب الحالة / المغادرة:</span>
-                  <span style={{ fontWeight: 600, color: isInside ? 'var(--text-3)' : (isAbsent ? 'var(--unpaid)' : (exitReasonLabel.includes('مبكر') ? 'var(--unpaid)' : 'var(--paid)')) }}>
+                <div className="asas-record-reason-box">
+                  <Icon name="info" style={{ width: 12, height: 12, color: 'var(--text-3)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 11.5, color: isInside ? 'var(--paid)' : (isAbsent ? 'var(--unpaid)' : 'var(--text-2)'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={exitReasonLabel}>
                     {exitReasonLabel}
                   </span>
                 </div>

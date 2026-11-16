@@ -841,6 +841,7 @@ h3 { font-size: clamp(14.5px, 0.4vw + 13px, 16.5px); }
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  contain: paint;
 }
 
 .asas-table {
@@ -1259,13 +1260,19 @@ select.asas-input option {
   width: 100%;
 }
 
+.asas-records-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
 .asas-records-container.view-cards .asas-records-table-view {
   display: none !important;
 }
 .asas-records-container.view-cards .asas-records-cards-view {
   display: grid !important;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
-  gap: 12px !important;
+  gap: 14px !important;
 }
 
 .asas-records-container.view-table .asas-records-table-view {
@@ -1283,16 +1290,16 @@ select.asas-input option {
 
 .asas-records-cards-view {
   display: none;
-  gap: 12px;
+  gap: 14px;
 }
 
 .asas-record-card {
-  padding: 14px 16px;
-  border-radius: var(--radius-lg);
+  padding: 16px;
+  border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.72) 0%, rgba(245, 240, 230, 0.52) 100%);
+  gap: 12px;
+  background: var(--glass-tint);
   border: 1px solid color-mix(in srgb, var(--brand-gold) 20%, var(--hairline));
   box-shadow: var(--glass-shadow);
   transition: transform 0.2s, box-shadow 0.2s;
@@ -1315,27 +1322,18 @@ select.asas-input option {
   min-width: 0;
 }
 
-.asas-record-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--brand-gold) 0%, var(--brand-sand) 100%);
-  color: var(--on-accent);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 14px;
+.asas-record-card-status {
   flex-shrink: 0;
 }
 
 .asas-record-emp-name {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: block;
 }
 
 .asas-record-card-body {
@@ -1368,19 +1366,23 @@ select.asas-input option {
   font-weight: 600;
 }
 
-.asas-record-reason-row {
+.asas-record-reason-box {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 11.5px;
-  padding-inline: 4px;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--glass-inset);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .asas-record-card-foot {
   display: flex;
   gap: 8px;
-  padding-top: 8px;
+  margin-top: auto;
+  padding-top: 10px;
   border-top: 1px solid var(--hairline);
 }
 
@@ -3118,6 +3120,27 @@ select.asas-input option {
   .asas-login-mobile-brand {
     display: block;
   }
+
+  /* Auto-switch wide tables to responsive cards on Tablet & Mobile (<= 900px) */
+  .asas-accounts-container:not(.view-table) .asas-accounts-table-view,
+  .asas-records-container:not(.view-table) .asas-records-table-view,
+  .asas-collective-container:not(.view-table) .asas-collective-table-view,
+  .asas-leave-container:not(.view-table) .asas-leave-table-view,
+  .asas-timeline-container:not(.view-table) .asas-timeline-table-view,
+  .asas-audit-container:not(.view-table) .asas-audit-table-view {
+    display: none;
+  }
+
+  .asas-accounts-container:not(.view-table) .asas-accounts-cards-view,
+  .asas-records-container:not(.view-table) .asas-records-cards-view,
+  .asas-collective-container:not(.view-table) .asas-collective-cards-view,
+  .asas-leave-container:not(.view-table) .asas-leave-cards-view,
+  .asas-timeline-container:not(.view-table) .asas-timeline-cards-view,
+  .asas-audit-container:not(.view-table) .asas-audit-cards-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -3304,25 +3327,20 @@ select.asas-input option {
     flex: 1 1 auto;
   }
 
-  /* Responsive Cards Auto-Activation on Mobile (<= 640px) */
-  .asas-accounts-container:not(.view-table) .asas-accounts-table-view,
-  .asas-records-container:not(.view-table) .asas-records-table-view,
-  .asas-collective-container:not(.view-table) .asas-collective-table-view,
-  .asas-leave-container:not(.view-table) .asas-leave-table-view,
-  .asas-timeline-container:not(.view-table) .asas-timeline-table-view,
-  .asas-audit-container:not(.view-table) .asas-audit-table-view {
-    display: none;
+  .card__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
   }
 
+  /* Single-column cards on phone (<= 640px) */
   .asas-accounts-container:not(.view-table) .asas-accounts-cards-view,
   .asas-records-container:not(.view-table) .asas-records-cards-view,
   .asas-collective-container:not(.view-table) .asas-collective-cards-view,
   .asas-leave-container:not(.view-table) .asas-leave-cards-view,
   .asas-timeline-container:not(.view-table) .asas-timeline-cards-view,
   .asas-audit-container:not(.view-table) .asas-audit-cards-view {
-    display: grid;
     grid-template-columns: 1fr;
-    gap: 12px;
   }
 }
 
