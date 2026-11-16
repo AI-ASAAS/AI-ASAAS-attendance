@@ -302,125 +302,249 @@ function Field({ label, children, ...props }) {
   );
 }
 
-function Records({ rows = [], onEdit, canEdit }) {
+function Records({ rows = [], onEdit, canEdit, showViewToggle = true }) {
+  const [viewMode, setViewMode] = useState('auto');
   const list = Array.isArray(rows) ? rows : [];
   if (!list.length) return <Empty />;
   return (
-    <div className="asas-table-wrap">
-      <table className="asas-table">
-        <thead>
-          <tr>
-            {['الموظف', 'الفرع', 'الدوام', 'أول دخول', 'آخر خروج', 'الحالة التلقائية', 'سبب الخروج التلقائي', 'الاحتساب', ...(canEdit ? ['إجراء'] : [])].map(x => <th key={x}>{x}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {list.map((r, idx) => {
-            const isInside = r.state === 'inside';
-            const isAbsent = r.state === 'absent';
-            const isLeave = r.state === 'leave';
-            const isEarly = r.status_key === 'early_exit';
-            const isLate = r.status_key && typeof r.status_key === 'string' && r.status_key.startsWith('late');
-            const statusLabel = r.status_label || (
-              isInside ? 'حاضر في الموعد' :
-              isAbsent ? 'لم يسجل اليوم (غائب)' :
-              isLeave ? 'في إجازة رسمية' :
-              'تم الانصراف'
-            );
-            const rawExitReason = r.exit_reason_label || (
-              isInside ? 'قيد الدوام (على رأس العمل)' :
-              isAbsent ? 'لم يحضر اليوم' :
-              isLeave ? 'إجازة معتمدة' :
-              ({
-                geofence: 'مغادرة نطاق الموقع تلقائياً (GPS)',
-                manual: 'انتهاء ساعات الدوام الرسمي في الموعد',
-                scheduled: 'انتهاء فترة المناوبة المجدولة تلقائياً',
-                admin_correction: 'تصحيح إداري'
-              }[r.exit_reason] || r.exit_reason || 'انتهاء الدوام الرسمي')
-            );
-            const exitReasonLabel = String(rawExitReason || '—');
+    <div className={`asas-records-container ${viewMode !== 'auto' ? `view-${viewMode}` : ''}`}>
+      {showViewToggle && list.length > 0 && (
+        <div className="asas-records-view-toggle">
+          <Segmented
+            label="نمط عرض السجلات"
+            value={viewMode}
+            onChange={setViewMode}
+            options={[
+              { value: 'auto', label: 'تلقائي' },
+              { value: 'table', label: 'جدول' },
+              { value: 'cards', label: 'بطاقات' }
+            ]}
+          />
+        </div>
+      )}
+      {/* 1. TABLE VIEW (Desktop / Tablet) */}
+      <div className="asas-records-table-view asas-table-wrap">
+        <table className="asas-table">
+          <thead>
+            <tr>
+              {['الموظف', 'الفرع', 'الدوام', 'أول دخول', 'آخر خروج', 'الحالة التلقائية', 'سبب الخروج التلقائي', 'الاحتساب', ...(canEdit ? ['إجراء'] : [])].map(x => <th key={x}>{x}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((r, idx) => {
+              const isInside = r.state === 'inside';
+              const isAbsent = r.state === 'absent';
+              const isLeave = r.state === 'leave';
+              const isEarly = r.status_key === 'early_exit';
+              const isLate = r.status_key && typeof r.status_key === 'string' && r.status_key.startsWith('late');
+              const statusLabel = r.status_label || (
+                isInside ? 'حاضر في الموعد' :
+                isAbsent ? 'لم يسجل اليوم (غائب)' :
+                isLeave ? 'في إجازة رسمية' :
+                'تم الانصراف'
+              );
+              const rawExitReason = r.exit_reason_label || (
+                isInside ? 'قيد الدوام (على رأس العمل)' :
+                isAbsent ? 'لم يحضر اليوم' :
+                isLeave ? 'إجازة معتمدة' :
+                ({
+                  geofence: 'مغادرة نطاق الموقع تلقائياً (GPS)',
+                  manual: 'انتهاء ساعات الدوام الرسمي في الموعد',
+                  scheduled: 'انتهاء فترة المناوبة المجدولة تلقائياً',
+                  admin_correction: 'تصحيح إداري'
+                }[r.exit_reason] || r.exit_reason || 'انتهاء الدوام الرسمي')
+              );
+              const exitReasonLabel = String(rawExitReason || '—');
 
-            return (
-              <tr key={r.id || ('emp-' + (r.employee_id || idx))}>
-                <td>
-                  <strong>{r.name}</strong>
-                  <small style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{r.identifier}</small>
-                </td>
-                <td>{r.branch_name || 'الفرع الرئيسي'}</td>
-                <td>{date(r.shift_start)}</td>
-                <td>
-                  {r.first_in ? (
-                    <span className="num" style={{ color: 'var(--paid)', fontWeight: 600 }}>{time(r.first_in)}</span>
-                  ) : (
-                    <span style={{ color: isAbsent ? 'var(--unpaid)' : 'var(--text-3)', fontWeight: 500 }}>
-                      {isAbsent ? 'لم يحضر' : '—'}
-                    </span>
-                  )}
-                </td>
-                <td>
-                  {r.last_out ? (
-                    <span className="num" style={{ color: 'var(--text)' }}>{time(r.last_out)}</span>
-                  ) : (
-                    <span style={{ color: isInside ? 'var(--partial)' : 'var(--text-3)', fontWeight: isInside ? 600 : 400 }}>
-                      {isInside ? 'حاضر الآن' : '—'}
-                    </span>
-                  )}
-                </td>
-                <td>
-                  <span 
-                    className={`asas-badge ${isInside ? 'inside' : 'outside'}`}
-                    style={
-                      isAbsent ? { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' } :
-                      isLeave ? { background: 'var(--glass-inset)', color: 'var(--chart-out)', border: '1px solid var(--chart-out)' } :
-                      {}
-                    }
-                  >
-                    <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : (isAbsent ? 'alert' : (isLeave ? 'briefcase' : (isEarly ? 'alert' : 'logout')))} style={{ width: 13, height: 13 }} />
-                    {statusLabel}
-                  </span>
-                </td>
-                <td>
-                  <span style={{
-                    fontSize: 12,
-                    color: isInside ? 'var(--text-3)' : (isAbsent ? 'var(--unpaid)' : (exitReasonLabel.includes('مبكر') ? 'var(--unpaid)' : 'var(--paid)')),
-                    fontWeight: 600
-                  }}>
-                    {exitReasonLabel}
-                  </span>
-                </td>
-                <td>
-                  {isAbsent ? (
-                    <span style={{ color: 'var(--unpaid)', fontSize: 12, fontWeight: 500 }}>0 دقيقة (غائب)</span>
-                  ) : isLeave ? (
-                    <span style={{ color: 'var(--chart-out)', fontSize: 12, fontWeight: 500 }}>إجازة معتمدة</span>
-                  ) : r.counted_minutes == null ? (
-                    <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}>مفتوح (قيد الاحتساب)</span>
-                  ) : (
-                    <>
-                      <strong className="num">{formatNumber(r.counted_minutes)} دقيقة</strong>
-                      <small>{r.deduct_away ? 'مع خصم المغادرة' : 'دون خصم المغادرة'}</small>
-                    </>
-                  )}
-                </td>
-                {canEdit && (
+              return (
+                <tr key={r.id || ('emp-' + (r.employee_id || idx))}>
                   <td>
-                    {r.id ? (
-                      <button className="asas-btn sm" onClick={() => onEdit(r)} title="تصحيح سجل الحضور">
-                        <Icon name="edit" />
-                        تصحيح
-                      </button>
+                    <strong>{r.name}</strong>
+                    <small style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{r.identifier}</small>
+                  </td>
+                  <td>{r.branch_name || 'الفرع الرئيسي'}</td>
+                  <td>{date(r.shift_start)}</td>
+                  <td>
+                    {r.first_in ? (
+                      <span className="num" style={{ color: 'var(--paid)', fontWeight: 600 }}>{time(r.first_in)}</span>
                     ) : (
-                      <button className="asas-btn sm primary" onClick={() => onEdit(r)} title="تسجيل حضور يدوي للموظف الغائب">
-                        <Icon name="checkCircle" />
-                        تحضير يدوي
-                      </button>
+                      <span style={{ color: isAbsent ? 'var(--unpaid)' : 'var(--text-3)', fontWeight: 500 }}>
+                        {isAbsent ? 'لم يحضر' : '—'}
+                      </span>
                     )}
                   </td>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  <td>
+                    {r.last_out ? (
+                      <span className="num" style={{ color: 'var(--text)' }}>{time(r.last_out)}</span>
+                    ) : (
+                      <span style={{ color: isInside ? 'var(--partial)' : 'var(--text-3)', fontWeight: isInside ? 600 : 400 }}>
+                        {isInside ? 'حاضر الآن' : '—'}
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    <span 
+                      className={`asas-badge ${isInside ? 'inside' : 'outside'}`}
+                      style={
+                        isAbsent ? { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' } :
+                        isLeave ? { background: 'var(--glass-inset)', color: 'var(--chart-out)', border: '1px solid var(--chart-out)' } :
+                        {}
+                      }
+                    >
+                      <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : (isAbsent ? 'alert' : (isLeave ? 'briefcase' : (isEarly ? 'alert' : 'logout')))} style={{ width: 13, height: 13 }} />
+                      {statusLabel}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{
+                      fontSize: 12,
+                      color: isInside ? 'var(--text-3)' : (isAbsent ? 'var(--unpaid)' : (exitReasonLabel.includes('مبكر') ? 'var(--unpaid)' : 'var(--paid)')),
+                      fontWeight: 600
+                    }}>
+                      {exitReasonLabel}
+                    </span>
+                  </td>
+                  <td>
+                    {isAbsent ? (
+                      <span style={{ color: 'var(--unpaid)', fontSize: 12, fontWeight: 500 }}>0 دقيقة (غائب)</span>
+                    ) : isLeave ? (
+                      <span style={{ color: 'var(--chart-out)', fontSize: 12, fontWeight: 500 }}>إجازة معتمدة</span>
+                    ) : r.counted_minutes == null ? (
+                      <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}>مفتوح (قيد الاحتساب)</span>
+                    ) : (
+                      <>
+                        <strong className="num">{formatNumber(r.counted_minutes)} دقيقة</strong>
+                        <small>{r.deduct_away ? 'مع خصم المغادرة' : 'دون خصم المغادرة'}</small>
+                      </>
+                    )}
+                  </td>
+                  {canEdit && (
+                    <td>
+                      {r.id ? (
+                        <button className="asas-btn sm" onClick={() => onEdit(r)} title="تصحيح سجل الحضور">
+                          <Icon name="edit" />
+                          تصحيح
+                        </button>
+                      ) : (
+                        <button className="asas-btn sm primary" onClick={() => onEdit(r)} title="تسجيل حضور يدوي للموظف الغائب">
+                          <Icon name="checkCircle" />
+                          تحضير يدوي
+                        </button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 2. CARDS VIEW (Phone first, liquid-glass) */}
+      <div className="asas-records-cards-view">
+        {list.map((r, idx) => {
+          const isInside = r.state === 'inside';
+          const isAbsent = r.state === 'absent';
+          const isLeave = r.state === 'leave';
+          const isEarly = r.status_key === 'early_exit';
+          const isLate = r.status_key && typeof r.status_key === 'string' && r.status_key.startsWith('late');
+          const statusLabel = r.status_label || (
+            isInside ? 'حاضر في الموعد' :
+            isAbsent ? 'لم يسجل اليوم (غائب)' :
+            isLeave ? 'في إجازة رسمية' :
+            'تم الانصراف'
+          );
+          const rawExitReason = r.exit_reason_label || (
+            isInside ? 'قيد الدوام (على رأس العمل)' :
+            isAbsent ? 'لم يحضر اليوم' :
+            isLeave ? 'إجازة معتمدة' :
+            ({
+              geofence: 'مغادرة نطاق الموقع تلقائياً (GPS)',
+              manual: 'انتهاء ساعات الدوام الرسمي في الموعد',
+              scheduled: 'انتهاء فترة المناوبة المجدولة تلقائياً',
+              admin_correction: 'تصحيح إداري'
+            }[r.exit_reason] || r.exit_reason || 'انتهاء الدوام الرسمي')
+          );
+          const exitReasonLabel = String(rawExitReason || '—');
+
+          return (
+            <Glass key={r.id || ('card-' + (r.employee_id || idx))} className="asas-record-card">
+              <div className="asas-record-card-head">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                  <div className="asas-record-avatar">
+                    {(r.name || 'م')[0]}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <strong className="asas-record-emp-name">{r.name}</strong>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, color: 'var(--text-3)' }}>
+                      <span className="num" style={{ color: 'var(--accent)', fontWeight: 600 }}>#{r.identifier}</span>
+                      <span>•</span>
+                      <span>{r.branch_name || 'الفرع الرئيسي'}</span>
+                    </div>
+                  </div>
+                </div>
+                <span 
+                  className={`asas-badge ${isInside ? 'inside' : 'outside'}`}
+                  style={
+                    isAbsent ? { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' } :
+                    isLeave ? { background: 'var(--glass-inset)', color: 'var(--chart-out)', border: '1px solid var(--chart-out)' } :
+                    {}
+                  }
+                >
+                  <Icon name={isInside ? (isLate ? 'alert' : 'checkCircle') : (isAbsent ? 'alert' : (isLeave ? 'briefcase' : (isEarly ? 'alert' : 'logout')))} style={{ width: 12, height: 12 }} />
+                  {statusLabel}
+                </span>
+              </div>
+
+              <div className="asas-record-card-body">
+                <div className="asas-record-time-row">
+                  <div className="asas-record-time-box">
+                    <span className="asas-record-time-label">أول دخول</span>
+                    <strong className="num" style={{ color: r.first_in ? 'var(--paid)' : (isAbsent ? 'var(--unpaid)' : 'var(--text-3)'), fontSize: 12 }}>
+                      {r.first_in ? time(r.first_in) : (isAbsent ? 'لم يحضر' : '—')}
+                    </strong>
+                  </div>
+                  <div className="asas-record-time-box">
+                    <span className="asas-record-time-label">آخر خروج</span>
+                    <strong className="num" style={{ color: r.last_out ? 'var(--text)' : (isInside ? 'var(--partial)' : 'var(--text-3)'), fontSize: 12 }}>
+                      {r.last_out ? time(r.last_out) : (isInside ? 'حاضر الآن' : '—')}
+                    </strong>
+                  </div>
+                  <div className="asas-record-time-box">
+                    <span className="asas-record-time-label">الاحتساب</span>
+                    <strong className="num" style={{ color: 'var(--accent)', fontSize: 12 }}>
+                      {isAbsent ? '0 د' : isLeave ? 'إجازة' : r.counted_minutes == null ? 'قيد العمل' : `${r.counted_minutes} د`}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="asas-record-reason-row">
+                  <span style={{ color: 'var(--text-3)' }}>سبب الحالة / المغادرة:</span>
+                  <span style={{ fontWeight: 600, color: isInside ? 'var(--text-3)' : (isAbsent ? 'var(--unpaid)' : (exitReasonLabel.includes('مبكر') ? 'var(--unpaid)' : 'var(--paid)')) }}>
+                    {exitReasonLabel}
+                  </span>
+                </div>
+              </div>
+
+              {canEdit && (
+                <div className="asas-record-card-foot">
+                  {r.id ? (
+                    <button className="asas-btn sm" onClick={() => onEdit(r)} style={{ width: '100%', justifyContent: 'center' }}>
+                      <Icon name="edit" />
+                      تصحيح السجل
+                    </button>
+                  ) : (
+                    <button className="asas-btn sm primary" onClick={() => onEdit(r)} style={{ width: '100%', justifyContent: 'center' }}>
+                      <Icon name="checkCircle" />
+                      تحضير يدوي
+                    </button>
+                  )}
+                </div>
+              )}
+            </Glass>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1200,6 +1324,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const [accountPage, setAccountPage] = useState(1);
   const [accountPageSize, setAccountPageSize] = useState(10);
   const [accountViewMode, setAccountViewMode] = useState('table');
+  const [collectiveViewMode, setCollectiveViewMode] = useState('auto');
   const [selectedAccountDetails, setSelectedAccountDetails] = useState(null);
   const [recordFilter, setRecordFilter] = useState('all');
   const [recordsTabMode, setRecordsTabMode] = useState('collective');
@@ -2484,103 +2609,191 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                       </Glass>
                     </div>
 
-                    {/* Collective Table */}
+                    {/* Collective Table & Mobile Cards */}
                     <Card
                       title={`التقرير الجماعي الشامل للحضور والانصراف (${filteredEmployees.length} موظف)`}
                       icon="users"
+                      actions={
+                        <div className="asas-view-toggle-wrap">
+                          <Segmented
+                            label="طريقة عرض التقرير"
+                            value={collectiveViewMode}
+                            onChange={setCollectiveViewMode}
+                            options={[
+                              { value: 'auto', label: 'تلقائي' },
+                              { value: 'table', label: 'جدول' },
+                              { value: 'cards', label: 'بطاقات' }
+                            ]}
+                          />
+                        </div>
+                      }
                     >
-                      <div className="asas-table-wrap">
-                        <table className="asas-table">
-                          <thead>
-                            <tr>
-                              {['الرقم الوظيفي', 'اسم الموظف', 'الفرع', 'الوردية', 'أيام الحضور', 'أيام الغياب', 'التأخير', 'ساعات العمل', 'الإجازات', 'نسبة الالتزام', 'إجراء'].map(h => (
-                                <th key={h}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredEmployees.map(emp => (
-                              <tr key={emp.id}>
-                                <td>
-                                  <strong style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>
-                                    {emp.identifier}
-                                  </strong>
-                                </td>
-                                <td>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <strong>{emp.name}</strong>
-                                    {emp.is_remote && (
-                                      <span className="asas-badge remote sm-badge">
-                                        <Icon name="globe" style={{ width: 10, height: 10 }} />
-                                        <span>عن بعد</span>
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td>{emp.branch_name || 'الفرع الرئيسي'}</td>
-                                <td>{emp.shift_name || 'دوام رسمي'}</td>
-                                <td>
-                                  <span style={{ color: 'var(--paid)', fontWeight: 700 }}>
-                                    {emp.present_days} يوم
-                                  </span>
-                                </td>
-                                <td>
-                                  <span style={{ color: emp.absent_days > 0 ? 'var(--unpaid)' : 'var(--text-3)', fontWeight: emp.absent_days > 0 ? 700 : 400 }}>
-                                    {emp.absent_days} يوم
-                                  </span>
-                                </td>
-                                <td>
-                                  {emp.late_days_count > 0 ? (
-                                    <span style={{ color: 'var(--partial)', fontWeight: 600 }}>
-                                      {emp.late_days_count} مرات ({emp.total_late_minutes} د)
-                                    </span>
-                                  ) : (
-                                    <span style={{ color: 'var(--paid)', fontSize: 12 }}>في الموعد</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <strong>{emp.total_work_hours} س</strong>
-                                </td>
-                                <td>
-                                  {emp.leave_days > 0 ? (
-                                    <span className="num" style={{ color: 'var(--chart-out)', fontWeight: 600 }}>{emp.leave_days} يوم</span>
-                                  ) : (
-                                    <span style={{ color: 'var(--text-3)' }}>0</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span
-                                      className={`asas-rate-pill ${emp.attendance_rate >= 80 ? 'good' : (emp.attendance_rate >= 50 ? 'warn' : 'bad')}`}
-                                    >
-                                      {emp.attendance_rate}%
-                                    </span>
-                                  </div>
-                                </td>
-                                <td>
-                                  <button
-                                    className="asas-btn sm primary"
-                                    onClick={() => {
-                                      setSelectedEmployeeId(String(emp.id));
-                                      setRecordsTabMode('individual');
-                                    }}
-                                    title="عرض السجل التاريخي والتحليلي الكامل للموظف"
-                                  >
-                                    <Icon name="user" />
-                                    عرض السجل الفردي
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                            {!filteredEmployees.length && (
+                      <div className={`asas-collective-container ${collectiveViewMode !== 'auto' ? `view-${collectiveViewMode}` : ''}`}>
+                        {/* 1. TABLE VIEW (Desktop / Tablet) */}
+                        <div className="asas-collective-table-view asas-table-wrap">
+                          <table className="asas-table">
+                            <thead>
                               <tr>
-                                <td colSpan={11} style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-3)' }}>
-                                  لا توجد بيانات موظفين مطابقة للبحث أو الفترة المحددة.
-                                </td>
+                                {['الرقم الوظيفي', 'اسم الموظف', 'الفرع', 'الوردية', 'أيام الحضور', 'أيام الغياب', 'التأخير', 'ساعات العمل', 'الإجازات', 'نسبة الالتزام', 'إجراء'].map(h => (
+                                  <th key={h}>{h}</th>
+                                ))}
                               </tr>
-                            )}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {filteredEmployees.map(emp => (
+                                <tr key={emp.id}>
+                                  <td>
+                                    <strong style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>
+                                      {emp.identifier}
+                                    </strong>
+                                  </td>
+                                  <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <strong>{emp.name}</strong>
+                                      {emp.is_remote && (
+                                        <span className="asas-badge remote sm-badge">
+                                          <Icon name="globe" style={{ width: 10, height: 10 }} />
+                                          <span>عن بعد</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td>{emp.branch_name || 'الفرع الرئيسي'}</td>
+                                  <td>{emp.shift_name || 'دوام رسمي'}</td>
+                                  <td>
+                                    <span style={{ color: 'var(--paid)', fontWeight: 700 }}>
+                                      {emp.present_days} يوم
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span style={{ color: emp.absent_days > 0 ? 'var(--unpaid)' : 'var(--text-3)', fontWeight: emp.absent_days > 0 ? 700 : 400 }}>
+                                      {emp.absent_days} يوم
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {emp.late_days_count > 0 ? (
+                                      <span style={{ color: 'var(--partial)', fontWeight: 600 }}>
+                                        {emp.late_days_count} مرات ({emp.total_late_minutes} د)
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: 'var(--paid)', fontSize: 12 }}>في الموعد</span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <strong>{emp.total_work_hours} س</strong>
+                                  </td>
+                                  <td>
+                                    {emp.leave_days > 0 ? (
+                                      <span className="num" style={{ color: 'var(--chart-out)', fontWeight: 600 }}>{emp.leave_days} يوم</span>
+                                    ) : (
+                                      <span style={{ color: 'var(--text-3)' }}>0</span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <span
+                                        className={`asas-rate-pill ${emp.attendance_rate >= 80 ? 'good' : (emp.attendance_rate >= 50 ? 'warn' : 'bad')}`}
+                                      >
+                                        {emp.attendance_rate}%
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <button
+                                      className="asas-btn sm primary"
+                                      onClick={() => {
+                                        setSelectedEmployeeId(String(emp.id));
+                                        setRecordsTabMode('individual');
+                                      }}
+                                      title="عرض السجل التاريخي والتحليلي الكامل للموظف"
+                                    >
+                                      <Icon name="user" />
+                                      عرض السجل الفردي
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                              {!filteredEmployees.length && (
+                                <tr>
+                                  <td colSpan={11} style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-3)' }}>
+                                    لا توجد بيانات موظفين مطابقة للبحث أو الفترة المحددة.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* 2. CARDS VIEW (Phone first, liquid-glass) */}
+                        <div className="asas-collective-cards-view">
+                          {filteredEmployees.map(emp => (
+                            <Glass key={emp.id} className="asas-collective-card">
+                              <div className="asas-collective-card-head">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                                  <UserAvatar user={emp} size="sm" />
+                                  <div style={{ minWidth: 0 }}>
+                                    <strong style={{ fontSize: 14.5, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {emp.name}
+                                    </strong>
+                                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, color: 'var(--text-3)' }}>
+                                      <span className="num" style={{ color: 'var(--accent)', fontWeight: 600 }}>#{emp.identifier}</span>
+                                      <span>•</span>
+                                      <span>{emp.branch_name || 'الفرع الرئيسي'}</span>
+                                      {emp.is_remote && (
+                                        <span className="asas-badge remote sm-badge" style={{ fontSize: 10, padding: '1px 5px' }}>
+                                          عن بعد
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <span className={`asas-rate-pill ${emp.attendance_rate >= 80 ? 'good' : (emp.attendance_rate >= 50 ? 'warn' : 'bad')}`}>
+                                  {emp.attendance_rate}%
+                                </span>
+                              </div>
+
+                              <div className="asas-collective-card-metrics">
+                                <div className="asas-metric-cell">
+                                  <span className="asas-metric-label">أيام الحضور</span>
+                                  <span className="num" style={{ color: 'var(--paid)', fontWeight: 700 }}>{emp.present_days} يوم</span>
+                                </div>
+                                <div className="asas-metric-cell">
+                                  <span className="asas-metric-label">أيام الغياب</span>
+                                  <span className="num" style={{ color: emp.absent_days > 0 ? 'var(--unpaid)' : 'var(--text-3)', fontWeight: 700 }}>{emp.absent_days} يوم</span>
+                                </div>
+                                <div className="asas-metric-cell">
+                                  <span className="asas-metric-label">ساعات العمل</span>
+                                  <span className="num" style={{ fontWeight: 700 }}>{emp.total_work_hours} س</span>
+                                </div>
+                                <div className="asas-metric-cell">
+                                  <span className="asas-metric-label">التأخير</span>
+                                  <span className="num" style={{ color: emp.late_days_count > 0 ? 'var(--partial)' : 'var(--paid)', fontWeight: 600 }}>
+                                    {emp.late_days_count > 0 ? `${emp.late_days_count} مرات (${emp.total_late_minutes}د)` : 'في الموعد'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="asas-collective-card-foot">
+                                <button
+                                  className="asas-btn sm primary"
+                                  style={{ width: '100%', justifyContent: 'center' }}
+                                  onClick={() => {
+                                    setSelectedEmployeeId(String(emp.id));
+                                    setRecordsTabMode('individual');
+                                  }}
+                                >
+                                  <Icon name="user" />
+                                  عرض السجل الفردي الكامل
+                                </button>
+                              </div>
+                            </Glass>
+                          ))}
+                          {!filteredEmployees.length && (
+                            <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-3)' }}>
+                              لا توجد بيانات موظفين مطابقة للبحث أو الفترة المحددة.
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </Card>
                   </>
@@ -2707,148 +2920,256 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                           </Glass>
                         </div>
 
-                        {/* Individual Day-by-Day Historical Timeline Table */}
+                        {/* Individual Day-by-Day Historical Timeline Table & Mobile Cards */}
                         <Card
                           title={`السجل التاريخي المفصل للموظف: ${individualData.employee.name} (الفترة: ${from} إلى ${to})`}
                           icon="list"
                         >
-                          <div className="asas-table-wrap">
-                            <table className="asas-table">
-                              <thead>
-                                <tr>
-                                  {['التاريخ', 'اليوم', 'الدوام', 'وقت الدخول', 'وقت الخروج', 'الحالة', 'التأخير', 'ساعات العمل', 'ملاحظات وتنبيهات', ...(can('attendance.edit') ? ['إجراء'] : [])].map(h => (
-                                    <th key={h}>{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {individualData.timeline.map((day, dIdx) => {
-                                  const isAbs = day.state === 'absent';
-                                  const isLate = day.state === 'late' || (day.late_minutes > 0);
-                                  const isLev = day.state === 'leave';
-                                  const isWkd = day.state === 'weekend';
-                                  const isIn = day.state === 'inside';
-                                  const isInc = day.state === 'incomplete' || day.needs_review;
-                                  const isPend = day.state === 'pending';
+                          <div className="asas-timeline-container">
+                            {/* 1. TABLE VIEW (Desktop / Tablet) */}
+                            <div className="asas-timeline-table-view asas-table-wrap">
+                              <table className="asas-table">
+                                <thead>
+                                  <tr>
+                                    {['التاريخ', 'اليوم', 'الدوام', 'وقت الدخول', 'وقت الخروج', 'الحالة', 'التأخير', 'ساعات العمل', 'ملاحظات وتنبيهات', ...(can('attendance.edit') ? ['إجراء'] : [])].map(h => (
+                                      <th key={h}>{h}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {individualData.timeline.map((day, dIdx) => {
+                                    const isAbs = day.state === 'absent';
+                                    const isLate = day.state === 'late' || (day.late_minutes > 0);
+                                    const isLev = day.state === 'leave';
+                                    const isWkd = day.state === 'weekend';
+                                    const isIn = day.state === 'inside';
+                                    const isInc = day.state === 'incomplete' || day.needs_review;
+                                    const isPend = day.state === 'pending';
 
-                                  let badgeStyle = { background: 'var(--paid-bg)', color: 'var(--paid)' };
-                                  if (isAbs) badgeStyle = { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' };
-                                  else if (isInc) badgeStyle = { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' };
-                                  else if (isLate) badgeStyle = { background: 'var(--partial-bg)', color: 'var(--partial)' };
-                                  else if (isLev) badgeStyle = { background: 'var(--glass-inset)', color: 'var(--chart-out)' };
-                                  else if (isWkd) badgeStyle = { background: 'var(--glass-inset)', color: 'var(--text-3)' };
-                                  else if (isPend) badgeStyle = { background: 'var(--glass-tint-strong)', color: 'var(--accent)' };
+                                    let badgeStyle = { background: 'var(--paid-bg)', color: 'var(--paid)' };
+                                    if (isAbs) badgeStyle = { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' };
+                                    else if (isInc) badgeStyle = { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' };
+                                    else if (isLate) badgeStyle = { background: 'var(--partial-bg)', color: 'var(--partial)' };
+                                    else if (isLev) badgeStyle = { background: 'var(--glass-inset)', color: 'var(--chart-out)' };
+                                    else if (isWkd) badgeStyle = { background: 'var(--glass-inset)', color: 'var(--text-3)' };
+                                    else if (isPend) badgeStyle = { background: 'var(--glass-tint-strong)', color: 'var(--accent)' };
 
-                                  return (
-                                    <tr key={day.date + '-' + dIdx} style={isInc ? { background: 'var(--unpaid-bg)' } : undefined}>
-                                      <td>
-                                        <strong className="num">{day.date}</strong>
-                                      </td>
-                                      <td>
-                                        <strong style={{ color: isWkd ? 'var(--text-3)' : 'var(--text)' }}>
-                                          {day.day_name}
-                                        </strong>
-                                      </td>
-                                      <td>
-                                        <span style={{ fontSize: 12, color: day.is_workday ? 'var(--text)' : 'var(--text-3)' }}>
-                                          {day.is_workday ? (individualData.employee.shift_name || 'دوام رسمي') : 'عطلة أسبوعية'}
-                                        </span>
-                                      </td>
-                                      <td>
-                                        {day.first_in ? (
-                                          <span style={{ color: 'var(--paid)', fontWeight: 700 }}>
-                                            {day.first_in_time}
-                                          </span>
-                                        ) : (
-                                          <span style={{ color: isAbs ? 'var(--unpaid)' : 'var(--text-3)', fontWeight: isAbs ? 600 : 400 }}>
-                                            {isAbs ? 'لم يحضر' : (isWkd ? '—' : (isLev ? 'إجازة' : '—'))}
-                                          </span>
-                                        )}
-                                      </td>
-                                      <td>
-                                        {day.last_out ? (
-                                          <span style={{ color: 'var(--text)', fontWeight: 600 }}>
-                                            {day.last_out_time}
-                                          </span>
-                                        ) : (
-                                          <span style={{ color: isIn ? 'var(--partial)' : 'var(--text-3)', fontWeight: isIn ? 700 : 400 }}>
-                                            {isIn ? 'حاضر الآن' : '—'}
-                                          </span>
-                                        )}
-                                      </td>
-                                      <td>
-                                        <span className="asas-badge" style={badgeStyle}>
-                                          <Icon name={isAbs || isInc ? 'alert' : (isLate ? 'clock' : (isLev ? 'calendar' : (isWkd ? 'clock' : 'checkCircle')))} style={{ width: 13, height: 13 }} />
-                                          {day.status_label}
-                                        </span>
-                                      </td>
-                                      <td>
-                                        {day.late_minutes > 0 ? (
-                                          <span style={{ color: 'var(--partial)', fontWeight: 700 }}>
-                                            {day.late_minutes} دقيقة
-                                          </span>
-                                        ) : (
-                                          <span style={{ color: 'var(--text-3)' }}>—</span>
-                                        )}
-                                      </td>
-                                      <td>
-                                        <strong style={{ color: Number(day.work_hours) > 0 ? 'var(--text)' : 'var(--text-3)' }}>
-                                          {day.work_hours || '0.0'} س
-                                        </strong>
-                                      </td>
-                                      <td>
-                                        {day.needs_review ? (
-                                          <span style={{ color: 'var(--unpaid)', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                            <Icon name="alert" style={{ width: 14, height: 14 }} />
-                                            سجل ناقص بحاجة لمراجعة
-                                          </span>
-                                        ) : (
-                                          <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
-                                            {day.exit_reason_label || (isWkd ? 'يوم راحة أسبوعية' : (isLev ? 'إجازة رسمية' : '—'))}
-                                          </span>
-                                        )}
-                                      </td>
-                                      {can('attendance.edit') && (
+                                    return (
+                                      <tr key={day.date + '-' + dIdx} style={isInc ? { background: 'var(--unpaid-bg)' } : undefined}>
                                         <td>
-                                          {day.record_id ? (
-                                            <button
-                                              className="asas-btn sm"
-                                              onClick={() => edit('records', {
-                                                id: day.record_id,
-                                                employee_id: individualData.employee.id,
-                                                first_in: day.first_in,
-                                                last_out: day.last_out,
-                                                state: isIn ? 'inside' : 'closed',
-                                                exit_reason: day.exit_reason || ''
-                                              })}
-                                              title="تصحيح سجل هذا اليوم"
-                                            >
-                                              <Icon name="edit" />
-                                              تصحيح
-                                            </button>
-                                          ) : isAbs ? (
-                                            <button
-                                              className="asas-btn sm primary"
-                                              onClick={() => edit('records', {
-                                                employee_id: individualData.employee.id,
-                                                first_in: `${day.date}T08:00:00`,
-                                                last_out: `${day.date}T16:00:00`,
-                                                state: 'closed',
-                                                reason: 'تسجيل حضور يدوي متأخر'
-                                              })}
-                                              title="تحضير يدوي لهذا اليوم"
-                                            >
-                                              <Icon name="checkCircle" />
-                                              تحضير يدوي
-                                            </button>
-                                          ) : null}
+                                          <strong className="num">{day.date}</strong>
                                         </td>
-                                      )}
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
+                                        <td>
+                                          <strong style={{ color: isWkd ? 'var(--text-3)' : 'var(--text)' }}>
+                                            {day.day_name}
+                                          </strong>
+                                        </td>
+                                        <td>
+                                          <span style={{ fontSize: 12, color: day.is_workday ? 'var(--text)' : 'var(--text-3)' }}>
+                                            {day.is_workday ? (individualData.employee.shift_name || 'دوام رسمي') : 'عطلة أسبوعية'}
+                                          </span>
+                                        </td>
+                                        <td>
+                                          {day.first_in ? (
+                                            <span style={{ color: 'var(--paid)', fontWeight: 700 }}>
+                                              {day.first_in_time}
+                                            </span>
+                                          ) : (
+                                            <span style={{ color: isAbs ? 'var(--unpaid)' : 'var(--text-3)', fontWeight: isAbs ? 600 : 400 }}>
+                                              {isAbs ? 'لم يحضر' : (isWkd ? '—' : (isLev ? 'إجازة' : '—'))}
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td>
+                                          {day.last_out ? (
+                                            <span style={{ color: 'var(--text)', fontWeight: 600 }}>
+                                              {day.last_out_time}
+                                            </span>
+                                          ) : (
+                                            <span style={{ color: isIn ? 'var(--partial)' : 'var(--text-3)', fontWeight: isIn ? 700 : 400 }}>
+                                              {isIn ? 'حاضر الآن' : '—'}
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td>
+                                          <span className="asas-badge" style={badgeStyle}>
+                                            <Icon name={isAbs || isInc ? 'alert' : (isLate ? 'clock' : (isLev ? 'calendar' : (isWkd ? 'clock' : 'checkCircle')))} style={{ width: 13, height: 13 }} />
+                                            {day.status_label}
+                                          </span>
+                                        </td>
+                                        <td>
+                                          {day.late_minutes > 0 ? (
+                                            <span style={{ color: 'var(--partial)', fontWeight: 700 }}>
+                                              {day.late_minutes} دقيقة
+                                            </span>
+                                          ) : (
+                                            <span style={{ color: 'var(--text-3)' }}>—</span>
+                                          )}
+                                        </td>
+                                        <td>
+                                          <strong style={{ color: Number(day.work_hours) > 0 ? 'var(--text)' : 'var(--text-3)' }}>
+                                            {day.work_hours || '0.0'} س
+                                          </strong>
+                                        </td>
+                                        <td>
+                                          {day.needs_review ? (
+                                            <span style={{ color: 'var(--unpaid)', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                              <Icon name="alert" style={{ width: 14, height: 14 }} />
+                                              سجل ناقص بحاجة لمراجعة
+                                            </span>
+                                          ) : (
+                                            <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                                              {day.exit_reason_label || (isWkd ? 'يوم راحة أسبوعية' : (isLev ? 'إجازة رسمية' : '—'))}
+                                            </span>
+                                          )}
+                                        </td>
+                                        {can('attendance.edit') && (
+                                          <td>
+                                            {day.record_id ? (
+                                              <button
+                                                className="asas-btn sm"
+                                                onClick={() => edit('records', {
+                                                  id: day.record_id,
+                                                  employee_id: individualData.employee.id,
+                                                  first_in: day.first_in,
+                                                  last_out: day.last_out,
+                                                  state: isIn ? 'inside' : 'closed',
+                                                  exit_reason: day.exit_reason || ''
+                                                })}
+                                                title="تصحيح سجل هذا اليوم"
+                                              >
+                                                <Icon name="edit" />
+                                                تصحيح
+                                              </button>
+                                            ) : isAbs ? (
+                                              <button
+                                                className="asas-btn sm primary"
+                                                onClick={() => edit('records', {
+                                                  employee_id: individualData.employee.id,
+                                                  first_in: `${day.date}T08:00:00`,
+                                                  last_out: `${day.date}T16:00:00`,
+                                                  state: 'closed',
+                                                  reason: 'تسجيل حضور يدوي متأخر'
+                                                })}
+                                                title="تحضير يدوي لهذا اليوم"
+                                              >
+                                                <Icon name="checkCircle" />
+                                                تحضير يدوي
+                                              </button>
+                                            ) : null}
+                                          </td>
+                                        )}
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* 2. CARDS VIEW (Phone first, liquid-glass) */}
+                            <div className="asas-timeline-cards-view">
+                              {individualData.timeline.map((day, dIdx) => {
+                                const isAbs = day.state === 'absent';
+                                const isLate = day.state === 'late' || (day.late_minutes > 0);
+                                const isLev = day.state === 'leave';
+                                const isWkd = day.state === 'weekend';
+                                const isIn = day.state === 'inside';
+                                const isInc = day.state === 'incomplete' || day.needs_review;
+                                const isPend = day.state === 'pending';
+
+                                let badgeStyle = { background: 'var(--paid-bg)', color: 'var(--paid)' };
+                                if (isAbs) badgeStyle = { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' };
+                                else if (isInc) badgeStyle = { background: 'var(--unpaid-bg)', color: 'var(--unpaid)', border: '1px solid var(--unpaid)' };
+                                else if (isLate) badgeStyle = { background: 'var(--partial-bg)', color: 'var(--partial)' };
+                                else if (isLev) badgeStyle = { background: 'var(--glass-inset)', color: 'var(--chart-out)' };
+                                else if (isWkd) badgeStyle = { background: 'var(--glass-inset)', color: 'var(--text-3)' };
+                                else if (isPend) badgeStyle = { background: 'var(--glass-tint-strong)', color: 'var(--accent)' };
+
+                                return (
+                                  <Glass key={day.date + '-' + dIdx} className="asas-timeline-card" style={isInc ? { borderColor: 'var(--unpaid)' } : undefined}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <div>
+                                        <strong className="num" style={{ fontSize: 14 }}>{day.date}</strong>
+                                        <span style={{ fontSize: 12, color: 'var(--text-3)', marginInlineStart: 6 }}>({day.day_name})</span>
+                                      </div>
+                                      <span className="asas-badge" style={badgeStyle}>
+                                        <Icon name={isAbs || isInc ? 'alert' : (isLate ? 'clock' : (isLev ? 'calendar' : (isWkd ? 'clock' : 'checkCircle')))} style={{ width: 12, height: 12 }} />
+                                        {day.status_label}
+                                      </span>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: '8px 10px', background: 'var(--glass-inset)', borderRadius: 8, fontSize: 11.5, textAlign: 'center' }}>
+                                      <div>
+                                        <span style={{ color: 'var(--text-3)', display: 'block', fontSize: 10 }}>الدخول</span>
+                                        <strong className="num" style={{ color: day.first_in ? 'var(--paid)' : (isAbs ? 'var(--unpaid)' : 'inherit') }}>
+                                          {day.first_in ? day.first_in_time : (isAbs ? 'لم يحضر' : '—')}
+                                        </strong>
+                                      </div>
+                                      <div>
+                                        <span style={{ color: 'var(--text-3)', display: 'block', fontSize: 10 }}>الخروج</span>
+                                        <strong className="num" style={{ color: day.last_out ? 'var(--text)' : (isIn ? 'var(--partial)' : 'inherit') }}>
+                                          {day.last_out ? day.last_out_time : (isIn ? 'حاضر الآن' : '—')}
+                                        </strong>
+                                      </div>
+                                      <div>
+                                        <span style={{ color: 'var(--text-3)', display: 'block', fontSize: 10 }}>ساعات العمل</span>
+                                        <strong className="num" style={{ color: 'var(--accent)' }}>{day.work_hours || '0.0'} س</strong>
+                                      </div>
+                                    </div>
+
+                                    {(day.needs_review || day.notes || day.exit_reason_label) && (
+                                      <div style={{ fontSize: 11.5, color: isInc ? 'var(--unpaid)' : 'var(--text-2)' }}>
+                                        {day.needs_review ? (
+                                          <strong style={{ color: 'var(--unpaid)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                            <Icon name="alert" style={{ width: 12, height: 12 }} />
+                                            سجل ناقص بحاجة لمراجعة
+                                          </strong>
+                                        ) : (
+                                          day.exit_reason_label || (isWkd ? 'يوم راحة أسبوعية' : (isLev ? 'إجازة رسمية' : '—'))
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {can('attendance.edit') && (day.record_id || isAbs) && (
+                                      <div style={{ display: 'flex', gap: 6, paddingTop: 6, borderTop: '1px solid var(--hairline)' }}>
+                                        {day.record_id ? (
+                                          <button
+                                            className="asas-btn sm"
+                                            style={{ width: '100%', justifyContent: 'center' }}
+                                            onClick={() => edit('records', {
+                                              id: day.record_id,
+                                              employee_id: individualData.employee.id,
+                                              first_in: day.first_in,
+                                              last_out: day.last_out,
+                                              state: isIn ? 'inside' : 'closed',
+                                              exit_reason: day.exit_reason || ''
+                                            })}
+                                          >
+                                            <Icon name="edit" />
+                                            تصحيح
+                                          </button>
+                                        ) : isAbs ? (
+                                          <button
+                                            className="asas-btn sm primary"
+                                            style={{ width: '100%', justifyContent: 'center' }}
+                                            onClick={() => edit('records', {
+                                              employee_id: individualData.employee.id,
+                                              first_in: `${day.date}T08:00:00`,
+                                              last_out: `${day.date}T16:00:00`,
+                                              state: 'closed',
+                                              reason: 'تسجيل حضور يدوي متأخر'
+                                            })}
+                                          >
+                                            <Icon name="checkCircle" />
+                                            تحضير يدوي
+                                          </button>
+                                        ) : null}
+                                      </div>
+                                    )}
+                                  </Glass>
+                                );
+                              })}
+                            </div>
                           </div>
                         </Card>
                       </>
@@ -2864,28 +3185,19 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 {/* VIEW 3: LIVE DUTY MOVEMENTS (LEGACY VIEW) */}
                 {recordsTabMode === 'live' && (
                   <>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
-                      {[
-                        ['all', `الكل (${allRecords.length})`, 'users'],
-                        ['inside', `حاضرون الآن (${insideCount})`, 'checkCircle'],
-                        ['outside', `انصرفوا (${outsideCount})`, 'logout'],
-                        ['absent', `لم يسجلوا اليوم / غائبون (${absentCount})`, 'alert'],
-                        ['leave', `في إجازة (${leaveCount})`, 'briefcase']
-                      ].map(([fKey, fLabel, fIcon]) => (
-                        <button
-                          key={fKey}
-                          className={`asas-btn sm ${recordFilter === fKey ? 'primary' : ''}`}
-                          onClick={() => setRecordFilter(fKey)}
-                          style={{
-                            whiteSpace: 'nowrap',
-                            fontWeight: recordFilter === fKey ? 700 : 500,
-                            backgroundColor: recordFilter === fKey ? undefined : 'rgba(255, 255, 255, 0.04)'
-                          }}
-                        >
-                          <Icon name={fIcon} style={{ width: 14, height: 14 }} />
-                          {fLabel}
-                        </button>
-                      ))}
+                    <div className="asas-segmented-wrap" style={{ marginBottom: 16 }}>
+                      <Segmented
+                        label="تصفية الحركات المباشرة"
+                        value={recordFilter}
+                        onChange={setRecordFilter}
+                        options={[
+                          { value: 'all', label: `الكل (${allRecords.length})` },
+                          { value: 'inside', label: `حاضرون (${insideCount})` },
+                          { value: 'outside', label: `انصرفوا (${outsideCount})` },
+                          { value: 'absent', label: `غائبون (${absentCount})` },
+                          { value: 'leave', label: `إجازات (${leaveCount})` }
+                        ]}
+                      />
                     </div>
 
                     <Card title={`سجل الحركات والتفاصيل المباشرة (${filteredRecords.length} من إجمالي ${allRecords.length} حركة)`} icon="calendar">
@@ -3659,57 +3971,123 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           {/* LEAVE REQUESTS TAB */}
           {tab === 'leave' && (
             <Card title="طلبات الإجازات والمراجعة" icon="receipt">
-              <div className="asas-table-wrap">
-                <table className="asas-table">
-                  <thead>
-                    <tr>
-                      <th>الموظف</th>
-                      <th>الفترة</th>
-                      <th>السبب</th>
-                      <th>الحالة</th>
-                      <th>المراجعة</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map(l => (
-                      <tr key={l.id}>
-                        <td><strong>{l.name}</strong></td>
-                        <td>{date(l.from_date)} — {date(l.to_date)}</td>
-                        <td style={{ whiteSpace: 'normal' }}>{l.reason}</td>
-                        <td><span className={`asas-badge ${l.status}`}>{states[l.status] || l.status}</span></td>
-                        <td>
-                          {l.status === 'pending' && can('leave.review') && (
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button className="asas-btn primary sm" onClick={async () => {
-                                const comment = window.prompt('ملاحظة القبول:');
-                                if (!comment) return;
-                                try {
-                                  await api(`/leave/${l.id}`, 'PATCH', { status: 'approved', comment });
-                                  await load();
-                                } catch (e) { setError(e.message); }
-                              }}>
-                                <Icon name="check" />
-                                قبول
-                              </button>
-                              <button className="asas-btn danger sm" onClick={async () => {
-                                const comment = window.prompt('سبب الرفض:');
-                                if (!comment) return;
-                                try {
-                                  await api(`/leave/${l.id}`, 'PATCH', { status: 'rejected', comment });
-                                  await load();
-                                } catch (e) { setError(e.message); }
-                              }}>
-                                <Icon name="close" />
-                                رفض
-                              </button>
-                            </div>
-                          )}
-                        </td>
+              <div className="asas-leave-container">
+                {/* 1. TABLE VIEW (Desktop / Tablet) */}
+                <div className="asas-leave-table-view asas-table-wrap">
+                  <table className="asas-table">
+                    <thead>
+                      <tr>
+                        <th>الموظف</th>
+                        <th>الفترة</th>
+                        <th>السبب</th>
+                        <th>الحالة</th>
+                        <th>المراجعة</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {!rows.length && !busy && <Empty>لا توجد طلبات إجازة جديدة.</Empty>}
+                    </thead>
+                    <tbody>
+                      {rows.map(l => (
+                        <tr key={l.id}>
+                          <td><strong>{l.name}</strong></td>
+                          <td>{date(l.from_date)} — {date(l.to_date)}</td>
+                          <td style={{ whiteSpace: 'normal' }}>{l.reason}</td>
+                          <td><span className={`asas-badge ${l.status}`}>{states[l.status] || l.status}</span></td>
+                          <td>
+                            {l.status === 'pending' && can('leave.review') && (
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button className="asas-btn primary sm" onClick={async () => {
+                                  const comment = window.prompt('ملاحظة القبول:');
+                                  if (!comment) return;
+                                  try {
+                                    await api(`/leave/${l.id}`, 'PATCH', { status: 'approved', comment });
+                                    await load();
+                                  } catch (e) { setError(e.message); }
+                                }}>
+                                  <Icon name="check" />
+                                  قبول
+                                </button>
+                                <button className="asas-btn danger sm" onClick={async () => {
+                                  const comment = window.prompt('سبب الرفض:');
+                                  if (!comment) return;
+                                  try {
+                                    await api(`/leave/${l.id}`, 'PATCH', { status: 'rejected', comment });
+                                    await load();
+                                  } catch (e) { setError(e.message); }
+                                }}>
+                                  <Icon name="close" />
+                                  رفض
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!rows.length && !busy && <Empty>لا توجد طلبات إجازة جديدة.</Empty>}
+                </div>
+
+                {/* 2. CARDS VIEW (Phone first, liquid-glass) */}
+                <div className="asas-leave-cards-view">
+                  {rows.map(l => (
+                    <Glass key={l.id} className="asas-leave-card">
+                      <div className="asas-leave-card-head">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                          <UserAvatar user={{ name: l.name }} size="sm" />
+                          <div style={{ minWidth: 0 }}>
+                            <strong style={{ fontSize: 14.5, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {l.name}
+                            </strong>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                              الفترة: <strong className="num" dir="ltr">{date(l.from_date)}</strong> إلى <strong className="num" dir="ltr">{date(l.to_date)}</strong>
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`asas-badge ${l.status}`}>{states[l.status] || l.status}</span>
+                      </div>
+
+                      <div className="asas-leave-card-body">
+                        <span style={{ fontSize: 11, color: 'var(--text-3)', display: 'block', marginBottom: 2 }}>سبب الإجازة:</span>
+                        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--text)' }}>{l.reason}</p>
+                      </div>
+
+                      {l.status === 'pending' && can('leave.review') && (
+                        <div className="asas-leave-card-actions">
+                          <button
+                            className="asas-btn primary sm"
+                            style={{ flex: 1, justifyContent: 'center' }}
+                            onClick={async () => {
+                              const comment = window.prompt('ملاحظة القبول:');
+                              if (!comment) return;
+                              try {
+                                await api(`/leave/${l.id}`, 'PATCH', { status: 'approved', comment });
+                                await load();
+                              } catch (e) { setError(e.message); }
+                            }}
+                          >
+                            <Icon name="check" />
+                            قبول الطلب
+                          </button>
+                          <button
+                            className="asas-btn danger sm"
+                            style={{ flex: 1, justifyContent: 'center' }}
+                            onClick={async () => {
+                              const comment = window.prompt('سبب الرفض:');
+                              if (!comment) return;
+                              try {
+                                await api(`/leave/${l.id}`, 'PATCH', { status: 'rejected', comment });
+                                await load();
+                              } catch (e) { setError(e.message); }
+                            }}
+                          >
+                            <Icon name="close" />
+                            رفض
+                          </button>
+                        </div>
+                      )}
+                    </Glass>
+                  ))}
+                  {!rows.length && !busy && <Empty>لا توجد طلبات إجازة جديدة.</Empty>}
+                </div>
               </div>
             </Card>
           )}
@@ -3717,28 +4095,54 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           {/* AUDIT LOG TAB */}
           {tab === 'audit' && (
             <Card title="سجل العمليات والرقابة السيادية" icon="shieldCheck">
-              <div className="asas-table-wrap">
-                <table className="asas-table">
-                  <thead>
-                    <tr>
-                      <th>التوقيت</th>
-                      <th>المستخدم</th>
-                      <th>العملية</th>
-                      <th>السبب والتفاصيل</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map(a => (
-                      <tr key={a.id}>
-                        <td>{date(a.created_at)} {time(a.created_at)}</td>
-                        <td><strong>{a.actor || 'النظام'}</strong></td>
-                        <td dir="ltr"><code>{a.action}</code></td>
-                        <td>{a.reason}</td>
+              <div className="asas-audit-container">
+                {/* 1. TABLE VIEW (Desktop / Tablet) */}
+                <div className="asas-audit-table-view asas-table-wrap">
+                  <table className="asas-table">
+                    <thead>
+                      <tr>
+                        <th>التوقيت</th>
+                        <th>المستخدم</th>
+                        <th>العملية</th>
+                        <th>السبب والتفاصيل</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {!rows.length && !busy && <Empty />}
+                    </thead>
+                    <tbody>
+                      {rows.map(a => (
+                        <tr key={a.id}>
+                          <td>{date(a.created_at)} {time(a.created_at)}</td>
+                          <td><strong>{a.actor || 'النظام'}</strong></td>
+                          <td dir="ltr"><code>{a.action}</code></td>
+                          <td>{a.reason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!rows.length && !busy && <Empty />}
+                </div>
+
+                {/* 2. CARDS VIEW (Phone first, liquid-glass) */}
+                <div className="asas-audit-cards-view">
+                  {rows.map(a => (
+                    <Glass key={a.id} className="asas-audit-card">
+                      <div className="asas-audit-card-head">
+                        <div>
+                          <strong style={{ fontSize: 14 }}>{a.actor || 'النظام'}</strong>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                            {date(a.created_at)} {time(a.created_at)}
+                          </div>
+                        </div>
+                        <code dir="ltr" style={{ fontSize: 11.5, padding: '3px 7px', background: 'var(--glass-inset)', borderRadius: 6, color: 'var(--accent)' }}>
+                          {a.action}
+                        </code>
+                      </div>
+                      <div className="asas-audit-card-body" style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 4 }}>
+                        {a.reason}
+                      </div>
+                    </Glass>
+                  ))}
+                  {!rows.length && !busy && <Empty />}
+                </div>
               </div>
             </Card>
           )}
@@ -6438,38 +6842,75 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 <p className="asas-muted" style={{ margin: 0 }}>لا توجد لديك طلبات إجازة سابقة.</p>
               </div>
             ) : (
-              <div className="asas-table-wrap">
-                <table className="asas-table">
-                  <thead>
-                    <tr>
-                      <th>الفترة</th>
-                      <th>المدة</th>
-                      <th>السبب</th>
-                      <th>الحالة</th>
-                      <th>ملاحظات الإدارة</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leaves.map(l => {
-                      const daysCount = Math.max(1, Math.round((new Date(l.to_date) - new Date(l.from_date)) / (1000 * 60 * 60 * 24)) + 1);
-                      return (
-                        <tr key={l.id}>
-                          <td><strong>{date(l.from_date)}</strong> إلى <strong>{date(l.to_date)}</strong></td>
-                          <td><span className="asas-badge">{daysCount} {daysCount === 1 ? 'يوم' : 'أيام'}</span></td>
-                          <td style={{ whiteSpace: 'normal', minWidth: 140 }}>{l.reason}</td>
-                          <td>
-                            <span className={`asas-badge ${l.status === 'approved' ? 'inside' : l.status === 'rejected' ? 'outside' : 'urgent'}`}>
-                              {states[l.status] || l.status}
-                            </span>
-                          </td>
-                          <td style={{ whiteSpace: 'normal', fontSize: 12.5, color: l.comment ? 'var(--text)' : 'var(--text-3)' }}>
-                            {l.comment || 'بانتظار المراجعة'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="asas-leave-container">
+                {/* 1. TABLE VIEW (Desktop / Tablet) */}
+                <div className="asas-leave-table-view asas-table-wrap">
+                  <table className="asas-table">
+                    <thead>
+                      <tr>
+                        <th>الفترة</th>
+                        <th>المدة</th>
+                        <th>السبب</th>
+                        <th>الحالة</th>
+                        <th>ملاحظات الإدارة</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leaves.map(l => {
+                        const daysCount = Math.max(1, Math.round((new Date(l.to_date) - new Date(l.from_date)) / (1000 * 60 * 60 * 24)) + 1);
+                        return (
+                          <tr key={l.id}>
+                            <td><strong>{date(l.from_date)}</strong> إلى <strong>{date(l.to_date)}</strong></td>
+                            <td><span className="asas-badge">{daysCount} {daysCount === 1 ? 'يوم' : 'أيام'}</span></td>
+                            <td style={{ whiteSpace: 'normal', minWidth: 140 }}>{l.reason}</td>
+                            <td>
+                              <span className={`asas-badge ${l.status === 'approved' ? 'inside' : l.status === 'rejected' ? 'outside' : 'urgent'}`}>
+                                {states[l.status] || l.status}
+                              </span>
+                            </td>
+                            <td style={{ whiteSpace: 'normal', fontSize: 12.5, color: l.comment ? 'var(--text)' : 'var(--text-3)' }}>
+                              {l.comment || 'بانتظار المراجعة'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 2. CARDS VIEW (Phone first, liquid-glass) */}
+                <div className="asas-leave-cards-view">
+                  {leaves.map(l => {
+                    const daysCount = Math.max(1, Math.round((new Date(l.to_date) - new Date(l.from_date)) / (1000 * 60 * 60 * 24)) + 1);
+                    return (
+                      <Glass key={l.id} className="asas-leave-card">
+                        <div className="asas-leave-card-head">
+                          <div>
+                            <strong className="num" dir="ltr" style={{ fontSize: 13.5 }}>{date(l.from_date)}</strong>
+                            <span style={{ fontSize: 12, color: 'var(--text-3)', marginInline: 4 }}>إلى</span>
+                            <strong className="num" dir="ltr" style={{ fontSize: 13.5 }}>{date(l.to_date)}</strong>
+                          </div>
+                          <span className={`asas-badge ${l.status === 'approved' ? 'inside' : l.status === 'rejected' ? 'outside' : 'urgent'}`}>
+                            {states[l.status] || l.status}
+                          </span>
+                        </div>
+                        <div className="asas-leave-card-body">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 11.5 }}>
+                            <span style={{ color: 'var(--text-3)' }}>المدة المطلوبة:</span>
+                            <strong className="num" style={{ color: 'var(--accent)' }}>{daysCount} {daysCount === 1 ? 'يوم' : 'أيام'}</strong>
+                          </div>
+                          <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5 }}>{l.reason}</p>
+                        </div>
+                        {l.comment && (
+                          <div style={{ fontSize: 11.5, color: 'var(--text-2)', padding: '6px 10px', background: 'var(--glass-inset)', borderRadius: 8 }}>
+                            <strong style={{ color: 'var(--accent)' }}>رد الإدارة: </strong>
+                            <span>{l.comment}</span>
+                          </div>
+                        )}
+                      </Glass>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </Card>
