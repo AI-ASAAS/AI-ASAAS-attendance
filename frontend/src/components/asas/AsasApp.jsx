@@ -147,9 +147,9 @@ const LiveClock = React.memo(function LiveClock({ iconColor = 'var(--accent)', i
     return () => clearInterval(id);
   }, []);
   return (
-    <div className="asas-clock-pill">
-      <Icon name="clock" style={{ width: iconSize, height: iconSize, color: iconColor }} />
-      <span><span className="asas-clock-label">{label}</span><strong>{time || '—'}</strong></span>
+    <div className="asas-clock-pill" aria-label={`الوقت: ${time || '—'}`}>
+      <Icon name="clock" style={{ width: iconSize, height: iconSize, color: iconColor, flexShrink: 0 }} />
+      <span><span className="asas-clock-label">{label}</span><strong className="num asas-clock-digits">{time || '—'}</strong></span>
     </div>
   );
 });
@@ -5740,9 +5740,15 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
                 onClick={onToggleTheme}
               />
             )}
-            <Button variant="ghost" size="sm" icon="logout" onClick={logout} title="تسجيل الخروج">
-              خروج
-            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="logout"
+              label="تسجيل الخروج"
+              onClick={logout}
+              title="تسجيل الخروج"
+              className="asas-header-logout-btn"
+            />
           </>
         }
       />

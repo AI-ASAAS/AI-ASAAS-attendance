@@ -384,12 +384,29 @@ h3 { font-size: clamp(14.5px, 0.4vw + 13px, 16.5px); }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   border-radius: var(--radius-pill);
   background: var(--glass-inset);
   color: var(--text-2);
   font-size: 12.5px;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  flex: none;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.asas-clock-pill strong,
+.asas-clock-digits {
+  display: inline-block;
+  min-width: 80px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  font-family: var(--font);
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 .asas-bell-btn {
@@ -2410,6 +2427,18 @@ select.asas-input option {
   .asas-topbar-actions,
   .site-header__actions {
     gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .asas-clock-pill {
+    padding: 4px 8px;
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  .asas-clock-pill strong,
+  .asas-clock-digits {
+    min-width: 72px;
   }
 
   .asas-content,
@@ -2511,9 +2540,20 @@ select.asas-input option {
   }
 
   .asas-clock-pill {
-    padding: 4px 8px;
-    font-size: 11.5px;
-    gap: 4px;
+    padding: 3px 6px;
+    font-size: 11px;
+    gap: 3px;
+  }
+
+  .asas-clock-pill strong,
+  .asas-clock-digits {
+    min-width: 60px;
+    font-size: 11px;
+  }
+
+  .asas-topbar-actions,
+  .site-header__actions {
+    gap: 3px;
   }
 
   .segmented {
