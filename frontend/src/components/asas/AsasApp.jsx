@@ -4717,11 +4717,13 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   <div className="asas-form-grid">
                     <Field label="الاسم الكامل للموظف" required value={form.name} onChange={e => set('name', e.target.value)} />
                     <Field
-                      label="الرقم الوظيفي (تلقائي ودائم)"
-                      disabled
-                      className="asas-readonly-id"
+                      label={user.role === 'super_admin' ? 'الرقم الوظيفي (إعادة ترقيم - مدير النظام)' : 'الرقم الوظيفي (تلقائي ومقيد)'}
+                      disabled={user.role !== 'super_admin'}
+                      className={user.role === 'super_admin' ? '' : 'asas-readonly-id'}
                       value={form.identifier || ''}
                       onChange={e => set('identifier', e.target.value)}
+                      placeholder={user.role === 'super_admin' ? 'مثال: 001 أو EMP-10' : ''}
+                      hint={user.role === 'super_admin' ? 'صلاحية سوبر أدمن: يمكنك تعديل أو إعادة ترقيم الرقم الوظيفي بحرية' : undefined}
                     />
                   </div>
                   <div className="asas-form-grid">

@@ -527,11 +527,22 @@ app.patch('/api/admin/accounts/:id',admin,allow('employees.write'),wrap(async(re
    const dup=(await c.query('SELECT id FROM accounts WHERE LOWER(email)=$1 AND id<>$2',[email,accountId])).rows;
    if(dup.length)error('VALIDATION','البريد الإلكتروني مسجل لموظف آخر بالفعل');
   }
+  let identifier = account.identifier;
+  if(b.identifier !== undefined && b.identifier !== null){
+   const newId = string(b.identifier, 100).trim();
+   if(!newId) error('VALIDATION', 'الرقم الوظيفي لا يمكن أن يكون فارغاً');
+   if(newId !== account.identifier){
+    if(req.user.role !== 'super_admin') error('FORBIDDEN', 'إعادة ترقيم أو تعديل الرقم الوظيفي لمدير النظام (السوبر أدمن) فقط', 403);
+    const dupId = (await c.query('SELECT id FROM accounts WHERE identifier=$1 AND id<>$2', [newId, accountId])).rows;
+    if(dupId.length) error('VALIDATION', `الرقم الوظيفي (${newId}) مستخدم لموظف آخر بالفعل`);
+    identifier = newId;
+   }
+  }
   let hash=account.password_hash;if(b.password){try{hash=await security.hashPassword(b.password);}catch(e){error('VALIDATION',e.message);}}
   const isRemote = b.is_remote === undefined ? account.is_remote : Boolean(b.is_remote);
-  await c.query('UPDATE accounts SET active=$1,branch_id=$2,shift_id=$3,permissions=$4,password_hash=$5,name=$6,email=$7,phone=$8,role=$9,is_remote=$10 WHERE id=$11',[active,branchId,shiftId,permissions,hash,name,email,phone,role,isRemote,accountId]);
+  await c.query('UPDATE accounts SET active=$1,branch_id=$2,shift_id=$3,permissions=$4,password_hash=$5,name=$6,email=$7,phone=$8,role=$9,is_remote=$10,identifier=$11 WHERE id=$12',[active,branchId,shiftId,permissions,hash,name,email,phone,role,isRemote,identifier,accountId]);
   if(!active||b.password)await c.query('DELETE FROM auth_sessions WHERE account_id=$1',[accountId]);
-  await audit(c,req.user,'account.update',accountId,reason,{active,branch_id:branchId,shift_id:shiftId,permissions,password_changed:!!b.password,email,phone});return {updated:true};
+  await audit(c,req.user,'account.update',accountId,reason,{active,branch_id:branchId,shift_id:shiftId,permissions,password_changed:!!b.password,email,phone,previous_identifier:account.identifier,identifier});return {updated:true};
  }));
 }));
 app.post('/api/admin/accounts/:id/reset-device',admin,allow('employees.write'),wrap(async(req,res)=>{

@@ -19,3 +19,11 @@ test('Shifts, Permissions and Profile: profile endpoint supports min 6 char pass
   assert.match(content, /new_password\.length<6/);
   assert.match(content, /slice\(0, 1000000\)/);
 });
+
+test('Super Admin Identifier Renumbering: verifies super_admin check and duplicate prevention in secure-app', () => {
+  const content = fs.readFileSync(require.resolve('../src/secure-app'), 'utf8');
+  assert.match(content, /req\.user\.role !== 'super_admin'/);
+  assert.match(content, /إعادة ترقيم أو تعديل الرقم الوظيفي لمدير النظام \(السوبر أدمن\) فقط/);
+  assert.match(content, /SELECT id FROM accounts WHERE identifier=\$1 AND id<>\$2/);
+  assert.match(content, /previous_identifier:account\.identifier/);
+});
