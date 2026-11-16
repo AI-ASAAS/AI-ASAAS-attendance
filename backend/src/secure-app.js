@@ -11,6 +11,7 @@ const notifications=require('./services/notification.service');
 const reportService=require('./services/report.service');
 const docxExport=require('./services/docx-export.service');
 const assistantService=require('./services/assistant.service');
+const webpushService=require('./services/webpush.service');
 const app=express();
 app.set('trust proxy', 1);
 const wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
@@ -322,6 +323,10 @@ app.get('/api/settings',wrap(async(req,res)=>{
  });
 }));
 
+app.get('/api/push/public-key', (req, res) => {
+ respond(res, { publicKey: webpushService.getPublicKey() });
+});
+
 app.use('/api',wrap(async(req,res,next)=>{
  const cookie=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('asas_session='))?.slice(13);
  const token=req.headers.authorization?.startsWith('Bearer ')?req.headers.authorization.slice(7):cookie;
@@ -336,6 +341,19 @@ app.post('/api/auth/logout',wrap(async(req,res)=>{
  res.clearCookie('asas_session',{path:'/'});
  res.clearCookie('asas_session',{path:'/api'});
  respond(res,{logged_out:true});
+}));
+
+app.post('/api/push/subscribe',wrap(async(req,res)=>{
+ const sub=req.body?.subscription;
+ if(!sub)error('VALIDATION','بيانات الاشتراك في الإشعارات مطلوبة');
+ await webpushService.saveSubscription(db, req.user.id, sub, req.headers['user-agent']);
+ respond(res,{success:true,message:'تم تفعيل إشعارات الهاتف بنجاح ✅'});
+}));
+
+app.post('/api/push/unsubscribe',wrap(async(req,res)=>{
+ const endpoint=req.body?.endpoint;
+ if(endpoint)await webpushService.removeSubscription(db, endpoint);
+ respond(res,{success:true,message:'تم إلغاء الاشتراك في الإشعارات'});
 }));
 
 app.get('/api/admin/branches',admin,wrap(async(req,res)=>{
@@ -634,15 +652,40 @@ app.put('/api/auth/profile',wrap(async(req,res)=>{
 }));
 
 app.get('/api/announcements',wrap(async(req,res)=>{
+ const currentUserId = req.user?.id || null;
  const {rows}=await db.query(`
-   SELECT a.*, acc.name as sender_name 
+   SELECT a.*, acc.name as sender_name,
+          CASE WHEN ar.read_at IS NOT NULL THEN 1 ELSE 0 END as is_read
    FROM announcements a 
    LEFT JOIN accounts acc ON acc.id = a.sender_id 
+   LEFT JOIN announcement_reads ar ON ar.announcement_id = a.id AND ar.account_id = $1
    WHERE a.active = TRUE 
    ORDER BY a.created_at DESC 
    LIMIT 50
- `);
- respond(res,rows);
+ `, [currentUserId]);
+ respond(res, rows.map(r => ({ ...r, is_read: Boolean(r.is_read) })));
+}));
+
+app.post('/api/announcements/mark-read',wrap(async(req,res)=>{
+ if (!req.user?.id) error('UNAUTHORIZED', 'يرجى تسجيل الدخول', 401);
+ const annId = req.body?.id ? id(req.body.id) : null;
+ const nowIso = new Date().toISOString();
+ if (annId) {
+   await db.query(`
+     INSERT INTO announcement_reads(account_id, announcement_id, read_at)
+     VALUES($1, $2, $3)
+     ON CONFLICT(account_id, announcement_id) DO UPDATE SET read_at = excluded.read_at
+   `, [req.user.id, annId, nowIso]);
+ } else {
+   await db.query(`
+     INSERT INTO announcement_reads(account_id, announcement_id, read_at)
+     SELECT $1, a.id, $2
+     FROM announcements a
+     WHERE a.active = TRUE
+     ON CONFLICT(account_id, announcement_id) DO UPDATE SET read_at = excluded.read_at
+   `, [req.user.id, nowIso]);
+ }
+ respond(res, { success: true, message: 'تم تحديث حالة قراءة التعميمات بنجاح' });
 }));
 
 app.post('/api/admin/announcements',admin,wrap(async(req,res)=>{
@@ -663,6 +706,14 @@ app.post('/api/admin/announcements',admin,wrap(async(req,res)=>{
   await audit(c,req.user,'announcement.create',r.rows[0].id,cleanTitle);
   return r.rows[0];
  });
+
+ // Dispatch native push notification to phones even when app is closed
+ webpushService.sendPushToAll(db, {
+  title: (cleanPriority === 'urgent' ? '🚨 تعميم عاجل: ' : '📢 تعميم رسمي: ') + cleanTitle,
+  body: cleanContent.slice(0, 120),
+  tag: `announcement-${inserted.id}`,
+  url: '/asas#announcements'
+ }).catch(err => console.warn('[WebPush] Error sending announcement push:', err.message));
 
  if(send_email){
   db.query('SELECT name, email FROM accounts WHERE active=TRUE AND email IS NOT NULL').then(async empRes=>{
@@ -1386,11 +1437,25 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
  const nowIso = now.toISOString();
  const broad = ['super_admin','hr_admin'].includes(req.user.role);
  const target = req.body?.target || 'inside';
+ const employeeId = req.body?.employee_id ? id(req.body.employee_id) : null;
+ const customNote = req.body?.custom_note ? string(req.body.custom_note, 300) : null;
 
  let targets = [];
- if (target === 'all') {
+ if (target === 'employee' || employeeId) {
+   if (!employeeId) error('VALIDATION', 'يرجى تحديد الموظف المستهدف بالإرسال');
    targets = (await db.query(`
-     SELECT a.id as employee_id, a.name, a.email, a.identifier, b.name as branch_name, r.id as record_id, r.first_in
+     SELECT a.id as employee_id, a.name, a.email, a.identifier, b.name as branch_name, r.id as record_id, r.first_in, r.state
+     FROM accounts a
+     LEFT JOIN branches b ON b.id = a.branch_id
+     LEFT JOIN duty_records r ON r.employee_id = a.id AND r.state = 'inside'
+     WHERE a.id = $1 AND ($2=1 OR a.branch_id=$3)
+   `, [employeeId, broad, req.user.branch_id])).rows;
+   if (!targets.length) {
+     error('NOT_FOUND', 'الموظف المحدد غير موجود أو خارج نطاق صلاحيات الفرع');
+   }
+ } else if (target === 'all') {
+   targets = (await db.query(`
+     SELECT a.id as employee_id, a.name, a.email, a.identifier, b.name as branch_name, r.id as record_id, r.first_in, r.state
      FROM accounts a
      LEFT JOIN branches b ON b.id = a.branch_id
      LEFT JOIN duty_records r ON r.employee_id = a.id AND r.state = 'inside'
@@ -1398,7 +1463,7 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
    `, [broad, req.user.branch_id])).rows;
  } else {
    targets = (await db.query(`
-     SELECT r.id as record_id, r.employee_id, r.shift_start, r.first_in, r.branch_id,
+     SELECT r.id as record_id, r.employee_id, r.shift_start, r.first_in, r.branch_id, r.state,
             a.name, a.email, a.identifier, b.name as branch_name
      FROM duty_records r
      JOIN accounts a ON a.id = r.employee_id
@@ -1420,6 +1485,7 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
      admin_name: req.user.name,
      hours_on_duty: hoursOnDuty,
      target,
+     custom_note: customNote,
      triggered_at: nowIso
    })]);
 
@@ -1427,18 +1493,31 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
      notifications.notifyDutyReminder(
        { name: record.name, email: record.email, identifier: record.identifier },
        record.branch_name,
-       hoursOnDuty
+       hoursOnDuty,
+       customNote
      ).catch(err => console.error('[Notification Error] Manual duty reminder failed:', err.message));
    }
+
+   // Dispatch real Web Push to phone even if app is closed
+   webpushService.sendPushToAccount(db, record.employee_id, {
+     title: '⏰ تذكير إثبات واستمرار الحضور',
+     body: customNote || `مرحباً ${record.name}، نود تذكيرك بتأكيد تواجدك على رأس العمل لتوثيق ساعات دوامك بدقة.`,
+     tag: `duty-reminder-${record.employee_id}-${Date.now()}`,
+     url: '/asas'
+   }).catch(err => console.warn('[WebPush] Manual duty reminder push error:', err.message));
+
    count++;
  }
 
- await audit(db, req.user, 'duty.reminder_blast', null, `إرسال تذكير دوام فوري لـ ${count} موظف (${target === 'all' ? 'كافة الموظفين' : 'الحاضرون بالدوام'})`);
+ const targetLabel = (target === 'employee' && targets[0])
+   ? `الموظف (${targets[0].name})`
+   : (target === 'all' ? 'كافة الموظفين' : 'الحاضرون بالدوام');
+ await audit(db, req.user, 'duty.reminder_blast', null, `إرسال تذكير دوام فوري لـ ${count} (${targetLabel})`);
  respond(res, {
    success: true,
    reminded_count: count,
    message: count > 0 
-     ? `تم إرسال تذكير الدوام بنجاح لـ ${count} موظف (${target === 'all' ? 'كافة الموظفين' : 'المتواجدين بالدوام'}) ✅`
+     ? `تم إرسال التنبيه الفوري بنجاح لـ ${targetLabel} عبر الإشعارات والجوال ✅`
      : 'لم يتم العثور على موظفين مطابقين لإرسال التذكير.'
  });
 }));

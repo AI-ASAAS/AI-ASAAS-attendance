@@ -115,6 +115,16 @@ async function checkDutyReminders() {
             hoursOnDuty
           ).catch(err => console.error('[Notification Error] Duty reminder email failed:', err.message));
         }
+
+        try {
+          const webpushService = require('./webpush.service');
+          webpushService.sendPushToAccount(db, record.employee_id, {
+            title: '⏰ تذكير إثبات واستمرار الحضور',
+            body: `مرحباً ${record.name}، مضت ${hoursOnDuty} ساعات على تواجدك في الدوام. يرجى تأكيد استمرار حضورك.`,
+            tag: `duty-reminder-auto-${record.id}-${intervalsCount}`,
+            url: '/asas'
+          }).catch(err => console.warn('[WebPush Auto Duty Error]:', err.message));
+        } catch (_) {}
       }
     }
   } catch (err) {

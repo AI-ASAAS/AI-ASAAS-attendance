@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getDeviceId, getDeviceName } from '../../utils/device';
 import { promptBiometricVerification } from '../../utils/biometric';
@@ -559,71 +559,124 @@ function Records({ rows = [], onEdit, canEdit, viewMode: externalViewMode, showV
   );
 }
 
-// Announcements Dialog
-function AnnouncementsModal({ announcements, onClose, canManage, onEdit, onDelete }) {
+// Web Push Helper Utilities for PWA & Closed-App Push Notifications
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function registerWebPushSubscription() {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return false;
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if (!reg || !reg.pushManager) return false;
+
+    if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') return false;
+    }
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const keyRes = await api('/push/public-key');
+      const vapidPublicKey = keyRes?.data?.publicKey || keyRes?.publicKey;
+      if (!vapidPublicKey) return false;
+
+      const convertedKey = urlBase64ToUint8Array(vapidPublicKey);
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedKey
+      });
+    }
+
+    if (sub) {
+      await api('/push/subscribe', 'POST', { subscription: sub.toJSON() });
+      return true;
+    }
+  } catch (err) {
+    console.warn('[WebPush] Register subscription note:', err?.message);
+  }
+  return false;
+}
+
+// Announcements Dialog (Official Asas UI)
+function AnnouncementsModal({ announcements, onClose, canManage, onEdit, onDelete, onMarkAllRead }) {
+  useEffect(() => {
+    if (typeof onMarkAllRead === 'function') {
+      onMarkAllRead();
+    }
+  }, [onMarkAllRead]);
+
   return (
-    <div className="asas-modal-backdrop" onClick={onClose}>
-      <section className="asas-modal" style={{ maxWidth: 620 }} onClick={e => e.stopPropagation()}>
-        <div className="asas-modal-head">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Icon name="bell" style={{ width: 22, height: 22, color: 'var(--accent)' }} />
-            <h2 style={{ fontSize: 18, margin: 0 }}>التعميمات والإشعارات الرسمية</h2>
+    <Modal
+      title={
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <Icon name="bell" style={{ color: 'var(--accent)' }} />
+          <Swash>التعميمات والإشعارات الرسمية</Swash>
+        </div>
+      }
+      onClose={onClose}
+      footer={
+        <div className="cluster" style={{ width: '100%', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+            {announcements.length > 0 ? `${formatNumber(announcements.length)} تعميم رسمي موثق` : ''}
+          </span>
+          <Button variant="primary" icon="check" onClick={onClose}>
+            إغلاق
+          </Button>
+        </div>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {announcements.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '36px 10px', color: 'var(--text-3)' }}>
+            <Icon name="sparkle" style={{ width: 40, height: 40, margin: '0 auto 10px', opacity: 0.3 }} />
+            <p>لا توجد تعميمات جديدة حالياً.</p>
           </div>
-          <button className="asas-btn sm" onClick={onClose} aria-label="إغلاق">
-            <Icon name="close" />
-          </button>
-        </div>
-        <div className="asas-modal-body">
-          {announcements.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '36px 10px', color: 'var(--text-3)' }}>
-              <Icon name="sparkle" style={{ width: 40, height: 40, margin: '0 auto 10px', opacity: 0.3 }} />
-              <p>لا توجد تعميمات جديدة حالياً.</p>
-            </div>
-          ) : (
-            announcements.map(a => (
-              <article key={a.id} className={`asas-announcement-card ${a.priority || 'normal'}`} style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text)' }}>{a.title}</h3>
-                  <span className={`asas-badge ${a.priority || 'normal'}`}>
-                    {a.priority === 'urgent' ? 'عاجل جداً' : a.priority === 'important' ? 'هام' : 'إشعار رسمي'}
-                  </span>
+        ) : (
+          announcements.map(a => (
+            <Glass key={a.id} className="card" style={{ padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 }}>
+                <h3 style={{ fontSize: 15.5, fontWeight: 700, margin: 0, color: 'var(--text)' }}>{a.title}</h3>
+                <span className={`pill ${a.priority === 'urgent' ? 'pill--failed' : (a.priority === 'important' ? 'pill--partial' : 'pill--paid')}`}>
+                  {a.priority === 'urgent' ? 'عاجل جداً' : a.priority === 'important' ? 'هام' : 'تعميم عام'}
+                </span>
+              </div>
+              <p style={{ fontSize: 13.5, lineHeight: 1.7, color: 'var(--text-2)', whiteSpace: 'pre-line', margin: '8px 0' }}>
+                {a.content}
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, fontSize: 11.5, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 8, flexWrap: 'wrap', gap: 8 }}>
+                <div>
+                  <span>المرسل: <strong style={{ color: 'var(--text)' }}>{a.sender_name || 'الإدارة'}</strong></span> · <time>{date(a.created_at)} · {time(a.created_at)}</time>
                 </div>
-                <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)', whiteSpace: 'pre-line', margin: '8px 0' }}>
-                  {a.content}
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, fontSize: 11.5, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 8, flexWrap: 'wrap', gap: 8 }}>
-                  <div>
-                    <span>المرسل: <strong>{a.sender_name || 'الإدارة'}</strong></span> · <time>{date(a.created_at)} · {time(a.created_at)}</time>
+                {canManage && (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {onEdit && (
+                      <Button variant="ghost" size="xs" icon="edit" onClick={() => onEdit(a)}>
+                        تعديل
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button variant="danger" size="xs" icon="trash" onClick={() => onDelete(a.id)}>
+                        حذف
+                      </Button>
+                    )}
                   </div>
-                  {canManage && (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {onEdit && (
-                        <button className="asas-btn sm" onClick={() => onEdit(a)}>
-                          <Icon name="edit" />
-                          تعديل
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button className="asas-btn sm danger" onClick={() => onDelete(a.id)}>
-                          <Icon name="trash" />
-                          حذف
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </article>
-            ))
-          )}
-        </div>
-        <div className="asas-modal-footer">
-          <button className="asas-btn primary" onClick={onClose}>
-            <Icon name="check" />
-            حسناً
-          </button>
-        </div>
-      </section>
-    </div>
+                )}
+              </div>
+            </Glass>
+          ))
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -1365,22 +1418,61 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const [showDutyReminderModal, setShowDutyReminderModal] = useState(false);
   const [triggeringReminder, setTriggeringReminder] = useState(false);
   const [reminderTarget, setReminderTarget] = useState('inside');
+  const [selectedReminderEmployee, setSelectedReminderEmployee] = useState(null);
+  const [reminderCustomNote, setReminderCustomNote] = useState('');
+  const [allEmployees, setAllEmployees] = useState([]);
   const [installPrompt, setInstallPrompt] = useState(null);
+
+  const unreadAnnouncementsCount = useMemo(() => {
+    return announcements.filter(a => !a.is_read).length;
+  }, [announcements]);
+
+  const markAnnouncementsAsRead = useCallback(async () => {
+    try {
+      await api('/announcements/mark-read', 'POST', { all: true });
+      setAnnouncements(prev => prev.map(a => ({ ...a, is_read: true })));
+    } catch (_) {
+      setAnnouncements(prev => prev.map(a => ({ ...a, is_read: true })));
+    }
+  }, []);
 
   const handleTriggerManualReminder = async () => {
     setTriggeringReminder(true);
     try {
-      const res = await api('/admin/remind-duty', 'POST', { target: reminderTarget });
+      const payload = {
+        target: reminderTarget,
+        employee_id: reminderTarget === 'employee' ? selectedReminderEmployee?.id : undefined,
+        custom_note: reminderCustomNote.trim() || undefined
+      };
+      const res = await api('/admin/remind-duty', 'POST', payload);
       playChime('success');
-      setMessage(res?.message || 'تم إرسال تذكير الدوام بنجاح ✅');
+      setNotice(res?.message || 'تم إرسال تذكير الدوام بنجاح ✅');
       load(true);
       setShowDutyReminderModal(false);
+      setReminderCustomNote('');
     } catch (err) {
       setError(err?.message || 'تعذر إرسال تذكير الدوام');
     } finally {
       setTriggeringReminder(false);
     }
   };
+
+  const handleOpenDirectReminder = useCallback((emp) => {
+    if (!emp) return;
+    const empId = emp.id || emp.employee_id;
+    setSelectedReminderEmployee({ id: empId, name: emp.name, identifier: emp.identifier });
+    setReminderTarget('employee');
+    setReminderCustomNote('');
+    setShowDutyReminderModal(true);
+  }, []);
+
+  useEffect(() => {
+    if (showDutyReminderModal && allEmployees.length === 0) {
+      api('/admin/accounts').then(res => {
+        if (Array.isArray(res)) setAllEmployees(res.filter(a => a.role === 'employee' && a.active !== false));
+      }).catch(() => {});
+    }
+  }, [showDutyReminderModal, allEmployees.length]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -1393,6 +1485,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       navigator.serviceWorker.register('/sw.js').catch(err => {
         console.warn('Service worker registration note:', err?.message);
       });
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        registerWebPushSubscription().catch(() => {});
+      }
     }
 
     return () => window.removeEventListener('beforeinstallprompt', handler);
@@ -2057,7 +2152,11 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           user={user}
           logout={logout}
           announcements={announcements}
-          onOpenAnnouncements={() => setShowAnnouncementsModal(true)}
+          unreadAnnouncementsCount={unreadAnnouncementsCount}
+          onOpenAnnouncements={() => {
+            setShowAnnouncementsModal(true);
+            markAnnouncementsAsRead();
+          }}
           onOpenProfile={() => setShowProfileModal(true)}
           onOpenInstall={() => setShowInstallModal(true)}
           installPrompt={installPrompt}
@@ -2070,6 +2169,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           <AnnouncementsModal
             announcements={announcements}
             onClose={() => setShowAnnouncementsModal(false)}
+            onMarkAllRead={markAnnouncementsAsRead}
           />
         )}
         {showProfileModal && (
@@ -2151,8 +2251,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 >
                   <Icon name={iconName} />
                   <span className="asas-nav-text">{label}</span>
-                  {key === 'announcements' && announcements.length > 0 && (
-                    <span className="asas-tab-badge urgent num">{announcements.length}</span>
+                  {key === 'announcements' && unreadAnnouncementsCount > 0 && (
+                    <span className="asas-tab-badge urgent num">{unreadAnnouncementsCount}</span>
                   )}
                   {key === 'accounts' && pendingAccountsCount > 0 && (
                     <span className="asas-tab-badge pending num">{pendingAccountsCount}</span>
@@ -2230,12 +2330,15 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
               <button
                 type="button"
                 className="btn btn--ghost btn--sm btn--icon asas-bell-btn"
-                onClick={() => setShowAnnouncementsModal(true)}
+                onClick={() => {
+                  setShowAnnouncementsModal(true);
+                  markAnnouncementsAsRead();
+                }}
                 aria-label="التعميمات الرسمية"
                 title="التعميمات الرسمية"
               >
                 <Icon name="bell" />
-                {announcements.length > 0 && <span className="asas-bell-badge num">{announcements.length}</span>}
+                {unreadAnnouncementsCount > 0 && <span className="asas-bell-badge num">{unreadAnnouncementsCount}</span>}
               </button>
               <Button
                 variant="ghost"
@@ -2782,6 +2885,16 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                       <Icon name="user" />
                                       عرض السجل الفردي
                                     </button>
+                                    <Button
+                                      variant="glass"
+                                      size="xs"
+                                      icon="clock"
+                                      title={`إرسال تنبيه دوام فوري لـ (${emp.name})`}
+                                      onClick={() => handleOpenDirectReminder(emp)}
+                                      style={{ marginInlineStart: 4 }}
+                                    >
+                                      تنبيه
+                                    </Button>
                                   </td>
                                 </tr>
                               ))}
@@ -2845,18 +2958,27 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                 </div>
                               </div>
 
-                              <div className="asas-collective-card-foot">
+                              <div className="asas-collective-card-foot" style={{ display: 'flex', gap: 8 }}>
                                 <button
                                   className="asas-btn sm primary"
-                                  style={{ width: '100%', justifyContent: 'center' }}
+                                  style={{ flex: 1, justifyContent: 'center' }}
                                   onClick={() => {
                                     setSelectedEmployeeId(String(emp.id));
                                     setRecordsTabMode('individual');
                                   }}
                                 >
                                   <Icon name="user" />
-                                  عرض السجل الفردي الكامل
+                                  عرض السجل
                                 </button>
+                                <Button
+                                  variant="glass"
+                                  size="sm"
+                                  icon="clock"
+                                  title={`إرسال تنبيه دوام فوري لـ (${emp.name})`}
+                                  onClick={() => handleOpenDirectReminder(emp)}
+                                >
+                                  تنبيه
+                                </Button>
                               </div>
                             </Glass>
                           ))}
@@ -3527,6 +3649,15 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                         إدارة
                                       </button>
                                     )}
+                                    <Button
+                                      variant="glass"
+                                      size="xs"
+                                      icon="clock"
+                                      title={`إرسال تنبيه دوام فوري للموظف (${a.name})`}
+                                      onClick={() => handleOpenDirectReminder(a)}
+                                    >
+                                      تنبيه
+                                    </Button>
                                     <button
                                       type="button"
                                       className="asas-btn sm"
@@ -3644,6 +3775,15 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                     إدارة
                                   </button>
                                 )}
+                                <Button
+                                  variant="glass"
+                                  size="xs"
+                                  icon="clock"
+                                  title={`إرسال تنبيه دوام فوري للموظف (${a.name})`}
+                                  onClick={() => handleOpenDirectReminder(a)}
+                                >
+                                  تنبيه
+                                </Button>
                                 <button
                                   type="button"
                                   className="asas-btn sm"
@@ -4484,6 +4624,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
         <AnnouncementsModal
           announcements={announcements}
           onClose={() => setShowAnnouncementsModal(false)}
+          onMarkAllRead={markAnnouncementsAsRead}
           canManage={can('employees.write')}
           onEdit={(a) => {
             setShowAnnouncementsModal(false);
@@ -4515,7 +4656,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           title={
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <Icon name="clock" style={{ color: 'var(--accent)' }} />
-              <Swash>تذكير الدوام الدوري</Swash>
+              <Swash>تذكير وتنبيه الدوام الفوري</Swash>
             </div>
           }
           onClose={() => setShowDutyReminderModal(false)}
@@ -4528,9 +4669,12 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                 variant="primary"
                 icon="clock"
                 loading={triggeringReminder}
+                disabled={triggeringReminder || (reminderTarget === 'employee' && !selectedReminderEmployee)}
                 onClick={handleTriggerManualReminder}
               >
-                {`إرسال التذكير الآن (${reminderTarget === 'inside' ? (data?.inside || 0) : (data?.total || 0)} موظف)`}
+                {reminderTarget === 'employee'
+                  ? (selectedReminderEmployee ? `إرسال التنبيه الفوري لـ (${selectedReminderEmployee.name})` : 'اختر موظفاً لإرسال التنبيه')
+                  : `إرسال التذكير الآن (${reminderTarget === 'inside' ? (data?.inside || 0) : (data?.total || 0)} موظف)`}
               </Button>
             </div>
           }
@@ -4544,30 +4688,81 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
               <Segmented
                 label="فئة المستهدفين"
                 value={reminderTarget}
-                onChange={setReminderTarget}
+                onChange={(val) => {
+                  setReminderTarget(val);
+                  if (val !== 'employee') setSelectedReminderEmployee(null);
+                }}
                 options={[
                   { value: 'inside', label: 'المتواجدون على رأس العمل', count: data?.inside || 0 },
+                  { value: 'employee', label: 'تنبيه موظف محدد' },
                   { value: 'all', label: 'كافة الموظفين المسجلين', count: data?.total || 0 }
                 ]}
               />
             </div>
 
-            {/* Asas Glass Card */}
-            <Glass className="card" style={{ padding: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>الموظفون المستهدفون بالإرسال:</span>
-                <strong className="num" style={{ fontSize: 20, color: 'var(--paid)' }}>
-                  {formatNumber(reminderTarget === 'inside' ? (data?.inside || 0) : (data?.total || 0))} موظف
-                </strong>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--hairline)', paddingTop: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>حالة التذكير التلقائي:</span>
-                <span className={`pill ${systemSettings.duty_reminder_enabled !== false ? 'pill--paid' : 'pill--partial'}`}>
-                  <Icon name={systemSettings.duty_reminder_enabled !== false ? 'checkCircle' : 'clock'} />
-                  {systemSettings.duty_reminder_enabled !== false ? 'مفعّل تلقائياً' : 'معطل مؤقتاً'}
+            {/* Employee Selector & Custom Note when Single Employee is chosen */}
+            {reminderTarget === 'employee' && (
+              <Glass className="card" style={{ padding: 14 }}>
+                <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 6, color: 'var(--text)' }}>
+                  حدد الموظف المراد تنبيهه مباشرة:
+                </label>
+                <select
+                  className="asas-input"
+                  style={{ marginBottom: 12, height: 42 }}
+                  value={selectedReminderEmployee?.id || ''}
+                  onChange={(e) => {
+                    const idNum = Number(e.target.value);
+                    const pool = allEmployees.length ? allEmployees : (data?.records || []).map(r => ({ id: r.employee_id, name: r.name, identifier: r.identifier }));
+                    const found = pool.find(x => (x.id === idNum || x.employee_id === idNum));
+                    setSelectedReminderEmployee(found ? { id: found.id || found.employee_id, name: found.name, identifier: found.identifier } : null);
+                  }}
+                >
+                  <option value="">-- اضغط لاختيار الموظف من القائمة --</option>
+                  {(allEmployees.length ? allEmployees : (data?.records || []).map(r => ({ id: r.employee_id, name: r.name, identifier: r.identifier }))).map(emp => {
+                    const isInside = (data?.records || []).some(r => (r.employee_id === emp.id || r.id === emp.id) && r.state === 'inside');
+                    return (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} (#{emp.identifier}) {isInside ? '🟢 متواجد بالدوام' : '⚪ خارج الدوام'}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 6, color: 'var(--text)' }}>
+                  رسالة أو ملاحظة تنبيه مخصصة (اختياري):
+                </label>
+                <textarea
+                  className="asas-input"
+                  rows={2}
+                  placeholder="مثال: يرجى تأكيد استمرار الحضور فوراً واستكمال التقرير اليومي..."
+                  value={reminderCustomNote}
+                  onChange={(e) => setReminderCustomNote(e.target.value)}
+                  style={{ resize: 'vertical' }}
+                />
+                <span style={{ fontSize: 11.5, color: 'var(--text-3)', display: 'block', marginTop: 4 }}>
+                  ستصل هذه الرسالة للموظف كإشعار فوري بجواله وتظهر داخل نافذة تأكيد الدوام.
                 </span>
-              </div>
-            </Glass>
+              </Glass>
+            )}
+
+            {/* Asas Glass Card for Inside or All */}
+            {reminderTarget !== 'employee' && (
+              <Glass className="card" style={{ padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-2)' }}>الموظفون المستهدفون بالإرسال:</span>
+                  <strong className="num" style={{ fontSize: 20, color: 'var(--paid)' }}>
+                    {formatNumber(reminderTarget === 'inside' ? (data?.inside || 0) : (data?.total || 0))} موظف
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--hairline)', paddingTop: 8 }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-2)' }}>حالة التذكير التلقائي:</span>
+                  <span className={`pill ${systemSettings.duty_reminder_enabled !== false ? 'pill--paid' : 'pill--partial'}`}>
+                    <Icon name={systemSettings.duty_reminder_enabled !== false ? 'checkCircle' : 'clock'} />
+                    {systemSettings.duty_reminder_enabled !== false ? 'مفعّل تلقائياً' : 'معطل مؤقتاً'}
+                  </span>
+                </div>
+              </Glass>
+            )}
 
             {/* Automation Frequency & Toggle */}
             <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -6087,7 +6282,7 @@ function sendSystemNotification(title, body, options = {}) {
   } catch (_) {}
 }
 
-function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProfile, onOpenInstall, installPrompt, defaultAction = 'auto', theme, onToggleTheme }) {
+function Employee({ user, logout, announcements, unreadAnnouncementsCount = 0, onOpenAnnouncements, onOpenProfile, onOpenInstall, installPrompt, defaultAction = 'auto', theme, onToggleTheme }) {
   const [empPage, setEmpPage] = useState('duty');
   const [empHistoryViewMode, setEmpHistoryViewMode] = useState('auto');
   const [data, setData] = useState(null);
@@ -6139,11 +6334,18 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
           playDutyReminderChime();
           sendSystemNotification(
             'تم تفعيل إشعارات أساس الذكية 🔔',
-            'ستصلك تنبيهات الحضور الفورية وتذكير التحضير كل ساعتين أثناء الدوام تلقائياً على هذا الجهاز.',
+            'ستصلك تنبيهات الحضور الفورية وتذكير التحضير كل ساعتين أثناء الدوام تلقائياً حتى والتطبيق مغلق.',
             { tag: 'asas-welcome-notif' }
           );
+          await registerWebPushSubscription();
         }
       } catch (_) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      registerWebPushSubscription().catch(() => {});
     }
   }, []);
   const videoRef = useRef(null);
@@ -6444,15 +6646,18 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
         setDutyReminder(prev => {
           if (prev?.open && prev?.alertId === alertId) return prev;
           playDutyReminderChime();
+          const customMsg = data.duty_reminder_alert.custom_note;
           sendSystemNotification(
             '⏰ تذكير إثبات واستمرار الحضور',
-            `تنبيه تذكير رسمي من الإدارة (${curUser.name}): يرجى تأكيد استمرار تواجدك وتفقد حالة الدوام.`,
+            customMsg || `تنبيه تذكير رسمي من الإدارة (${curUser.name}): يرجى تأكيد استمرار تواجدك وتفقد حالة الدوام.`,
             { tag: `asas-duty-alert-${alertId}` }
           );
           return {
             open: true,
             alertId,
             hoursOnDuty: data.duty_reminder_alert.hours_on_duty || 2,
+            custom_note: customMsg || null,
+            admin_name: data.duty_reminder_alert.admin_name || null,
             type: 'admin_blast'
           };
         });
@@ -6856,7 +7061,7 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
               title="الإشعارات والتعميمات"
             >
               <Icon name="bell" />
-              {announcements.length > 0 && <span className="asas-bell-badge num">{announcements.length}</span>}
+              {unreadAnnouncementsCount > 0 && <span className="asas-bell-badge num">{unreadAnnouncementsCount}</span>}
             </button>
             {onToggleTheme && (
               <Button
@@ -7513,6 +7718,15 @@ function Employee({ user, logout, announcements, onOpenAnnouncements, onOpenProf
             <p style={{ margin: '0 0 14px', fontSize: 14.5, color: 'var(--text)' }}>
               مرحباً <strong>{user?.name}</strong>، نود تذكيرك بتأكيد تواجدك على رأس العمل لتوثيق استمرار ساعات دوامك بدقة ونزاهة واحتساب استحقاقاتك كاملاً.
             </p>
+            {dutyReminder.custom_note && (
+              <div style={{ background: 'rgba(186, 149, 85, 0.12)', border: '1px solid var(--accent)', borderRadius: 8, padding: 12, marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="bell" style={{ width: 14, height: 14 }} />
+                  <span>تنبيه وملاحظة من الإدارة:</span>
+                </div>
+                <div style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>{dutyReminder.custom_note}</div>
+              </div>
+            )}
             <Glass className="card" style={{ padding: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 13, color: 'var(--text-2)' }}>المدة المسجلة بالدوام:</span>

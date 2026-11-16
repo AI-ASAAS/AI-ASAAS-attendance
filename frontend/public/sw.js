@@ -55,6 +55,7 @@ self.addEventListener('push', (event) => {
     if (event.data) payload.body = event.data.text();
   }
 
+  const isUrgent = Boolean(payload.tag && (payload.tag.includes('duty') || payload.tag.includes('urgent')));
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
@@ -62,7 +63,8 @@ self.addEventListener('push', (event) => {
       badge: payload.badge || '/favicon.png',
       tag: payload.tag || 'asas-duty-reminder',
       renotify: true,
-      vibrate: [200, 100, 200],
+      requireInteraction: isUrgent,
+      vibrate: isUrgent ? [300, 100, 300, 100, 300] : [200, 100, 200],
       data: { url: payload.url || '/asas' }
     })
   );

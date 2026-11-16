@@ -219,7 +219,7 @@ async function notifyAnnouncement(account, announcement) {
 }
 
 // ─── 6. Periodic Duty Attendance Reminder Email (Every 2 Hours) ───────────
-async function notifyDutyReminder(account, branchName, hoursOnDuty) {
+async function notifyDutyReminder(account, branchName, hoursOnDuty, customNote) {
   if (!account.email) return;
   const hours = Number(hoursOnDuty || 2);
   const subject = `⏰ [أساس] تذكير إثبات واستمرار الحضور (${hours} ساعة على بدء الدوام)`;
@@ -235,6 +235,12 @@ async function notifyDutyReminder(account, branchName, hoursOnDuty) {
         <p style="font-size: 15px;">عزيزي الموظف <strong>${account.name}</strong>،</p>
         <p>نود تذكيرك بأنه قد مضت <strong>${hours} ساعات</strong> على تواجدك في الدوام اليوم في <strong>${branchName || 'مقر العمل المعتمد'}</strong>.</p>
         
+        ${customNote ? `
+        <div style="background: #fff8e6; border: 1px solid #ffd166; border-radius: 8px; padding: 14px; margin: 14px 0;">
+          <strong style="color: #995c00; display: block; margin-bottom: 4px;">📝 ملاحظة وتنبيه الإدارة:</strong>
+          <span style="color: #402c00; font-size: 14px;">${customNote}</span>
+        </div>` : ''}
+
         <div style="background: #fbf7ee; border: 1px solid #ebdcc0; border-radius: 8px; padding: 16px; margin: 16px 0;">
           <p style="margin: 4px 0;">⏱️ <strong>ساعات الدوام المسجلة:</strong> ${hours} ساعات دوام متواصل</p>
           <p style="margin: 4px 0;">📌 <strong>الحالة الحالية:</strong> على رأس العمل (مناوبة نشطة)</p>
@@ -256,7 +262,7 @@ async function notifyDutyReminder(account, branchName, hoursOnDuty) {
     to: account.email,
     subject,
     html,
-    text: `تذكير إثبات الحضور: مضت ${hours} ساعات على تواجدك في الدوام. يرجى فتح النظام لتأكيد استمرار حضورك.`
+    text: `تذكير إثبات الحضور: مضت ${hours} ساعات على تواجدك في الدوام. ${customNote ? `ملاحظة: ${customNote} ` : ''}يرجى فتح النظام لتأكيد استمرار حضورك.`
   });
 }
 
