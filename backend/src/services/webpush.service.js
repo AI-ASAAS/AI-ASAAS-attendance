@@ -118,9 +118,20 @@ async function sendNotificationToSub(db, subRecord, payloadObj) {
     }
   };
 
+  const rawBody = String(payloadObj.body || 'إشعار جديد من نظام أساس').trim();
+  const fullBodyRaw = String(payloadObj.fullBody || rawBody).trim();
+  const fullBody = fullBodyRaw.length > 2000 ? `${fullBodyRaw.slice(0, 1997).trim()}…` : fullBodyRaw;
+  const shortBody = rawBody.length > 180 ? `${rawBody.slice(0, 177).trim()}…` : rawBody;
+
   const payloadString = JSON.stringify({
-    title: payloadObj.title || '⏰ أساس - نظام الحضور والدوام',
-    body: payloadObj.body || 'إشعار جديد من نظام أساس',
+    title: payloadObj.title || 'نظام أساس · تنبيه الدوام',
+    body: shortBody,
+    fullBody,
+    type: payloadObj.type || 'general',
+    priority: payloadObj.priority || 'normal',
+    announcementId: payloadObj.announcementId || null,
+    senderName: payloadObj.senderName || 'إدارة نظام أساس',
+    createdAt: payloadObj.createdAt || new Date().toISOString(),
     icon: payloadObj.icon || '/icon-192.png',
     badge: payloadObj.badge || '/favicon.png',
     tag: payloadObj.tag || 'asas-alert-' + Date.now(),

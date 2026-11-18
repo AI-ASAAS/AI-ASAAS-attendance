@@ -708,11 +708,23 @@ app.post('/api/admin/announcements',admin,wrap(async(req,res)=>{
  });
 
  // Dispatch native push notification to phones even when app is closed
+ const priorityPrefix = cleanPriority === 'urgent'
+  ? 'تعميم عاجل · '
+  : (cleanPriority === 'important' ? 'تعميم هام · ' : 'تعميم رسمي · ');
+ const previewBody = cleanContent.length > 150
+  ? `${cleanContent.slice(0, 147).trim()}… — اضغط لعرض الرسالة كاملة`
+  : cleanContent;
  webpushService.sendPushToAll(db, {
-  title: (cleanPriority === 'urgent' ? '🚨 تعميم عاجل: ' : '📢 تعميم رسمي: ') + cleanTitle,
-  body: cleanContent.slice(0, 120),
+  title: `${priorityPrefix}${cleanTitle}`,
+  body: previewBody,
+  fullBody: cleanContent,
+  type: 'announcement',
+  priority: cleanPriority,
+  announcementId: inserted.id,
+  senderName: req.user.name || 'الإدارة',
+  createdAt: inserted.created_at || new Date().toISOString(),
   tag: `announcement-${inserted.id}`,
-  url: '/asas#announcements'
+  url: `/asas?open_announcement=${inserted.id}`
  }).catch(err => console.warn('[WebPush] Error sending announcement push:', err.message));
 
  if(send_email){
@@ -1499,11 +1511,22 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
    }
 
    // Dispatch real Web Push to phone even if app is closed
+   const fullReminderText = customNote
+     ? `${customNote}\n\nيرجى فتح النظام لتأكيد استمرار تواجدك وتوثيق ساعات دوامك بدقة.`
+     : `مرحباً ${record.name}، نود تذكيرك بتأكيد تواجدك على رأس العمل لتوثيق ساعات دوامك بدقة.`;
+   const shortReminderBody = customNote
+     ? (customNote.length > 140 ? `${customNote.slice(0, 137).trim()}… — اضغط لقراءة التنبيه كاملاً` : customNote)
+     : `مرحباً ${record.name}، يرجى تأكيد استمرار تواجدك في الدوام الآن.`;
    webpushService.sendPushToAccount(db, record.employee_id, {
-     title: '⏰ تذكير إثبات واستمرار الحضور',
-     body: customNote || `مرحباً ${record.name}، نود تذكيرك بتأكيد تواجدك على رأس العمل لتوثيق ساعات دوامك بدقة.`,
+     title: 'تذكير إثبات واستمرار الحضور · أساس',
+     body: shortReminderBody,
+     fullBody: fullReminderText,
+     type: 'duty_reminder',
+     priority: customNote ? 'important' : 'normal',
+     senderName: req.user.name || 'إدارة الدوام',
+     createdAt: nowIso,
      tag: `duty-reminder-${record.employee_id}-${Date.now()}`,
-     url: '/asas'
+     url: '/asas?open_reminder=1'
    }).catch(err => console.warn('[WebPush] Manual duty reminder push error:', err.message));
 
    count++;

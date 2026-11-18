@@ -118,11 +118,17 @@ async function checkDutyReminders() {
 
         try {
           const webpushService = require('./webpush.service');
+          const msg = `مرحباً ${record.name}، مضت ${hoursOnDuty} ساعات على تواجدك في الدوام اليوم في ${record.branch_name || 'مقر العمل'}. يرجى تأكيد استمرار حضورك لتوثيق ساعات عملك بنزاهة ودقة.`;
           webpushService.sendPushToAccount(db, record.employee_id, {
-            title: '⏰ تذكير إثبات واستمرار الحضور',
-            body: `مرحباً ${record.name}، مضت ${hoursOnDuty} ساعات على تواجدك في الدوام. يرجى تأكيد استمرار حضورك.`,
+            title: 'تذكير الدوام الدوري · أساس',
+            body: `مضت ${hoursOnDuty} ساعات على بدء دوامك اليوم. اضغط لتأكيد استمرار الحضور.`,
+            fullBody: msg,
+            type: 'duty_reminder',
+            priority: 'normal',
+            senderName: 'نظام أساس التلقائي',
+            createdAt: nowIso,
             tag: `duty-reminder-auto-${record.id}-${intervalsCount}`,
-            url: '/asas'
+            url: '/asas?open_reminder=1'
           }).catch(err => console.warn('[WebPush Auto Duty Error]:', err.message));
         } catch (_) {}
       }

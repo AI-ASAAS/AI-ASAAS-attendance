@@ -6,6 +6,7 @@ import { promptBiometricVerification } from '../../utils/biometric';
 import {
   Ambient,
   AssistantWidget,
+  Avatar,
   Button,
   Card,
   EmptyState,
@@ -607,65 +608,275 @@ async function registerWebPushSubscription() {
   return false;
 }
 
-// Announcements Dialog (Official Asas UI)
-function AnnouncementsModal({ announcements, onClose, canManage, onEdit, onDelete, onMarkAllRead }) {
+function getNotificationPriorityMeta(priority) {
+  if (priority === 'urgent') {
+    return {
+      label: 'عاجل جداً',
+      pillClass: 'pill--unpaid',
+      icon: 'alert',
+      kindClass: 'kind-icon--out',
+      cls: 'is-urgent'
+    };
+  }
+  if (priority === 'important') {
+    return {
+      label: 'هام',
+      pillClass: 'pill--partial',
+      icon: 'bell',
+      kindClass: 'kind-icon--gold',
+      cls: 'is-important'
+    };
+  }
+  return {
+    label: 'إشعار رسمي',
+    pillClass: 'pill--paid',
+    icon: 'sparkle',
+    kindClass: 'kind-icon--in',
+    cls: 'is-normal'
+  };
+}
+
+// Announcements & Notifications Center Dialog (Official AI-ASAAS/skills Master-Detail)
+function AnnouncementsModal({
+  announcements,
+  initialSelectedId = null,
+  directNotification = null,
+  onClearDirectNotification,
+  onClose,
+  canManage,
+  onEdit,
+  onDelete,
+  onMarkRead,
+  onMarkAllRead
+}) {
+  const [filter, setFilter] = useState('all');
+  const [selectedId, setSelectedId] = useState(initialSelectedId);
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
-    if (typeof onMarkAllRead === 'function') {
+    if (initialSelectedId != null) {
+      setSelectedId(initialSelectedId);
+    }
+  }, [initialSelectedId]);
+
+  const unreadList = useMemo(() => announcements.filter(a => !a.is_read), [announcements]);
+  const priorityList = useMemo(
+    () => announcements.filter(a => a.priority === 'urgent' || a.priority === 'important'),
+    [announcements]
+  );
+
+  const filteredAnnouncements = useMemo(() => {
+    if (filter === 'unread') return unreadList;
+    if (filter === 'priority') return priorityList;
+    return announcements;
+  }, [announcements, filter, unreadList, priorityList]);
+
+  const selectedAnnouncement = useMemo(() => {
+    if (selectedId == null) return null;
+    return announcements.find(a => String(a.id) === String(selectedId)) || null;
+  }, [announcements, selectedId]);
+
+  // Mark individual announcement as read immediately when opened in full reader
+  useEffect(() => {
+    if (selectedAnnouncement && !selectedAnnouncement.is_read && typeof onMarkRead === 'function') {
+      onMarkRead(selectedAnnouncement.id);
+    }
+  }, [selectedAnnouncement, onMarkRead]);
+
+  const activeItem = useMemo(() => {
+    if (directNotification) {
+      return {
+        id: directNotification.announcementId || 'direct',
+        title: directNotification.title || 'إشعار من نظام أساس',
+        content: directNotification.fullBody || directNotification.body || '',
+        priority: directNotification.priority || 'normal',
+        sender_name: directNotification.senderName || 'إدارة نظام أساس',
+        created_at: directNotification.createdAt || new Date().toISOString(),
+        isDirect: true
+      };
+    }
+    return selectedAnnouncement;
+  }, [directNotification, selectedAnnouncement]);
+
+  const activeIndex = useMemo(() => {
+    if (!selectedAnnouncement) return -1;
+    return filteredAnnouncements.findIndex(a => String(a.id) === String(selectedAnnouncement.id));
+  }, [filteredAnnouncements, selectedAnnouncement]);
+
+  const handleOpenItem = (a) => {
+    if (typeof onClearDirectNotification === 'function') onClearDirectNotification();
+    setSelectedId(a.id);
+    setCopied(false);
+    if (!a.is_read && typeof onMarkRead === 'function') {
+      onMarkRead(a.id);
+    }
+  };
+
+  const handleBackToList = () => {
+    if (typeof onClearDirectNotification === 'function') onClearDirectNotification();
+    setSelectedId(null);
+    setCopied(false);
+  };
+
+  const handleCopyFullMessage = async (item) => {
+    if (!item) return;
+    const textToCopy = `${item.title}\n\n${item.content}\n\n— ${item.sender_name || 'الإدارة'}`;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2400);
+      }
+    } catch (_) {}
+  };
+
+  const handleCloseModal = () => {
+    if (typeof onMarkAllRead === 'function' && unreadList.length > 0) {
       onMarkAllRead();
     }
-  }, [onMarkAllRead]);
+    onClose();
+  };
+
+  const activeMeta = activeItem ? getNotificationPriorityMeta(activeItem.priority) : null;
 
   return (
     <Modal
+      wide
       title={
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <Icon name="bell" style={{ color: 'var(--accent)' }} />
-          <Swash>التعميمات والإشعارات الرسمية</Swash>
+          <Icon name={activeItem ? activeMeta.icon : 'bell'} style={{ color: 'var(--accent)' }} />
+          <Swash>{activeItem ? 'تفاصيل الإشعار الكامل' : 'مركز الإشعارات والتعميمات'}</Swash>
         </div>
       }
-      onClose={onClose}
+      onClose={handleCloseModal}
       footer={
-        <div className="cluster" style={{ width: '100%', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-            {announcements.length > 0 ? `${formatNumber(announcements.length)} تعميم رسمي موثق` : ''}
-          </span>
-          <Button variant="primary" icon="check" onClick={onClose}>
-            إغلاق
-          </Button>
-        </div>
-      }
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {announcements.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '36px 10px', color: 'var(--text-3)' }}>
-            <Icon name="sparkle" style={{ width: 40, height: 40, margin: '0 auto 10px', opacity: 0.3 }} />
-            <p>لا توجد تعميمات جديدة حالياً.</p>
+        activeItem ? (
+          <div className="cluster" style={{ width: '100%', justifyContent: 'space-between' }}>
+            <Button variant="ghost" size="sm" icon="chevronRight" onClick={handleBackToList}>
+              جميع الإشعارات
+            </Button>
+            <div className="cluster" style={{ gap: 8 }}>
+              <Button
+                variant="glass"
+                size="sm"
+                icon={copied ? 'checkCircle' : 'file'}
+                onClick={() => handleCopyFullMessage(activeItem)}
+              >
+                {copied ? 'تم نسخ النص' : 'نسخ الرسالة'}
+              </Button>
+              <Button variant="primary" size="sm" icon="check" onClick={handleCloseModal}>
+                تم الاطلاع
+              </Button>
+            </div>
           </div>
         ) : (
-          announcements.map(a => (
-            <Glass key={a.id} className="card" style={{ padding: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 }}>
-                <h3 style={{ fontSize: 15.5, fontWeight: 700, margin: 0, color: 'var(--text)' }}>{a.title}</h3>
-                <span className={`pill ${a.priority === 'urgent' ? 'pill--failed' : (a.priority === 'important' ? 'pill--partial' : 'pill--paid')}`}>
-                  {a.priority === 'urgent' ? 'عاجل جداً' : a.priority === 'important' ? 'هام' : 'تعميم عام'}
-                </span>
-              </div>
-              <p style={{ fontSize: 13.5, lineHeight: 1.7, color: 'var(--text-2)', whiteSpace: 'pre-line', margin: '8px 0' }}>
-                {a.content}
-              </p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, fontSize: 11.5, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 8, flexWrap: 'wrap', gap: 8 }}>
-                <div>
-                  <span>المرسل: <strong style={{ color: 'var(--text)' }}>{a.sender_name || 'الإدارة'}</strong></span> · <time>{date(a.created_at)} · {time(a.created_at)}</time>
+          <div className="cluster" style={{ width: '100%', justifyContent: 'space-between' }}>
+            <span className="subtle">
+              {announcements.length > 0
+                ? `${formatNumber(announcements.length)} إشعار رسمي · اضغط على أي إشعار لعرض الرسالة كاملة`
+                : 'مركز الإشعارات الرسمية'}
+            </span>
+            <div className="cluster" style={{ gap: 8 }}>
+              {unreadList.length > 0 && typeof onMarkAllRead === 'function' && (
+                <Button variant="glass" size="sm" icon="checkCircle" onClick={onMarkAllRead}>
+                  تحديد الكل كمقروء
+                </Button>
+              )}
+              <Button variant="primary" size="sm" icon="check" onClick={handleCloseModal}>
+                إغلاق
+              </Button>
+            </div>
+          </div>
+        )
+      }
+    >
+      <div className="asas-notif-center">
+        {activeItem ? (
+          /* ─── Full-Message Reader View ─── */
+          <>
+            <div className="asas-notif-reader-nav">
+              <Button variant="ghost" size="sm" icon="chevronRight" onClick={handleBackToList}>
+                العودة للقائمة
+              </Button>
+              <span className={`pill ${activeMeta.pillClass}`}>
+                <Icon name={activeMeta.icon} />
+                {activeMeta.label}
+              </span>
+            </div>
+
+            <Glass className={`asas-notif-reader ${activeMeta.cls}`}>
+              <div className="asas-notif-reader__meta">
+                <div className="asas-notif-reader__sender">
+                  <Avatar name={activeItem.sender_name || 'الإدارة'} size={42} />
+                  <div className="asas-notif-reader__sender-info">
+                    <span className="asas-notif-reader__sender-name">
+                      {activeItem.sender_name || 'إدارة نظام أساس'}
+                    </span>
+                    <span className="asas-notif-reader__time">
+                      تعميم وإشعار رسمي موثق · <time className="num">{date(activeItem.created_at)} · {time(activeItem.created_at)}</time>
+                    </span>
+                  </div>
                 </div>
-                {canManage && (
-                  <div style={{ display: 'flex', gap: 6 }}>
+                {!activeItem.isDirect && (
+                  <span className="pill pill--paid">
+                    <Icon name="checkCircle" />
+                    تمت القراءة
+                  </span>
+                )}
+              </div>
+
+              <h2 className="asas-notif-reader__title">{activeItem.title}</h2>
+
+              <div className="prose asas-notif-full-body">
+                {activeItem.content}
+              </div>
+
+              <div className="asas-notif-reader__actions">
+                {!activeItem.isDirect && filteredAnnouncements.length > 1 && activeIndex >= 0 ? (
+                  <div className="asas-notif-pager">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon="chevronRight"
+                      disabled={activeIndex <= 0}
+                      onClick={() => handleOpenItem(filteredAnnouncements[activeIndex - 1])}
+                    >
+                      السابق
+                    </Button>
+                    <span className="subtle num" style={{ padding: '0 6px' }}>
+                      {formatNumber(activeIndex + 1)} / {formatNumber(filteredAnnouncements.length)}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon="chevronLeft"
+                      disabled={activeIndex >= filteredAnnouncements.length - 1}
+                      onClick={() => handleOpenItem(filteredAnnouncements[activeIndex + 1])}
+                    >
+                      التالي
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="subtle">الرسالة الكاملة بدون اختصار</span>
+                )}
+
+                {canManage && !activeItem.isDirect && (
+                  <div className="cluster" style={{ gap: 6 }}>
                     {onEdit && (
-                      <Button variant="ghost" size="xs" icon="edit" onClick={() => onEdit(a)}>
+                      <Button variant="ghost" size="sm" icon="edit" onClick={() => onEdit(activeItem)}>
                         تعديل
                       </Button>
                     )}
                     {onDelete && (
-                      <Button variant="danger" size="xs" icon="trash" onClick={() => onDelete(a.id)}>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        icon="trash"
+                        onClick={async () => {
+                          await onDelete(activeItem.id);
+                          handleBackToList();
+                        }}
+                      >
                         حذف
                       </Button>
                     )}
@@ -673,7 +884,83 @@ function AnnouncementsModal({ announcements, onClose, canManage, onEdit, onDelet
                 )}
               </div>
             </Glass>
-          ))
+          </>
+        ) : (
+          /* ─── Notification List View ─── */
+          <>
+            {announcements.length > 0 && (
+              <div className="asas-notif-toolbar">
+                <Segmented
+                  label="تصفية الإشعارات"
+                  value={filter}
+                  onChange={setFilter}
+                  options={[
+                    { value: 'all', label: 'الكل', count: announcements.length },
+                    { value: 'unread', label: 'غير مقروء', count: unreadList.length },
+                    { value: 'priority', label: 'عاجل وهام', count: priorityList.length }
+                  ]}
+                />
+              </div>
+            )}
+
+            {filteredAnnouncements.length === 0 ? (
+              <EmptyState
+                icon="bell"
+                title={filter === 'unread' ? 'اطلعت على جميع الإشعارات' : 'لا توجد إشعارات في هذا التصنيف'}
+              >
+                {filter === 'unread'
+                  ? 'لا توجد تعميمات غير مقروءة حالياً. يمكنك عرض الكل للرجوع إلى الأرشيف.'
+                  : 'ستظهر التعميمات الإدارية والإشعارات الرسمية هنا فور نشرها.'}
+              </EmptyState>
+            ) : (
+              <div className="list" role="list">
+                {filteredAnnouncements.map(a => {
+                  const meta = getNotificationPriorityMeta(a.priority);
+                  const isUnread = !a.is_read;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      role="listitem"
+                      className={`row asas-notif-row ${meta.cls} ${isUnread ? 'asas-notif-row--unread' : ''}`}
+                      onClick={() => handleOpenItem(a)}
+                    >
+                      <span className={`kind-icon ${meta.kindClass}`} aria-hidden="true">
+                        <Icon name={meta.icon} />
+                      </span>
+
+                      <div className="row__main">
+                        <div className="asas-notif-row__head">
+                          <div className="asas-notif-row__title-wrap">
+                            {isUnread && <span className="asas-notif-unread-dot" aria-label="غير مقروء" />}
+                            <span className="asas-notif-row__title">{a.title}</span>
+                          </div>
+                          <span className={`pill ${meta.pillClass}`}>
+                            <Icon name={meta.icon} />
+                            {meta.label}
+                          </span>
+                        </div>
+
+                        <p className="asas-notif-excerpt">{a.content}</p>
+
+                        <div className="asas-notif-row__foot">
+                          <span>
+                            <strong style={{ color: 'var(--text-2)' }}>{a.sender_name || 'الإدارة'}</strong>
+                            {' · '}
+                            <time className="num">{date(a.created_at)} · {time(a.created_at)}</time>
+                          </span>
+                          <span className="asas-notif-cta">
+                            <span>عرض الرسالة كاملة</span>
+                            <Icon name="chevronLeft" />
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </Modal>
@@ -1411,6 +1698,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   });
   const [announcements, setAnnouncements] = useState([]);
   const [showAnnouncementsModal, setShowAnnouncementsModal] = useState(false);
+  const [selectedAnnouncementId, setSelectedAnnouncementId] = useState(null);
+  const [directPushNotification, setDirectPushNotification] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [newCustomPerm, setNewCustomPerm] = useState('');
   const [showInstallModal, setShowInstallModal] = useState(false);
@@ -1427,14 +1716,97 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
     return announcements.filter(a => !a.is_read).length;
   }, [announcements]);
 
+  const markAnnouncementAsRead = useCallback(async (annId) => {
+    if (!annId) return;
+    setAnnouncements(prev => prev.map(a => (String(a.id) === String(annId) ? { ...a, is_read: true } : a)));
+    try {
+      await api('/announcements/mark-read', 'POST', { id: annId });
+    } catch (_) {}
+  }, []);
+
   const markAnnouncementsAsRead = useCallback(async () => {
+    setAnnouncements(prev => prev.map(a => ({ ...a, is_read: true })));
     try {
       await api('/announcements/mark-read', 'POST', { all: true });
-      setAnnouncements(prev => prev.map(a => ({ ...a, is_read: true })));
-    } catch (_) {
-      setAnnouncements(prev => prev.map(a => ({ ...a, is_read: true })));
-    }
+    } catch (_) {}
   }, []);
+
+  const openAnnouncementsCenter = useCallback((annId = null) => {
+    setDirectPushNotification(null);
+    setSelectedAnnouncementId(annId);
+    setShowAnnouncementsModal(true);
+    if (annId != null) {
+      markAnnouncementAsRead(annId);
+    }
+  }, [markAnnouncementAsRead]);
+
+  const openNotificationPayload = useCallback((payload) => {
+    if (!payload) return;
+    if (payload.announcementId) {
+      setDirectPushNotification(null);
+      setSelectedAnnouncementId(payload.announcementId);
+      setShowAnnouncementsModal(true);
+      markAnnouncementAsRead(payload.announcementId);
+      return;
+    }
+    if (payload.fullBody || payload.body) {
+      setSelectedAnnouncementId(null);
+      setDirectPushNotification({
+        title: payload.title || 'إشعار من نظام أساس',
+        fullBody: payload.fullBody || payload.body,
+        body: payload.body || payload.fullBody,
+        priority: payload.priority || (payload.type === 'duty_reminder' ? 'important' : 'normal'),
+        senderName: payload.senderName || 'إدارة نظام أساس',
+        createdAt: payload.createdAt || new Date().toISOString(),
+        type: payload.type || 'general'
+      });
+      setShowAnnouncementsModal(true);
+    }
+  }, [markAnnouncementAsRead]);
+
+  // Listen for OS / Phone Push Notification clicks (Service Worker & in-app browser notifications)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onSwMessage = (event) => {
+      if (event?.data?.type === 'ASAS_OPEN_NOTIFICATION' && event.data.payload) {
+        openNotificationPayload(event.data.payload);
+      }
+    };
+    const onCustomNotif = (event) => {
+      if (event?.detail) {
+        openNotificationPayload(event.detail);
+      }
+    };
+    window.addEventListener('asas:open-notification', onCustomNotif);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', onSwMessage);
+    }
+    return () => {
+      window.removeEventListener('asas:open-notification', onCustomNotif);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', onSwMessage);
+      }
+    };
+  }, [openNotificationPayload]);
+
+  // Handle deep-link query params when opening app from a closed-app phone push notification
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const openAnnId = params.get('open_announcement');
+      if (openAnnId && announcements.length > 0) {
+        const match = announcements.find(a => String(a.id) === String(openAnnId));
+        openAnnouncementsCenter(match ? match.id : null);
+        params.delete('open_announcement');
+        const nextUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '') + window.location.hash;
+        window.history.replaceState({}, '', nextUrl);
+      } else if (window.location.hash === '#announcements' && announcements.length > 0) {
+        openAnnouncementsCenter(null);
+        window.history.replaceState({}, '', window.location.pathname + window.location.search);
+      }
+    } catch (_) {}
+  }, [user, announcements, openAnnouncementsCenter]);
 
   const handleTriggerManualReminder = async () => {
     setTriggeringReminder(true);
@@ -2153,10 +2525,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           logout={logout}
           announcements={announcements}
           unreadAnnouncementsCount={unreadAnnouncementsCount}
-          onOpenAnnouncements={() => {
-            setShowAnnouncementsModal(true);
-            markAnnouncementsAsRead();
-          }}
+          onOpenAnnouncements={() => openAnnouncementsCenter(null)}
           onOpenProfile={() => setShowProfileModal(true)}
           onOpenInstall={() => setShowInstallModal(true)}
           installPrompt={installPrompt}
@@ -2168,7 +2537,15 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
         {showAnnouncementsModal && (
           <AnnouncementsModal
             announcements={announcements}
-            onClose={() => setShowAnnouncementsModal(false)}
+            initialSelectedId={selectedAnnouncementId}
+            directNotification={directPushNotification}
+            onClearDirectNotification={() => setDirectPushNotification(null)}
+            onClose={() => {
+              setShowAnnouncementsModal(false);
+              setSelectedAnnouncementId(null);
+              setDirectPushNotification(null);
+            }}
+            onMarkRead={markAnnouncementAsRead}
             onMarkAllRead={markAnnouncementsAsRead}
           />
         )}
@@ -2330,12 +2707,9 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
               <button
                 type="button"
                 className="btn btn--ghost btn--sm btn--icon asas-bell-btn"
-                onClick={() => {
-                  setShowAnnouncementsModal(true);
-                  markAnnouncementsAsRead();
-                }}
-                aria-label="التعميمات الرسمية"
-                title="التعميمات الرسمية"
+                onClick={() => openAnnouncementsCenter(null)}
+                aria-label="مركز الإشعارات والتعميمات"
+                title="مركز الإشعارات والتعميمات"
               >
                 <Icon name="bell" />
                 {unreadAnnouncementsCount > 0 && <span className="asas-bell-badge num">{unreadAnnouncementsCount}</span>}
@@ -2395,7 +2769,17 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
               </button>
             </div>
           )}
-          {notice && <div role="status" className="asas-notice">{notice}</div>}
+          {notice && (
+            <div role="status" className="asas-notice">
+              <div className="asas-notice__content">
+                <span className="asas-notice__icon" aria-hidden="true">
+                  <Icon name="checkCircle" />
+                </span>
+                <span className="asas-notice__text">{notice}</span>
+              </div>
+              <Button variant="ghost" size="sm" icon="close" label="إغلاق الإشعار" onClick={() => setNotice('')} />
+            </div>
+          )}
           {busy && !data && <Empty>جارٍ جلب وتحديث البيانات لحظياً…</Empty>}
 
           {/* DASHBOARD TAB */}
@@ -3898,42 +4282,68 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           {tab === 'announcements' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-                <p className="asas-muted" style={{ margin: 0 }}>
-                  نشر بيانات رسمية تظهر فوراً لجميع الموظفين في التطبيق والموقع مع إرسال بريد إلكتروني اختياري.
+                <p className="asas-muted prose" style={{ margin: 0 }}>
+                  نشر تعميمات وإشعارات رسمية تصل فوراً لهواتف الموظفين وتظهر في التطبيق. اضغط على أي إشعار لعرض الرسالة كاملة.
                 </p>
               </div>
 
               <div className="asas-announcements-grid">
-                {announcements.map(a => (
-                  <article key={a.id} className={`asas-announcement-card ${a.priority || 'normal'}`}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text)' }}>{a.title}</h3>
-                      <span className={`asas-badge ${a.priority || 'normal'}`}>
-                        {a.priority === 'urgent' ? 'عاجل جداً' : a.priority === 'important' ? 'هام' : 'إشعار رسمي'}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)', whiteSpace: 'pre-line', margin: '8px 0' }}>
-                      {a.content}
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: 11.5, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 8, flexWrap: 'wrap', gap: 8 }}>
-                      <div>المرسل: <strong>{a.sender_name || 'الإدارة'}</strong> · <time>{date(a.created_at)}</time></div>
-                      {can('employees.write') && (
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="asas-btn sm" onClick={() => edit('announcements', a)} title="تعديل التعميم">
-                            <Icon name="edit" />
-                            تعديل
-                          </button>
-                          <button className="asas-btn sm danger" onClick={() => deleteAnnouncement(a.id)} title="حذف التعميم">
-                            <Icon name="trash" />
-                            حذف
-                          </button>
+                {announcements.map(a => {
+                  const meta = getNotificationPriorityMeta(a.priority);
+                  return (
+                    <article
+                      key={a.id}
+                      className={`asas-announcement-card asas-announcement-card--interactive ${a.priority || 'normal'}`}
+                      onClick={() => openAnnouncementsCenter(a.id)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openAnnouncementsCenter(a.id);
+                        }
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 10 }}>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16.5, fontWeight: 700, margin: 0, color: 'var(--text)', lineHeight: 1.4 }}>{a.title}</h3>
+                        <span className={`pill ${meta.pillClass}`}>
+                          <Icon name={meta.icon} />
+                          {meta.label}
+                        </span>
+                      </div>
+                      <p className="asas-notif-excerpt" style={{ WebkitLineClamp: 3 }}>
+                        {a.content}
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: 12, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 10, flexWrap: 'wrap', gap: 8 }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                          <Avatar name={a.sender_name || 'الإدارة'} size={26} />
+                          <span>
+                            <strong style={{ color: 'var(--text-2)' }}>{a.sender_name || 'الإدارة'}</strong>
+                            {' · '}
+                            <time className="num">{date(a.created_at)}</time>
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </article>
-                ))}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="sm" icon="eye" onClick={() => openAnnouncementsCenter(a.id)}>
+                            عرض كامل
+                          </Button>
+                          {can('employees.write') && (
+                            <>
+                              <Button variant="ghost" size="sm" icon="edit" label="تعديل التعميم" onClick={() => edit('announcements', a)} />
+                              <Button variant="danger" size="sm" icon="trash" label="حذف التعميم" onClick={() => deleteAnnouncement(a.id)} />
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
-              {!announcements.length && !busy && <Empty>لا توجد تعميمات نشطة حالياً.</Empty>}
+              {!announcements.length && !busy && (
+                <EmptyState icon="bell" title="لا توجد تعميمات رسمية بعد">
+                  انشر أول تعميم رسمي ليصل فوراً كإشعار إلى هواتف وحسابات الموظفين.
+                </EmptyState>
+              )}
             </div>
           )}
 
@@ -4623,11 +5033,21 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       {showAnnouncementsModal && (
         <AnnouncementsModal
           announcements={announcements}
-          onClose={() => setShowAnnouncementsModal(false)}
+          initialSelectedId={selectedAnnouncementId}
+          directNotification={directPushNotification}
+          onClearDirectNotification={() => setDirectPushNotification(null)}
+          onClose={() => {
+            setShowAnnouncementsModal(false);
+            setSelectedAnnouncementId(null);
+            setDirectPushNotification(null);
+          }}
+          onMarkRead={markAnnouncementAsRead}
           onMarkAllRead={markAnnouncementsAsRead}
           canManage={can('employees.write')}
           onEdit={(a) => {
             setShowAnnouncementsModal(false);
+            setSelectedAnnouncementId(null);
+            setDirectPushNotification(null);
             edit('announcements', a);
           }}
           onDelete={async (id) => {
@@ -6255,28 +6675,55 @@ function playDutyReminderChime() {
 function sendSystemNotification(title, body, options = {}) {
   try {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      const fullBody = options.fullBody || body;
+      const previewBody = String(body || '').length > 160
+        ? `${String(body).slice(0, 157).trim()}… — اضغط لعرض الرسالة كاملة`
+        : body;
+      const payloadData = {
+        url: options.url || '/asas',
+        title,
+        body: previewBody,
+        fullBody,
+        type: options.type || 'general',
+        priority: options.priority || 'normal',
+        announcementId: options.announcementId || null,
+        senderName: options.senderName || 'نظام أساس للحضور',
+        createdAt: new Date().toISOString(),
+        ...(options.data || {})
+      };
       const opts = {
-        body,
+        body: previewBody,
         icon: '/icon-192.png',
         badge: '/favicon.png',
+        dir: 'rtl',
+        lang: 'ar',
         tag: options.tag || 'asas-geofence',
         renotify: true,
         vibrate: [200, 100, 200],
-        data: { url: '/asas' },
-        ...options
+        ...options,
+        data: payloadData
+      };
+      const showFallback = () => {
+        const n = new Notification(title, opts);
+        n.onclick = () => {
+          try { window.focus(); } catch (_) {}
+          window.dispatchEvent(new CustomEvent('asas:open-notification', { detail: payloadData }));
+          n.close();
+        };
       };
       if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
         navigator.serviceWorker.ready.then(reg => {
           if (reg && reg.showNotification) {
-            reg.showNotification(title, opts);
+            reg.showNotification(title, {
+              ...opts,
+              actions: [{ action: 'open', title: 'عرض الرسالة كاملة' }]
+            });
           } else {
-            new Notification(title, opts);
+            showFallback();
           }
-        }).catch(() => {
-          new Notification(title, opts);
-        });
+        }).catch(showFallback);
       } else {
-        new Notification(title, opts);
+        showFallback();
       }
     }
   } catch (_) {}
@@ -6641,17 +7088,36 @@ function Employee({ user, logout, announcements, unreadAnnouncementsCount = 0, o
       const snoozeAlertKey = `asas_duty_reminder_alert_snooze_${curUser.id}_${alertId}`;
       const lastAlertAck = localStorage.getItem(ackAlertKey);
       const snoozeUntil = Number(localStorage.getItem(snoozeAlertKey) || 0);
+      const urlParams = new URLSearchParams(window.location.search);
+      const forceOpenFromPush = urlParams.get('open_reminder') === '1';
 
-      if (!lastAlertAck && Date.now() > snoozeUntil) {
+      if (forceOpenFromPush || (!lastAlertAck && Date.now() > snoozeUntil)) {
+        if (forceOpenFromPush) {
+          urlParams.delete('open_reminder');
+          const cleanUrl = window.location.pathname + (urlParams.toString() ? `?${urlParams.toString()}` : '') + window.location.hash;
+          window.history.replaceState({}, '', cleanUrl);
+        }
         setDutyReminder(prev => {
           if (prev?.open && prev?.alertId === alertId) return prev;
           playDutyReminderChime();
           const customMsg = data.duty_reminder_alert.custom_note;
-          sendSystemNotification(
-            '⏰ تذكير إثبات واستمرار الحضور',
-            customMsg || `تنبيه تذكير رسمي من الإدارة (${curUser.name}): يرجى تأكيد استمرار تواجدك وتفقد حالة الدوام.`,
-            { tag: `asas-duty-alert-${alertId}` }
-          );
+          const fullText = customMsg
+            ? `${customMsg}\n\nيرجى تأكيد استمرار تواجدك وتوثيق ساعات دوامك بدقة.`
+            : `تنبيه تذكير رسمي من الإدارة (${curUser.name}): يرجى تأكيد استمرار تواجدك وتفقد حالة الدوام.`;
+          if (!forceOpenFromPush) {
+            sendSystemNotification(
+              'تذكير إثبات واستمرار الحضور · أساس',
+              customMsg || `تنبيه تذكير رسمي من الإدارة (${curUser.name}): يرجى تأكيد استمرار تواجدك وتفقد حالة الدوام.`,
+              {
+                tag: `asas-duty-alert-${alertId}`,
+                type: 'duty_reminder',
+                priority: customMsg ? 'important' : 'normal',
+                fullBody: fullText,
+                senderName: data.duty_reminder_alert.admin_name || 'إدارة الدوام',
+                url: '/asas?open_reminder=1'
+              }
+            );
+          }
           return {
             open: true,
             alertId,
@@ -7232,7 +7698,17 @@ function Employee({ user, logout, announcements, unreadAnnouncementsCount = 0, o
           </button>
         </div>
       ) : null}
-      {message && <div className="asas-notice">{message}</div>}
+      {message && (
+        <div role="status" className="asas-notice">
+          <div className="asas-notice__content">
+            <span className="asas-notice__icon" aria-hidden="true">
+              <Icon name="checkCircle" />
+            </span>
+            <span className="asas-notice__text">{message}</span>
+          </div>
+          <Button variant="ghost" size="sm" icon="close" label="إغلاق الإشعار" onClick={() => setMessage('')} />
+        </div>
+      )}
 
       {/* SUBPAGE 1: Attendance & Duty Status */}
       {empPage === 'duty' && (
@@ -7714,23 +8190,33 @@ function Employee({ user, logout, announcements, unreadAnnouncementsCount = 0, o
             </div>
           }
         >
-          <div style={{ padding: '8px 0', lineHeight: 1.8 }}>
-            <p style={{ margin: '0 0 14px', fontSize: 14.5, color: 'var(--text)' }}>
-              مرحباً <strong>{user?.name}</strong>، نود تذكيرك بتأكيد تواجدك على رأس العمل لتوثيق استمرار ساعات دوامك بدقة ونزاهة واحتساب استحقاقاتك كاملاً.
+          <div className="asas-notif-center">
+            <p className="prose" style={{ margin: 0, fontSize: 14.5, color: 'var(--text)' }}>
+              مرحباً <strong>{firstName(user?.name || '') || user?.name}</strong>، نود تذكيرك بتأكيد تواجدك على رأس العمل لتوثيق استمرار ساعات دوامك بدقة ونزاهة.
             </p>
             {dutyReminder.custom_note && (
-              <div style={{ background: 'rgba(186, 149, 85, 0.12)', border: '1px solid var(--accent)', borderRadius: 8, padding: 12, marginBottom: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="bell" style={{ width: 14, height: 14 }} />
-                  <span>تنبيه وملاحظة من الإدارة:</span>
+              <Glass className="asas-notif-reader is-important" style={{ padding: 14, gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <Avatar name={dutyReminder.admin_name || 'الإدارة'} size={30} />
+                    <strong style={{ fontSize: 13.5, color: 'var(--text)' }}>
+                      {dutyReminder.admin_name ? `رسالة من ${dutyReminder.admin_name}` : 'رسالة وتنبيه من الإدارة'}
+                    </strong>
+                  </div>
+                  <span className="pill pill--partial">
+                    <Icon name="bell" />
+                    تنبيه مباشر
+                  </span>
                 </div>
-                <div style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>{dutyReminder.custom_note}</div>
-              </div>
+                <div className="prose asas-notif-full-body" style={{ padding: '12px 14px', fontSize: 14.5 }}>
+                  {dutyReminder.custom_note}
+                </div>
+              </Glass>
             )}
             <Glass className="card" style={{ padding: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 13, color: 'var(--text-2)' }}>المدة المسجلة بالدوام:</span>
-                <strong className="num" style={{ color: 'var(--paid)', fontSize: 16 }}>{dutyReminder.hoursOnDuty || 2} ساعات متواصلة</strong>
+                <strong className="num" style={{ color: 'var(--paid)', fontSize: 16 }}>{formatNumber(dutyReminder.hoursOnDuty || 2)} ساعات متواصلة</strong>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--hairline)', paddingTop: 8 }}>
                 <span style={{ fontSize: 13, color: 'var(--text-2)' }}>حالة المناوبة:</span>

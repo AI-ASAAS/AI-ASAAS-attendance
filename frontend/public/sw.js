@@ -1,5 +1,5 @@
 // public/sw.js — AI-ASAAS Sovereign Attendance Service Worker
-const CACHE_NAME = 'asas-attendance-v5.2';
+const CACHE_NAME = 'asas-attendance-v5.3';
 const ASSETS_TO_CACHE = [
   '/',
   '/asas',
@@ -38,8 +38,14 @@ self.addEventListener('activate', (event) => {
 // ─── Push Notifications: Handle Incoming Web Push ─────────────
 self.addEventListener('push', (event) => {
   let payload = {
-    title: '⏰ نظام أساس للحضور والدوام',
+    title: 'نظام أساس · تنبيه الدوام',
     body: 'تذكير: يرجى تفقد حالة دوامك وتسجيل الحضور.',
+    fullBody: '',
+    type: 'general',
+    priority: 'normal',
+    announcementId: null,
+    senderName: 'إدارة نظام أساس',
+    createdAt: new Date().toISOString(),
     icon: '/icon-192.png',
     badge: '/favicon.png',
     tag: 'asas-duty-reminder',
@@ -52,33 +58,72 @@ self.addEventListener('push', (event) => {
       payload = { ...payload, ...data };
     }
   } catch (_) {
-    if (event.data) payload.body = event.data.text();
+    if (event.data) {
+      const txt = event.data.text();
+      payload.body = txt;
+      payload.fullBody = txt;
+    }
   }
 
-  const isUrgent = Boolean(payload.tag && (payload.tag.includes('duty') || payload.tag.includes('urgent')));
-  event.waitUntil(
-    self.registration.showNotification(payload.title, {
+  if (!payload.fullBody) payload.fullBody = payload.body;
+
+  const isUrgent = Boolean(
+    payload.priority === 'urgent' ||
+    (payload.tag && (payload.tag.includes('duty') || payload.tag.includes('urgent')))
+  );
+
+  const notifOptions = {
+    body: payload.body,
+    icon: payload.icon || '/icon-192.png',
+    badge: payload.badge || '/favicon.png',
+    tag: payload.tag || 'asas-duty-reminder',
+    dir: 'rtl',
+    lang: 'ar',
+    renotify: true,
+    requireInteraction: isUrgent,
+    timestamp: payload.timestamp || Date.now(),
+    vibrate: isUrgent ? [260, 100, 260, 100, 260] : [180, 90, 180],
+    actions: [
+      { action: 'open', title: 'عرض الرسالة كاملة' }
+    ],
+    data: {
+      url: payload.url || '/asas',
+      title: payload.title,
       body: payload.body,
-      icon: payload.icon || '/icon-192.png',
-      badge: payload.badge || '/favicon.png',
-      tag: payload.tag || 'asas-duty-reminder',
-      renotify: true,
-      requireInteraction: isUrgent,
-      vibrate: isUrgent ? [300, 100, 300, 100, 300] : [200, 100, 200],
-      data: { url: payload.url || '/asas' }
-    })
+      fullBody: payload.fullBody,
+      type: payload.type || 'general',
+      priority: payload.priority || 'normal',
+      announcementId: payload.announcementId || null,
+      senderName: payload.senderName || 'إدارة نظام أساس',
+      createdAt: payload.createdAt || new Date().toISOString()
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, notifOptions)
   );
 });
 
-// ─── Notification Click: Focus / Open Window ──────────────────
+// ─── Notification Click: Focus / Open Window & Show Full Message ──
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const urlToOpen = event.notification.data?.url || '/asas';
+  const notifData = event.notification.data || {};
+  let urlToOpen = notifData.url || '/asas';
+
+  if (notifData.announcementId && !urlToOpen.includes('open_announcement=')) {
+    urlToOpen = `/asas?open_announcement=${encodeURIComponent(String(notifData.announcementId))}`;
+  } else if (notifData.type === 'duty_reminder' && !urlToOpen.includes('open_reminder=')) {
+    urlToOpen = '/asas?open_reminder=1';
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
-        if (client.url && client.url.includes('/asas') && 'focus' in client) {
+        if (client.url && (client.url.includes('/asas') || client.url.endsWith('/')) && 'focus' in client) {
+          client.postMessage({
+            type: 'ASAS_OPEN_NOTIFICATION',
+            payload: notifData
+          });
           return client.focus();
         }
       }
