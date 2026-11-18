@@ -347,7 +347,7 @@ app.post('/api/push/subscribe',wrap(async(req,res)=>{
  const sub=req.body?.subscription;
  if(!sub)error('VALIDATION','بيانات الاشتراك في الإشعارات مطلوبة');
  await webpushService.saveSubscription(db, req.user.id, sub, req.headers['user-agent']);
- respond(res,{success:true,message:'تم تفعيل إشعارات الهاتف بنجاح ✅'});
+ respond(res,{success:true,message:'تم تفعيل إشعارات الهاتف بنجاح'});
 }));
 
 app.post('/api/push/unsubscribe',wrap(async(req,res)=>{
@@ -1180,7 +1180,7 @@ app.post('/api/attendance/heartbeat',employee,wrap(async(req,res)=>{
    now.toISOString(),
    JSON.stringify({ source: 'duty_reminder_heartbeat', confirmed_at: now.toISOString(), reminder_type: req.body?.reminder_type || 'two_hour_interval' })
   ]);
-  return { active: true, confirmed: true, message: 'تم تأكيد استمرار حضورك بنجاح ✅', confirmed_at: now.toISOString() };
+  return { active: true, confirmed: true, message: 'تم تأكيد استمرار حضورك بنجاح', confirmed_at: now.toISOString() };
  });
  respond(res, result);
 }));
@@ -1540,7 +1540,7 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
    success: true,
    reminded_count: count,
    message: count > 0 
-     ? `تم إرسال التنبيه الفوري بنجاح لـ ${targetLabel} عبر الإشعارات والجوال ✅`
+     ? `تم إرسال التنبيه الفوري بنجاح لـ ${targetLabel} عبر الإشعارات والجوال`
      : 'لم يتم العثور على موظفين مطابقين لإرسال التذكير.'
  });
 }));

@@ -89,11 +89,11 @@ async function notifyAccountCreated(account, deviceName) {
 // ─── 2. Check-In Notification Email ───────────────────────────────────────
 async function notifyCheckIn(account, branchName, timeStr) {
   if (!account.email) return;
-  const subject = `✅ [أساس] تم تسجيل حضورك بنجاح (${timeStr})`;
+  const subject = `[أساس] تم تسجيل حضورك بنجاح (${timeStr})`;
   const html = `
     <div dir="rtl" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e0dacb; border-radius: 12px; overflow: hidden;">
       <div style="background: #2d6a4f; padding: 20px; text-align: center; color: #ffffff;">
-        <h2 style="margin: 0; font-size: 20px;">تم توثيق تسجيل الحضور ✅</h2>
+        <h2 style="margin: 0; font-size: 20px;">تم توثيق تسجيل الحضور</h2>
         <p style="margin: 4px 0 0; font-size: 13px; opacity: 0.9;">نظام أساس للحضور والانصراف</p>
       </div>
       <div style="padding: 24px; color: #231f20; line-height: 1.6;">
@@ -156,7 +156,7 @@ async function notifyLeaveUpdate(account, leave, status) {
   if (!account.email) return;
   const statusLabels = {
     pending: 'قيد المراجعة',
-    approved: 'تمت الموافقة ✅',
+    approved: 'تمت الموافقة',
     rejected: 'تم الرفض ❌'
   };
   const statusColors = {

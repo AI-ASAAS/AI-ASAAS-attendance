@@ -740,7 +740,7 @@
           enterBtn.style.padding = '18px 16px';
         }
         if (actionTitle) actionTitle.textContent = 'بوابة كود الدخول والعودة (Check-In)';
-        if (tokenHint) tokenHint.textContent = '✅ كود الدخول والعودة المعتمد مُفعل وجاهز';
+        if (tokenHint) tokenHint.textContent = 'كود الدخول والعودة المعتمد مُفعل وجاهز';
         if (tabEnter) { tabEnter.style.border = '2px solid var(--success)'; tabEnter.style.background = '#eaf4ee'; }
       } else if (actionHint === 'exit') {
         if (enterBtn) enterBtn.style.display = 'none';
@@ -750,10 +750,10 @@
           exitBtn.style.padding = '18px 16px';
         }
         if (actionTitle) actionTitle.textContent = 'بوابة كود الخروج والانصراف (Check-Out)';
-        if (tokenHint) tokenHint.textContent = '✅ كود الخروج والانصراف المعتمد مُفعل وجاهز';
+        if (tokenHint) tokenHint.textContent = 'كود الخروج والانصراف المعتمد مُفعل وجاهز';
         if (tabExit) { tabExit.style.border = '2px solid var(--ink)'; tabExit.style.background = '#f5f3f0'; }
       } else if (qrToken) {
-        if (tokenHint) tokenHint.textContent = '✅ رمز اليوم موثق ومُفعل';
+        if (tokenHint) tokenHint.textContent = 'رمز اليوم موثق ومُفعل';
       }
     }
 
@@ -791,7 +791,7 @@
               accuracy: Math.round(pos.coords.accuracy),
               captured_at: new Date(pos.timestamp).toISOString()
             };
-            box.textContent = `✅ تم التقاط الموقع (دقة: ${latestFix.accuracy} م)`;
+            box.textContent = `تم التقاط الموقع (دقة: ${latestFix.accuracy} م)`;
             box.style.color = 'var(--success)';
             resolve(latestFix);
           },
@@ -1145,7 +1145,7 @@
       if (isHidden && currentRecord) {
         const firstIn = currentRecord.first_in ? new Date(currentRecord.first_in).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' }) : '—';
         const lastOut = currentRecord.last_out ? new Date(currentRecord.last_out).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' }) : '—';
-        const late = currentRecord.late_minutes ? `${currentRecord.late_minutes} دقيقة تأخير` : 'في الموعد المحدد ✅';
+        const late = currentRecord.late_minutes ? `${currentRecord.late_minutes} دقيقة تأخير` : 'في الموعد المحدد ';
         const exitReason = { geofence: 'مغادرة الموقع التلقائية (Geofence)', manual: 'تسجيل يدوي', scheduled: 'نهاية الدوام' }[currentRecord.exit_reason] || (currentRecord.exit_reason || '—');
         
         document.getElementById('todayRecordContent').innerHTML = `

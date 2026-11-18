@@ -1861,7 +1861,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       };
       const res = await api('/admin/remind-duty', 'POST', payload);
       playChime('success');
-      setNotice(res?.message || 'تم إرسال تذكير الدوام بنجاح ✅');
+      setNotice(res?.message || 'تم إرسال تذكير الدوام بنجاح');
       load(true);
       setShowDutyReminderModal(false);
       setReminderCustomNote('');
@@ -7396,7 +7396,7 @@ function Employee({ user, logout, announcements, unreadAnnouncementsCount = 0, o
         }
       }
       playChime('success');
-      setMessage(res?.message || 'تم تأكيد استمرار حضورك بنجاح ✅');
+      setMessage(res?.message || 'تم تأكيد استمرار حضورك بنجاح');
       setDutyReminder(null);
       setReminderConfirmedToast(true);
       setTimeout(() => setReminderConfirmedToast(false), 6000);
@@ -7820,7 +7820,7 @@ function Employee({ user, logout, announcements, unreadAnnouncementsCount = 0, o
           <div className="asas-banner alert alert--success" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Icon name="check" style={{ width: 18, height: 18, color: 'var(--success)' }} />
-              <span>تم توثيق وتأكيد استمرار حضورك بنجاح ✅ وسيتم تذكيرك تلقائياً بعد ساعتين.</span>
+              <span>تم توثيق وتأكيد استمرار حضورك بنجاح، وسيتم تذكيرك تلقائياً بعد ساعتين.</span>
             </div>
             <button type="button" className="btn btn--ghost btn--sm" onClick={() => setReminderConfirmedToast(false)}>✕</button>
           </div>
