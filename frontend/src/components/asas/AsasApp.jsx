@@ -1711,6 +1711,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const [collectiveData, setCollectiveData] = useState(null);
   const [individualData, setIndividualData] = useState(null);
   const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
+  const [activePreset, setActivePreset] = useState('today');
   const [selectedMonth, setSelectedMonth] = useState(() => {
     try {
       const d = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden' }).format(new Date());
@@ -2092,6 +2093,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       setFrom(`${prevYear}-${pmStr}-01`);
       setTo(`${prevYear}-${pmStr}-${ldStr}`);
     }
+    setActivePreset(presetKey);
+    setShowMonthYearPicker(false);
   }, []);
 
   const applyMonthRange = useCallback((y, m) => {
@@ -2102,6 +2105,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
     const ldStr = String(lastDay).padStart(2, '0');
     setFrom(`${yr}-${mStr}-01`);
     setTo(`${yr}-${mStr}-${ldStr}`);
+    setActivePreset('custom_month');
     setShowMonthYearPicker(false);
   }, []);
 
@@ -2994,92 +2998,120 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     onChange={setRecordsTabMode}
                     options={[
                       { value: 'collective', label: 'التقرير الجماعي' },
-                      { value: 'individual', label: 'سجل الموظف الفردي' },
+                      { value: 'individual', label: 'السجل الفردي' },
                       { value: 'live', label: 'الحركات المباشرة' }
                     ]}
                   />
                 </div>
 
-                {/* Period Controls & Quick Presets */}
-                <div className="asas-records-period-box">
-                  <div className="asas-presets-bar">
-                    <span className="asas-presets-label">فترات سريعة:</span>
-                    {[
-                      ['today', 'اليوم'],
-                      ['yesterday', 'أمس'],
-                      ['this_week', 'هذا الأسبوع'],
-                      ['this_month', 'هذا الشهر'],
-                      ['last_month', 'الشهر السابق']
-                    ].map(([key, label]) => (
+                {/* Period Controls & Quick Presets (AI-ASAAS/skills Responsive Card) */}
+                <Glass className="asas-records-period-box">
+                  <div className="asas-presets-section">
+                    <div className="asas-presets-head">
+                      <span className="asas-presets-label">
+                        <Icon name="clock" />
+                        فترات سريعة
+                      </span>
                       <button
-                        key={key}
-                        className="asas-btn sm asas-preset-btn"
-                        onClick={() => applyPreset(key)}
+                        type="button"
+                        className="chip asas-month-toggle-chip"
+                        aria-pressed={showMonthYearPicker || activePreset === 'custom_month'}
+                        onClick={() => setShowMonthYearPicker(v => !v)}
                       >
-                        {label}
+                        <Icon name="calendar" />
+                        <span>تحديد شهر وسنة</span>
                       </button>
-                    ))}
-                    <button
-                      className={`asas-btn sm asas-preset-btn ${showMonthYearPicker ? 'primary' : ''}`}
-                      onClick={() => setShowMonthYearPicker(!showMonthYearPicker)}
-                    >
-                      <Icon name="calendar" style={{ width: 12, height: 12 }} />
-                      <span>تحديد شهر وسنة</span>
-                    </button>
+                    </div>
+
+                    <div className="chips asas-presets-chips" role="group" aria-label="فترات سريعة">
+                      {[
+                        ['today', 'اليوم'],
+                        ['yesterday', 'أمس'],
+                        ['this_week', 'هذا الأسبوع'],
+                        ['this_month', 'هذا الشهر'],
+                        ['last_month', 'الشهر السابق']
+                      ].map(([key, label]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          className="chip"
+                          aria-pressed={activePreset === key}
+                          onClick={() => applyPreset(key)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Month & Year Picker Dropdown */}
                   {showMonthYearPicker && (
                     <div className="asas-month-picker-panel">
-                      <Field label="السنة">
-                        <select
-                          className="asas-input"
-                          style={{ minWidth: 110 }}
-                          value={selectedYear}
-                          onChange={e => setSelectedYear(Number(e.target.value))}
+                      <div className="asas-month-picker-fields">
+                        <Field label="السنة">
+                          <select
+                            className="asas-input"
+                            value={selectedYear}
+                            onChange={e => setSelectedYear(Number(e.target.value))}
+                          >
+                            {[2024, 2025, 2026, 2027].map(y => (
+                              <option key={y} value={y}>{y}</option>
+                            ))}
+                          </select>
+                        </Field>
+                        <Field label="الشهر">
+                          <select
+                            className="asas-input"
+                            value={selectedMonth}
+                            onChange={e => setSelectedMonth(Number(e.target.value))}
+                          >
+                            {[
+                              [1, 'يناير (1)'], [2, 'فبراير (2)'], [3, 'مارس (3)'], [4, 'أبريل (4)'],
+                              [5, 'مايو (5)'], [6, 'يونيو (6)'], [7, 'يوليو (7)'], [8, 'أغسطس (8)'],
+                              [9, 'سبتمبر (9)'], [10, 'أكتوبر (10)'], [11, 'نوفمبر (11)'], [12, 'ديسمبر (12)']
+                            ].map(([m, name]) => (
+                              <option key={m} value={m}>{name}</option>
+                            ))}
+                          </select>
+                        </Field>
+                      </div>
+                      <div className="asas-month-picker-actions">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon="check"
+                          onClick={() => applyMonthRange(selectedYear, selectedMonth)}
                         >
-                          {[2024, 2025, 2026, 2027].map(y => (
-                            <option key={y} value={y}>{y}</option>
-                          ))}
-                        </select>
-                      </Field>
-                      <Field label="الشهر">
-                        <select
-                          className="asas-input"
-                          style={{ minWidth: 150 }}
-                          value={selectedMonth}
-                          onChange={e => setSelectedMonth(Number(e.target.value))}
+                          تطبيق الشهر
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowMonthYearPicker(false)}
                         >
-                          {[
-                            [1, 'يناير (1)'], [2, 'فبراير (2)'], [3, 'مارس (3)'], [4, 'أبريل (4)'],
-                            [5, 'مايو (5)'], [6, 'يونيو (6)'], [7, 'يوليو (7)'], [8, 'أغسطس (8)'],
-                            [9, 'سبتمبر (9)'], [10, 'أكتوبر (10)'], [11, 'نوفمبر (11)'], [12, 'ديسمبر (12)']
-                          ].map(([m, name]) => (
-                            <option key={m} value={m}>{name}</option>
-                          ))}
-                        </select>
-                      </Field>
-                      <button
-                        className="asas-btn sm primary"
-                        onClick={() => applyMonthRange(selectedYear, selectedMonth)}
-                      >
-                        <Icon name="check" />
-                        تطبيق الشهر
-                      </button>
-                      <button
-                        className="asas-btn sm"
-                        onClick={() => setShowMonthYearPicker(false)}
-                      >
-                        إلغاء
-                      </button>
+                          إلغاء
+                        </Button>
+                      </div>
                     </div>
                   )}
 
-                  {/* Date Range Inputs & Filters */}
+                  {/* Date Range Inputs, Search & Export Actions */}
                   <div className="asas-filter-container">
                     <div className="asas-filter-fields">
-                      <Field label="من تاريخ" type="date" value={from} onChange={e => setFrom(e.target.value)} />
-                      <Field label="إلى تاريخ" type="date" value={to} onChange={e => setTo(e.target.value)} />
+                      <div className="asas-filter-dates-row">
+                        <Field
+                          label="من تاريخ"
+                          type="date"
+                          value={from}
+                          onChange={e => { setFrom(e.target.value); setActivePreset(''); }}
+                        />
+                        <Field
+                          label="إلى تاريخ"
+                          type="date"
+                          value={to}
+                          onChange={e => { setTo(e.target.value); setActivePreset(''); }}
+                        />
+                      </div>
 
                       {recordsTabMode === 'individual' && (
                         <div className="asas-filter-emp-select">
@@ -3114,6 +3146,16 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                 onChange={e => setSearch(e.target.value)}
                               />
                               <Icon name="search" className="asas-search-icon" />
+                              {search && (
+                                <button
+                                  type="button"
+                                  className="asas-search-clear-btn"
+                                  onClick={() => setSearch('')}
+                                  aria-label="مسح البحث"
+                                >
+                                  <Icon name="close" style={{ width: 14, height: 14 }} />
+                                </button>
+                              )}
                             </div>
                           </Field>
                         </div>
@@ -3121,23 +3163,23 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     </div>
 
                     {can('reports.export') && (
-                      <div className="asas-filter-export-actions">
-                        <button className="asas-btn sm" disabled={busy} onClick={exportCsv} title="تصدير إلى جدول Excel">
-                          <Icon name="fileSpreadsheet" />
-                          Excel / CSV
-                        </button>
-                        <button className="asas-btn sm" disabled={busy} onClick={exportWord} title="تصدير كملف Word معتمد وفق القالب الرسمي">
-                          <Icon name="file" />
-                          Word (DOCX)
-                        </button>
-                        <button className="asas-btn sm" disabled={busy} onClick={exportTxt} title="تصدير كنص منسق">
-                          <Icon name="download" />
-                          تقرير TXT
-                        </button>
+                      <div className="asas-filter-export-wrap">
+                        <span className="asas-export-label">تصدير التقرير:</span>
+                        <div className="asas-filter-export-actions">
+                          <Button variant="glass" size="sm" icon="fileSpreadsheet" disabled={busy} onClick={exportCsv} title="تصدير إلى جدول Excel">
+                            Excel / CSV
+                          </Button>
+                          <Button variant="glass" size="sm" icon="file" disabled={busy} onClick={exportWord} title="تصدير كملف Word معتمد وفق القالب الرسمي">
+                            Word (DOCX)
+                          </Button>
+                          <Button variant="glass" size="sm" icon="download" disabled={busy} onClick={exportTxt} title="تصدير كنص منسق">
+                            تقرير TXT
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
-                </div>
+                </Glass>
 
                 {/* VIEW 1: COLLECTIVE REPORT */}
                 {recordsTabMode === 'collective' && (
