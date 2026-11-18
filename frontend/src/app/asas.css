@@ -301,15 +301,18 @@ h3 { font-size: clamp(14.5px, 0.4vw + 13px, 16.5px); }
   top: 0;
   z-index: 30;
   padding: 12px var(--page-pad) 0;
+  max-width: 100%;
 }
 
 .asas-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   min-height: var(--header-h);
-  padding-inline: 18px 12px;
+  padding-inline: 16px 12px;
+  max-width: 100%;
+  overflow: hidden;
   background: linear-gradient(165deg, rgba(252, 249, 245, 0.90) 0%, rgba(237, 231, 218, 0.76) 100%);
   border: 1px solid color-mix(in srgb, var(--brand-gold) 24%, var(--hairline));
 }
@@ -322,23 +325,51 @@ h3 { font-size: clamp(14.5px, 0.4vw + 13px, 16.5px); }
 .asas-topbar-start {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
 }
 
 .asas-topbar-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: none;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .asas-menu-btn {
   display: none;
+  flex: none;
 }
 
 .asas-header-mobile-brand {
   display: none;
+}
+
+.asas-header-mobile-brand,
+.site-header__brand .brand {
+  padding: 0;
+  gap: 7px;
+  min-width: 0;
+  flex-shrink: 1;
+  text-decoration: none;
+  color: inherit;
+}
+
+.asas-header-mobile-brand .brand__mark,
+.site-header__brand .brand__mark {
+  width: 26px;
+  height: 31px;
+  flex: none;
+}
+
+.asas-header-mobile-brand .brand__name,
+.site-header__brand .brand__name {
+  font-size: 16.5px;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .asas-header-section {
@@ -353,6 +384,10 @@ h3 { font-size: clamp(14.5px, 0.4vw + 13px, 16.5px); }
   font-weight: 700;
   color: var(--text-2);
   white-space: nowrap;
+  min-width: 0;
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .asas-content {
@@ -1884,6 +1919,10 @@ select.asas-input option {
 }
 
 /* ───────── Modals ───────── */
+.modal-backdrop {
+  z-index: 100;
+}
+
 .asas-modal-backdrop,
 .asas-modal-overlay {
   position: fixed;
@@ -1893,6 +1932,7 @@ select.asas-input option {
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   padding: 20px;
   animation: asasFadeIn 0.2s var(--ease-out);
@@ -2744,6 +2784,7 @@ select.asas-input option {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .asas-qr-toolbar {
@@ -2755,7 +2796,8 @@ select.asas-input option {
 
 .asas-qr-branch-select {
   flex: 1 1 240px;
-  max-width: 340px;
+  min-width: 0;
+  max-width: 420px;
   height: 44px;
 }
 
@@ -2763,6 +2805,7 @@ select.asas-input option {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .asas-qr-branch-head {
@@ -2778,7 +2821,7 @@ select.asas-input option {
 .asas-qr-branch-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: clamp(17px, 1vw + 14px, 20px);
   font-weight: 700;
   color: var(--text);
 }
@@ -2797,7 +2840,7 @@ select.asas-input option {
 }
 
 .asas-qr-card {
-  padding: clamp(16px, 2.2vw, 22px);
+  padding: clamp(14px, 2.2vw, 22px);
   border-radius: var(--radius-xl);
   text-align: center;
   background: linear-gradient(160deg, rgba(252, 249, 245, 0.90) 0%, rgba(237, 231, 218, 0.66) 100%);
@@ -2807,6 +2850,7 @@ select.asas-input option {
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 :root[data-theme='dark'] .asas-qr-card {
@@ -2816,20 +2860,24 @@ select.asas-input option {
 
 .asas-qr-box {
   background: #ffffff;
-  padding: 12px;
+  padding: 10px;
+  width: min(100%, 212px);
   max-width: 100%;
+  aspect-ratio: 1 / 1;
   border-radius: var(--radius-lg);
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--hairline);
+  box-sizing: border-box;
 }
 
 .asas-qr-box svg,
 .asas-qr-box canvas,
 .asas-qr-box img {
+  width: 100% !important;
+  height: 100% !important;
   max-width: 100%;
-  height: auto;
   display: block;
 }
 
@@ -2841,55 +2889,91 @@ select.asas-input option {
 }
 
 .asas-qr-card-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
   width: 100%;
   margin-top: auto;
-  padding-top: 8px;
+  padding-top: 10px;
   border-top: 1px solid var(--hairline);
+}
+
+.asas-qr-card-actions > .btn {
+  width: 100%;
+  justify-content: center;
+  padding-inline: 8px;
 }
 
 /* ───────── A4 QR Poster Preview & Print Sheet (Zero Empty Spaces & Fully Responsive) ───────── */
 .asas-a4-preview-modal {
-  max-width: 860px;
-  width: min(96vw, 860px);
-  max-height: 94dvh;
+  max-width: 100%;
+  width: min(96vw, 820px);
+  max-height: 92dvh;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.asas-a4-preview-modal.is-single {
+  width: min(96vw, 560px);
+}
+
+.asas-a4-preview-modal .asas-modal-head,
+.asas-a4-preview-modal .asas-print-controls,
+.asas-a4-preview-modal .asas-modal-footer {
+  flex: none;
+}
+
+.asas-a4-modal-title {
+  font-size: clamp(15px, 0.8vw + 13px, 18px);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.asas-a4-modal-sub {
+  font-size: 12px;
+  margin: 2px 0 0;
+  line-height: 1.4;
 }
 
 .asas-print-controls {
-  padding: 12px 18px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--hairline);
   background: var(--glass-inset);
 }
 
 .asas-a4-preview-scroll {
   flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: clamp(10px, 2vw, 18px);
-  background: var(--overlay);
+  -webkit-overflow-scrolling: touch;
+  padding: 12px;
+  background: var(--glass-inset);
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
 }
 
 .asas-printable-area {
   width: 100%;
-  display: flex;
-  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+  display: block;
 }
 
-/* On screen: Fluid & tight — ZERO giant 297mm blank spaces and ZERO 210mm horizontal overflow */
+/* On screen: Fluid & tight — ZERO giant 297mm blank spaces and ZERO horizontal overflow */
 .asas-a4-sheet {
   width: 100%;
-  max-width: 760px;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   height: auto;
   min-height: 0;
-  padding: 14px;
+  padding: 12px;
   background: #ffffff;
   color: #1a1918;
   font-family: var(--font-text), serif;
@@ -2897,37 +2981,43 @@ select.asas-input option {
   display: flex;
   flex-direction: column;
   border-radius: 10px;
-  box-shadow: 0 18px 42px -18px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 12px 28px -16px rgba(0, 0, 0, 0.22);
 }
 
 .asas-a4-border {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border: 3px double #ba9555;
   outline: 1.5px solid #1a1918;
   outline-offset: -5px;
-  padding: 18px 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   background: #ffffff;
 }
 
 .asas-a4-header {
   text-align: center;
   border-bottom: 2px solid #ba9555;
-  padding-bottom: 12px;
+  padding-bottom: 10px;
+  min-width: 0;
 }
 
 .asas-a4-logo-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 8px;
 }
 
 .asas-a4-logo-brand {
   text-align: start;
+  min-width: 0;
 }
 
 .asas-a4-logo-stamp {
@@ -2936,11 +3026,12 @@ select.asas-input option {
   color: #55524e;
   font-weight: 600;
   line-height: 1.45;
+  min-width: 0;
 }
 
 .asas-a4-brand-title {
   font-family: var(--font-display), serif;
-  font-size: clamp(17px, 2.6vw, 22px);
+  font-size: clamp(16px, 2.4vw, 21px);
   font-weight: 800;
   color: #1a1918;
   margin: 0;
@@ -2949,7 +3040,7 @@ select.asas-input option {
 
 .asas-a4-subtitle {
   font-family: var(--font);
-  font-size: 11px;
+  font-size: 10.5px;
   color: #8c6928;
   font-weight: 700;
   letter-spacing: 0.4px;
@@ -2958,15 +3049,17 @@ select.asas-input option {
 
 .asas-a4-branch-badge {
   display: inline-block;
+  max-width: 100%;
   background: #fbf7ee;
   border: 1.5px solid #ba9555;
   color: #1a1918;
   font-family: var(--font-display);
-  font-size: clamp(14.5px, 2.2vw, 17px);
+  font-size: clamp(14px, 2vw, 17px);
   font-weight: 800;
-  padding: 5px 20px;
+  padding: 5px 18px;
   border-radius: 30px;
   margin-top: 6px;
+  overflow-wrap: anywhere;
 }
 
 .asas-a4-meta-line {
@@ -2977,9 +3070,11 @@ select.asas-input option {
 }
 
 .asas-a4-codes-grid {
+  width: 100%;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
   align-items: stretch;
 }
 
@@ -2988,9 +3083,13 @@ select.asas-input option {
 }
 
 .asas-a4-code-card {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   border: 1.5px solid #d4c8b2;
   border-radius: 12px;
-  padding: 16px 14px;
+  padding: 14px 12px;
   text-align: center;
   background: #fdfcf9;
   display: flex;
@@ -3005,11 +3104,12 @@ select.asas-input option {
 
 .asas-a4-code-title {
   font-family: var(--font);
-  font-size: 14.5px;
+  font-size: clamp(13px, 1.4vw, 14.5px);
   font-weight: 800;
-  padding: 5px 16px;
+  padding: 5px 14px;
   border-radius: 20px;
   display: inline-block;
+  max-width: 100%;
   color: #ffffff;
 }
 
@@ -3018,18 +3118,26 @@ select.asas-input option {
 
 .asas-a4-qr-frame {
   background: #ffffff;
-  padding: 10px;
+  padding: 8px;
   border: 2px solid #1a1918;
   border-radius: 10px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
+  width: min(100%, 200px);
   max-width: 100%;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+}
+
+.asas-a4-codes-grid.single .asas-a4-qr-frame {
+  width: min(100%, 240px);
 }
 
 .asas-a4-qr-frame svg {
+  width: 100% !important;
+  height: 100% !important;
   max-width: 100%;
-  height: auto;
   display: block;
 }
 
@@ -3038,11 +3146,13 @@ select.asas-input option {
   font-weight: 700;
   color: #292524;
   line-height: 1.5;
+  overflow-wrap: break-word;
 }
 
 .asas-a4-steps-list {
   margin: 0;
-  padding: 8px 22px 8px 12px;
+  padding-block: 8px;
+  padding-inline: 22px 12px;
   font-size: 11px;
   color: #44403c;
   line-height: 1.65;
@@ -3050,7 +3160,10 @@ select.asas-input option {
   border: 1px dashed #d6d3d1;
   border-radius: 8px;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   text-align: start;
+  overflow-wrap: break-word;
 }
 
 .asas-a4-footer {
@@ -3060,6 +3173,7 @@ select.asas-input option {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .asas-a4-security-notice {
@@ -3084,9 +3198,24 @@ select.asas-input option {
   font-weight: 700;
 }
 
+.asas-a4-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
 @media (max-width: 768px) {
   .asas-qr-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .asas-a4-codes-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
   }
 }
 
@@ -3103,20 +3232,27 @@ select.asas-input option {
 
   .asas-qr-branch-actions {
     width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .asas-qr-branch-actions > .btn {
-    flex: 1 1 auto;
+    width: 100%;
     justify-content: center;
+    padding-inline: 8px;
   }
 
-  .asas-qr-card-actions > .btn {
-    flex: 1 1 auto;
-    justify-content: center;
+  .asas-qr-card-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .asas-qr-card-primary-action {
+    grid-column: 1 / -1;
   }
 
   .asas-print-controls {
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
 
   .asas-a4-preview-scroll {
@@ -3124,13 +3260,15 @@ select.asas-input option {
   }
 
   .asas-a4-sheet {
-    padding: 8px;
+    padding: 6px;
     border-radius: 8px;
+    box-shadow: none;
   }
 
   .asas-a4-border {
-    padding: 12px;
-    gap: 12px;
+    padding: 10px;
+    gap: 10px;
+    outline-offset: -4px;
   }
 
   .asas-a4-logo-row {
@@ -3144,24 +3282,70 @@ select.asas-input option {
     text-align: center;
   }
 
-  .asas-a4-codes-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
+  .asas-a4-code-card {
+    padding: 10px;
+    gap: 8px;
   }
 
-  .asas-a4-code-card {
-    padding: 12px;
+  .asas-a4-qr-frame {
+    width: min(100%, 190px);
+  }
+
+  .asas-a4-codes-grid.single .asas-a4-qr-frame {
+    width: min(100%, 215px);
   }
 
   .asas-a4-footer-bottom {
     justify-content: center;
     text-align: center;
   }
+
+  .asas-a4-footer-actions > .btn--ghost {
+    flex: 0 0 auto;
+  }
+
+  .asas-a4-footer-actions > .btn--primary {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .asas-a4-modal-sub {
+    display: none;
+  }
+
+  .asas-qr-branch-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   RESPONSIVE BREAKPOINTS (Strictly the 3 AI-ASAAS/skills kit breakpoints)
+   RESPONSIVE BREAKPOINTS (Zero Topbar Overlap & Full Mobile/Tablet Polish)
    =========================================================================== */
+
+@media (max-width: 1180px) {
+  .asas-clock-label {
+    display: none;
+  }
+
+  .asas-clock-pill {
+    flex: 0 0 96px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+    padding: 4px 8px;
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  .asas-clock-pill strong,
+  .asas-clock-digits {
+    width: 66px;
+    min-width: 66px;
+    max-width: 66px;
+  }
+}
 
 @media (max-width: 1080px) {
   .asas-grid-halves {
@@ -3175,44 +3359,45 @@ select.asas-input option {
 
 @media (max-width: 900px) {
   .asas-topbar-wrap {
-    padding: 10px var(--page-pad) 0;
+    padding: max(8px, env(safe-area-inset-top, 0px)) var(--page-pad) 0;
   }
 
   .asas-topbar {
-    padding-inline: 12px 10px;
+    padding-inline: 10px;
+    gap: 8px;
   }
 
   .site-header__bar {
-    padding-inline: 12px 10px;
+    padding-inline: 10px;
     gap: 8px;
   }
 
   .site-header__brand {
     font-size: 16px;
-    gap: 8px;
+    gap: 7px;
   }
 
   .asas-topbar-actions,
   .site-header__actions {
-    gap: 4px;
+    gap: 5px;
     flex-shrink: 0;
   }
 
   .asas-clock-pill {
-    flex: 0 0 138px;
-    width: 138px;
-    min-width: 138px;
-    max-width: 138px;
-    padding: 4px 6px;
-    font-size: 12px;
-    gap: 4px;
+    flex: 0 0 92px;
+    width: 92px;
+    min-width: 92px;
+    max-width: 92px;
+    padding: 3px 6px;
+    font-size: 11.5px;
+    gap: 3px;
   }
 
   .asas-clock-pill strong,
   .asas-clock-digits {
-    width: 76px;
-    min-width: 76px;
-    max-width: 76px;
+    width: 62px;
+    min-width: 62px;
+    max-width: 62px;
   }
 
   .asas-content,
@@ -3351,31 +3536,58 @@ select.asas-input option {
     --radius-md: 12px;
   }
 
-  .asas-clock-label {
-    display: none;
+  .asas-topbar-wrap {
+    padding: max(8px, env(safe-area-inset-top, 0px)) 10px 0;
   }
 
-  .asas-clock-pill {
-    flex: 0 0 94px;
-    width: 94px;
-    min-width: 94px;
-    max-width: 94px;
-    padding: 3px 6px;
-    font-size: 11px;
-    gap: 3px;
+  .asas-topbar,
+  .site-header__bar {
+    min-height: 52px;
+    padding-inline: 8px;
+    gap: 6px;
   }
 
-  .asas-clock-pill strong,
-  .asas-clock-digits {
-    width: 66px;
-    min-width: 66px;
-    max-width: 66px;
-    font-size: 11px;
+  .asas-topbar-start {
+    gap: 6px;
+  }
+
+  /* Phones already show system time in the status bar — hiding the clock pill in the narrow header prevents any overlap */
+  .asas-topbar .asas-clock-pill,
+  .site-header__bar .asas-clock-pill {
+    display: none !important;
   }
 
   .asas-topbar-actions,
   .site-header__actions {
-    gap: 3px;
+    gap: 4px;
+  }
+
+  .asas-topbar .btn--icon,
+  .asas-topbar .asas-topbar-reminder-btn,
+  .asas-topbar .asas-bell-btn,
+  .site-header__bar .btn--icon,
+  .site-header__bar .asas-bell-btn {
+    width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 !important;
+  }
+
+  .asas-topbar-user .asas-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .asas-header-mobile-brand .brand__mark,
+  .site-header__brand .brand__mark {
+    width: 24px;
+    height: 28px;
+  }
+
+  .asas-header-mobile-brand .brand__name,
+  .site-header__brand .brand__name {
+    font-size: 15.5px;
   }
 
   .segmented {
@@ -3463,6 +3675,20 @@ select.asas-input option {
     width: 100%;
   }
 
+  .asas-filter-export-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .asas-filter-export-actions > .asas-btn {
+    width: 100%;
+    justify-content: center;
+    padding-inline: 6px;
+    font-size: 11.5px;
+  }
+
   .asas-presets-bar {
     gap: 6px;
   }
@@ -3505,27 +3731,43 @@ select.asas-input option {
 
   .asas-modal-backdrop,
   .asas-modal-overlay {
-    align-items: end;
+    place-items: end stretch;
     padding: 0;
   }
 
-  .asas-modal,
-  .asas-modal.asas-a4-preview-modal {
+  .asas-modal {
     width: 100%;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    max-height: 90dvh;
+    max-height: 92dvh;
+  }
+
+  .asas-modal.asas-a4-preview-modal,
+  .asas-modal.asas-a4-preview-modal.is-single {
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 94dvh;
   }
 
   .asas-modal-body {
-    max-height: calc(90dvh - 120px);
+    max-height: calc(92dvh - 120px);
   }
 
   .asas-modal-footer {
     padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
   }
 
-  .asas-modal-footer > * {
+  .asas-modal-footer:not(.asas-a4-footer-actions) > * {
     flex: 1 1 auto;
+  }
+
+  .asas-a4-footer-actions > .btn--ghost {
+    flex: 0 0 auto;
+  }
+
+  .asas-a4-footer-actions > .btn--primary {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 
   .card__header {
@@ -3545,34 +3787,25 @@ select.asas-input option {
   }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 400px) {
   .site-header__bar,
   .asas-topbar {
-    padding-inline: 8px 6px;
-    gap: 6px;
+    padding-inline: 6px;
+    gap: 4px;
   }
 
-  .asas-clock-pill {
-    flex: 0 0 88px;
-    width: 88px;
-    min-width: 88px;
-    max-width: 88px;
-    padding: 2px 4px;
-    font-size: 10px;
-    gap: 2px;
-  }
-
-  .asas-clock-pill strong,
-  .asas-clock-digits {
-    width: 60px;
-    min-width: 60px;
-    max-width: 60px;
-    font-size: 10px;
+  .asas-topbar-actions,
+  .site-header__actions {
+    gap: 3px;
   }
 
   .site-header__brand .brand__name,
   .asas-header-mobile-brand .brand__name {
     display: none;
+  }
+
+  .asas-filter-export-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -3668,6 +3901,18 @@ select.asas-input option {
     justify-content: center !important;
     gap: 6mm !important;
     padding: 8mm 6mm !important;
+  }
+
+  .asas-a4-qr-frame {
+    width: 56mm !important;
+    height: 56mm !important;
+    padding: 3mm !important;
+  }
+
+  .asas-a4-codes-grid.single .asas-a4-qr-frame {
+    width: 82mm !important;
+    height: 82mm !important;
+    padding: 4mm !important;
   }
 }
 
@@ -3795,15 +4040,16 @@ select.asas-input option {
   cursor: pointer;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1120px) {
   .asas-topbar-reminder-btn .asas-reminder-btn-label,
   .asas-topbar-reminder-btn .sm-badge {
     display: none !important;
   }
   .asas-topbar-reminder-btn {
     padding: 0 !important;
-    width: 36px !important;
-    height: 36px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
     justify-content: center !important;
   }
 }

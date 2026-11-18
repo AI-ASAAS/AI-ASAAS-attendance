@@ -1190,13 +1190,19 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
 
   return (
     <div className="asas-modal-backdrop asas-print-mode" onClick={onClose}>
-      <section className="asas-modal asas-a4-preview-modal" onClick={e => e.stopPropagation()}>
+      <section
+        className={`asas-modal asas-a4-preview-modal ${printMode !== 'both' ? 'is-single' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="معاينة وطباعة ملصق A4"
+        onClick={e => e.stopPropagation()}
+      >
         <div className="asas-modal-head">
           <div className="asas-modal-title-row">
             <Icon name="printer" style={{ color: 'var(--accent)' }} />
             <div style={{ minWidth: 0 }}>
-              <h2 style={{ fontSize: 17, margin: 0 }}><Swash>معاينة وطباعة ملصق A4</Swash></h2>
-              <p className="subtle" style={{ fontSize: 12, margin: 0 }}>متوافق مع الطباعة الرسمية (A4 Portrait) بدون فراغات زائدة</p>
+              <h2 className="asas-a4-modal-title"><Swash>معاينة وطباعة ملصق A4</Swash></h2>
+              <p className="subtle asas-a4-modal-sub">ملصق رسمي جاهز للطباعة (A4 Portrait)</p>
             </div>
           </div>
           <Button variant="ghost" size="sm" icon="close" label="إغلاق" onClick={onClose} />
@@ -1209,7 +1215,7 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
               value={printMode}
               onChange={setPrintMode}
               options={[
-                { value: 'both', label: 'مزدوج (دخول + خروج)' },
+                { value: 'both', label: 'مزدوج' },
                 { value: 'enter', label: 'الدخول فقط' },
                 { value: 'exit', label: 'الخروج فقط' }
               ]}
@@ -1251,7 +1257,7 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
                         تسجيل الحضور (دخول)
                       </div>
                       <div className="asas-a4-qr-frame">
-                        <QRCodeSVG value={enterUrl} size={printMode === 'both' ? 210 : 300} level="M" includeMargin />
+                        <QRCodeSVG value={enterUrl} size={240} level="M" includeMargin />
                       </div>
                       <div className="asas-a4-code-desc">
                         يُعلق عند المدخل الرئيسي للمقر · مخصص حصرياً لتسجيل الدخول والبدء
@@ -1270,7 +1276,7 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
                         تسجيل الانصراف (خروج)
                       </div>
                       <div className="asas-a4-qr-frame">
-                        <QRCodeSVG value={exitUrl} size={printMode === 'both' ? 210 : 300} level="M" includeMargin />
+                        <QRCodeSVG value={exitUrl} size={240} level="M" includeMargin />
                       </div>
                       <div className="asas-a4-code-desc">
                         يُعلق عند المخرج · مخصص حصرياً لتسجيل الانصراف وإنهاء الدوام
@@ -1299,13 +1305,11 @@ function PrintPosterModal({ qr, branchName, initialMode = 'both', onClose }) {
           </div>
         </div>
 
-        <div className="asas-modal-footer">
-          <div className="asas-modal-footer-bar">
-            <Button variant="ghost" size="sm" onClick={onClose}>إغلاق</Button>
-            <Button variant="primary" size="sm" icon="printer" onClick={handlePrint}>
-              طباعة الملصق الآن (A4)
-            </Button>
-          </div>
+        <div className="asas-modal-footer asas-a4-footer-actions">
+          <Button variant="ghost" size="sm" onClick={onClose}>إغلاق</Button>
+          <Button variant="primary" size="sm" icon="printer" onClick={handlePrint}>
+            طباعة الملصق الآن (A4)
+          </Button>
         </div>
       </section>
     </div>
@@ -2016,7 +2020,19 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           : `/admin/${tab}`;
         const result = await api(path);
         setData(result);
-        if (tab === 'branches' || tab === 'qr') setBranches(result);
+        if (tab === 'branches' || tab === 'qr') {
+          setBranches(result);
+          if (tab === 'qr' && Array.isArray(result)) {
+            const activeBranches = result.filter(b => b.active);
+            if (activeBranches.length > 0) {
+              const targetId = activeBranches.some(b => String(b.id) === String(branchId))
+                ? String(branchId)
+                : String(activeBranches[0].id);
+              if (targetId !== String(branchId)) setBranchId(targetId);
+              api(`/admin/branches/${targetId}/qr`).then(qrRes => setQr(qrRes)).catch(() => {});
+            }
+          }
+        }
         if (tab === 'settings' && result) setSystemSettings(result);
         if (tab === 'announcements' && Array.isArray(result)) setAnnouncements(result);
       }
@@ -2407,10 +2423,12 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
     }
   }
 
-  async function showQr() {
+  async function showQr(targetBranchId) {
+    const idToLoad = targetBranchId || branchId;
+    if (!idToLoad) return;
     setBusy(true);
     try {
-      setQr(await api(`/admin/branches/${branchId}/qr`));
+      setQr(await api(`/admin/branches/${idToLoad}/qr`));
       setError('');
     } catch (e) {
       setError(e.message);
@@ -4647,12 +4665,21 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
             <Card title="رموز الحضور والانصراف المعتمدة" icon="qrCode">
               <div className="asas-qr-page">
                 <div className="asas-qr-toolbar">
-                  <select className="input asas-qr-branch-select" value={branchId} onChange={e => setBranchId(e.target.value)}>
+                  <select
+                    className="input asas-qr-branch-select"
+                    value={branchId}
+                    onChange={e => {
+                      const nextId = e.target.value;
+                      setBranchId(nextId);
+                      if (nextId) showQr(nextId);
+                      else setQr(null);
+                    }}
+                  >
                     <option value="">اختر الفرع لعرض الرموز</option>
                     {branches.filter(b => b.active).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
-                  <Button variant="primary" icon="qrCode" onClick={showQr} disabled={!branchId || busy} loading={busy}>
-                    عرض الرموز المعتمدة
+                  <Button variant="primary" icon="qrCode" onClick={() => showQr()} disabled={!branchId || busy} loading={busy}>
+                    تحديث الرموز
                   </Button>
                 </div>
 
@@ -4717,7 +4744,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                 يُعلق عند المدخل · مخصص حصرياً لتسجيل الدخول والعودة
                               </p>
                               <div className="asas-qr-card-actions">
-                                <a className="btn btn--primary btn--sm" href={enterUrl} target="_blank" rel="noreferrer">
+                                <a className="btn btn--primary btn--sm asas-qr-card-primary-action" href={enterUrl} target="_blank" rel="noreferrer">
                                   <Icon name="logIn" />
                                   فتح الدخول
                                 </a>
@@ -4742,7 +4769,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                                 يُعلق عند المخرج · مخصص حصرياً لتسجيل الانصراف وإنهاء الدوام
                               </p>
                               <div className="asas-qr-card-actions">
-                                <a className="btn btn--danger btn--sm" href={exitUrl} target="_blank" rel="noreferrer">
+                                <a className="btn btn--danger btn--sm asas-qr-card-primary-action" href={exitUrl} target="_blank" rel="noreferrer">
                                   <Icon name="logout" />
                                   فتح الخروج
                                 </a>
