@@ -51,7 +51,7 @@ async function ensureLocalDatabase() {
       await db.query(
         `INSERT INTO accounts (identifier, name, password_hash, role, branch_id, shift_id, permissions, active)
          VALUES ($1, $2, $3, 'super_admin', $4, $5, '[]', 1)`,
-        [defaultId, 'مدير أساس', passHash, branchId, shiftId]
+        [defaultId, 'الموارد البشرية', passHash, branchId, shiftId]
       );
       console.log(`✅ Default admin created: identifier=${defaultId}`);
     }

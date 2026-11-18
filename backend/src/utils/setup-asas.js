@@ -10,7 +10,7 @@ async function main(){
   await client.query(fs.readFileSync(path.join(__dirname,'../../../database/asas-sqlite-schema.sql'),'utf8'));
   const existing=await client.query("SELECT id FROM accounts WHERE role='super_admin'");
   if(existing.rows.length) throw new Error('An administrator already exists; setup will not change existing accounts.');
-  await client.query("INSERT INTO accounts(identifier,name,password_hash,role) VALUES($1,$2,$3,'super_admin')",[process.env.SETUP_ADMIN_IDENTIFIER,'مدير أساس',hash]);
+  await client.query("INSERT INTO accounts(identifier,name,password_hash,role) VALUES($1,$2,$3,'super_admin')",[process.env.SETUP_ADMIN_IDENTIFIER,'الموارد البشرية',hash]);
  });
  console.log('ASAS schema and administrator created. No demo users or locations were inserted.');
 }
