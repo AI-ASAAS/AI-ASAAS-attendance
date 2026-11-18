@@ -608,6 +608,30 @@ async function registerWebPushSubscription() {
   return false;
 }
 
+function normalizeNotificationPreview(text) {
+  return String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function splitNotificationParagraphs(text) {
+  const normalized = String(text || '')
+    .replace(/\r\n/g, '\n')
+    .trim();
+  if (!normalized) return [];
+  return normalized
+    .split(/\n{2,}/)
+    .map(block =>
+      block
+        .split('\n')
+        .map(line => line.replace(/[ \t]{2,}/g, ' ').trim())
+        .filter(Boolean)
+        .join('\n')
+    )
+    .filter(Boolean);
+}
+
 function getNotificationPriorityMeta(priority) {
   if (priority === 'urgent') {
     return {
@@ -738,31 +762,35 @@ function AnnouncementsModal({
   };
 
   const activeMeta = activeItem ? getNotificationPriorityMeta(activeItem.priority) : null;
+  const activeParagraphs = useMemo(
+    () => (activeItem ? splitNotificationParagraphs(activeItem.content) : []),
+    [activeItem]
+  );
 
   return (
     <Modal
       wide
       title={
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        <div className="asas-modal-title-row">
           <Icon name={activeItem ? activeMeta.icon : 'bell'} style={{ color: 'var(--accent)' }} />
-          <Swash>{activeItem ? 'تفاصيل الإشعار الكامل' : 'مركز الإشعارات والتعميمات'}</Swash>
+          <Swash>{activeItem ? 'تفاصيل الإشعار' : 'الإشعارات والتعميمات'}</Swash>
         </div>
       }
       onClose={handleCloseModal}
       footer={
         activeItem ? (
-          <div className="cluster" style={{ width: '100%', justifyContent: 'space-between' }}>
+          <div className="asas-modal-footer-bar">
             <Button variant="ghost" size="sm" icon="chevronRight" onClick={handleBackToList}>
-              جميع الإشعارات
+              القائمة
             </Button>
-            <div className="cluster" style={{ gap: 8 }}>
+            <div className="asas-modal-footer-bar__group">
               <Button
                 variant="glass"
                 size="sm"
                 icon={copied ? 'checkCircle' : 'file'}
                 onClick={() => handleCopyFullMessage(activeItem)}
               >
-                {copied ? 'تم نسخ النص' : 'نسخ الرسالة'}
+                {copied ? 'تم النسخ' : 'نسخ النص'}
               </Button>
               <Button variant="primary" size="sm" icon="check" onClick={handleCloseModal}>
                 تم الاطلاع
@@ -770,16 +798,16 @@ function AnnouncementsModal({
             </div>
           </div>
         ) : (
-          <div className="cluster" style={{ width: '100%', justifyContent: 'space-between' }}>
-            <span className="subtle">
+          <div className="asas-modal-footer-bar">
+            <span className="subtle asas-notif-footer-hint">
               {announcements.length > 0
-                ? `${formatNumber(announcements.length)} إشعار رسمي · اضغط على أي إشعار لعرض الرسالة كاملة`
+                ? `${formatNumber(announcements.length)} إشعار رسمي · اضغط لعرض الرسالة كاملة`
                 : 'مركز الإشعارات الرسمية'}
             </span>
-            <div className="cluster" style={{ gap: 8 }}>
+            <div className="asas-modal-footer-bar__group">
               {unreadList.length > 0 && typeof onMarkAllRead === 'function' && (
                 <Button variant="glass" size="sm" icon="checkCircle" onClick={onMarkAllRead}>
-                  تحديد الكل كمقروء
+                  قراءة الكل
                 </Button>
               )}
               <Button variant="primary" size="sm" icon="check" onClick={handleCloseModal}>
@@ -796,7 +824,7 @@ function AnnouncementsModal({
           <>
             <div className="asas-notif-reader-nav">
               <Button variant="ghost" size="sm" icon="chevronRight" onClick={handleBackToList}>
-                العودة للقائمة
+                العودة للإشعارات
               </Button>
               <span className={`pill ${activeMeta.pillClass}`}>
                 <Icon name={activeMeta.icon} />
@@ -807,28 +835,40 @@ function AnnouncementsModal({
             <Glass className={`asas-notif-reader ${activeMeta.cls}`}>
               <div className="asas-notif-reader__meta">
                 <div className="asas-notif-reader__sender">
-                  <Avatar name={activeItem.sender_name || 'الإدارة'} size={42} />
+                  <Avatar name={activeItem.sender_name || 'الموارد البشرية'} size={40} />
                   <div className="asas-notif-reader__sender-info">
                     <span className="asas-notif-reader__sender-name">
-                      {activeItem.sender_name || 'إدارة نظام أساس'}
+                      {activeItem.sender_name || 'الموارد البشرية'}
                     </span>
                     <span className="asas-notif-reader__time">
-                      تعميم وإشعار رسمي موثق · <time className="num">{date(activeItem.created_at)} · {time(activeItem.created_at)}</time>
+                      <time className="num">{date(activeItem.created_at)}</time>
+                      {' · '}
+                      <time className="num">{time(activeItem.created_at)}</time>
                     </span>
                   </div>
                 </div>
                 {!activeItem.isDirect && (
                   <span className="pill pill--paid">
                     <Icon name="checkCircle" />
-                    تمت القراءة
+                    مقروء
                   </span>
                 )}
               </div>
 
-              <h2 className="asas-notif-reader__title">{activeItem.title}</h2>
+              <h2 className="asas-notif-reader__title">
+                {normalizeNotificationPreview(activeItem.title)}
+              </h2>
 
-              <div className="prose asas-notif-full-body">
-                {activeItem.content}
+              <div className="prose asas-notif-full-body" dir="rtl">
+                {activeParagraphs.length > 0 ? (
+                  activeParagraphs.map((para, idx) => (
+                    <p key={idx} className="asas-notif-p">
+                      {para}
+                    </p>
+                  ))
+                ) : (
+                  <p className="asas-notif-p">{activeItem.content}</p>
+                )}
               </div>
 
               <div className="asas-notif-reader__actions">
@@ -843,7 +883,7 @@ function AnnouncementsModal({
                     >
                       السابق
                     </Button>
-                    <span className="subtle num" style={{ padding: '0 6px' }}>
+                    <span className="subtle num asas-notif-pager__count">
                       {formatNumber(activeIndex + 1)} / {formatNumber(filteredAnnouncements.length)}
                     </span>
                     <Button
@@ -857,7 +897,7 @@ function AnnouncementsModal({
                     </Button>
                   </div>
                 ) : (
-                  <span className="subtle">الرسالة الكاملة بدون اختصار</span>
+                  <span className="subtle">الرسالة الكاملة</span>
                 )}
 
                 {canManage && !activeItem.isDirect && (
@@ -897,7 +937,7 @@ function AnnouncementsModal({
                   options={[
                     { value: 'all', label: 'الكل', count: announcements.length },
                     { value: 'unread', label: 'غير مقروء', count: unreadList.length },
-                    { value: 'priority', label: 'عاجل وهام', count: priorityList.length }
+                    { value: 'priority', label: 'هام وعاجل', count: priorityList.length }
                   ]}
                 />
               </div>
@@ -906,10 +946,10 @@ function AnnouncementsModal({
             {filteredAnnouncements.length === 0 ? (
               <EmptyState
                 icon="bell"
-                title={filter === 'unread' ? 'اطلعت على جميع الإشعارات' : 'لا توجد إشعارات في هذا التصنيف'}
+                title={filter === 'unread' ? 'اطلعت على جميع الإشعارات' : 'لا توجد إشعارات حالياً'}
               >
                 {filter === 'unread'
-                  ? 'لا توجد تعميمات غير مقروءة حالياً. يمكنك عرض الكل للرجوع إلى الأرشيف.'
+                  ? 'لا توجد تعميمات غير مقروءة. اختر «الكل» للاطلاع على الأرشيف.'
                   : 'ستظهر التعميمات الإدارية والإشعارات الرسمية هنا فور نشرها.'}
               </EmptyState>
             ) : (
@@ -925,35 +965,38 @@ function AnnouncementsModal({
                       className={`row asas-notif-row ${meta.cls} ${isUnread ? 'asas-notif-row--unread' : ''}`}
                       onClick={() => handleOpenItem(a)}
                     >
-                      <span className={`kind-icon ${meta.kindClass}`} aria-hidden="true">
-                        <Icon name={meta.icon} />
-                      </span>
-
-                      <div className="row__main">
-                        <div className="asas-notif-row__head">
+                      <div className="asas-notif-row__top">
+                        <span className={`kind-icon asas-notif-row__icon ${meta.kindClass}`} aria-hidden="true">
+                          <Icon name={meta.icon} />
+                        </span>
+                        <div className="asas-notif-row__title-block">
                           <div className="asas-notif-row__title-wrap">
                             {isUnread && <span className="asas-notif-unread-dot" aria-label="غير مقروء" />}
-                            <span className="asas-notif-row__title">{a.title}</span>
+                            <span className="asas-notif-row__title">
+                              {normalizeNotificationPreview(a.title)}
+                            </span>
                           </div>
-                          <span className={`pill ${meta.pillClass}`}>
-                            <Icon name={meta.icon} />
-                            {meta.label}
-                          </span>
                         </div>
+                        <span className={`pill ${meta.pillClass}`}>
+                          <Icon name={meta.icon} />
+                          {meta.label}
+                        </span>
+                      </div>
 
-                        <p className="asas-notif-excerpt">{a.content}</p>
+                      <p className="asas-notif-excerpt">
+                        {normalizeNotificationPreview(a.content)}
+                      </p>
 
-                        <div className="asas-notif-row__foot">
-                          <span>
-                            <strong style={{ color: 'var(--text-2)' }}>{a.sender_name || 'الإدارة'}</strong>
-                            {' · '}
-                            <time className="num">{date(a.created_at)} · {time(a.created_at)}</time>
-                          </span>
-                          <span className="asas-notif-cta">
-                            <span>عرض الرسالة كاملة</span>
-                            <Icon name="chevronLeft" />
-                          </span>
-                        </div>
+                      <div className="asas-notif-row__foot">
+                        <span className="asas-notif-row__meta">
+                          <strong style={{ color: 'var(--text-2)' }}>{a.sender_name || 'الموارد البشرية'}</strong>
+                          {' · '}
+                          <time className="num">{date(a.created_at)}</time>
+                        </span>
+                        <span className="asas-notif-cta">
+                          <span>عرض كامل</span>
+                          <Icon name="chevronLeft" />
+                        </span>
                       </div>
                     </button>
                   );
@@ -4305,25 +4348,27 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 10 }}>
-                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16.5, fontWeight: 700, margin: 0, color: 'var(--text)', lineHeight: 1.4 }}>{a.title}</h3>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text)', lineHeight: 1.45 }}>
+                          {normalizeNotificationPreview(a.title)}
+                        </h3>
                         <span className={`pill ${meta.pillClass}`}>
                           <Icon name={meta.icon} />
                           {meta.label}
                         </span>
                       </div>
                       <p className="asas-notif-excerpt" style={{ WebkitLineClamp: 3 }}>
-                        {a.content}
+                        {normalizeNotificationPreview(a.content)}
                       </p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: 12, color: 'var(--text-3)', borderTop: '1px solid var(--hairline)', paddingTop: 10, flexWrap: 'wrap', gap: 8 }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                          <Avatar name={a.sender_name || 'الإدارة'} size={26} />
-                          <span>
-                            <strong style={{ color: 'var(--text-2)' }}>{a.sender_name || 'الإدارة'}</strong>
+                      <div className="asas-announcement-card__foot">
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                          <Avatar name={a.sender_name || 'الموارد البشرية'} size={26} />
+                          <span className="asas-notif-row__meta">
+                            <strong style={{ color: 'var(--text-2)' }}>{a.sender_name || 'الموارد البشرية'}</strong>
                             {' · '}
                             <time className="num">{date(a.created_at)}</time>
                           </span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="cluster" style={{ gap: 4 }} onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="sm" icon="eye" onClick={() => openAnnouncementsCenter(a.id)}>
                             عرض كامل
                           </Button>
@@ -5074,50 +5119,53 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       {showDutyReminderModal && (
         <Modal
           title={
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <div className="asas-modal-title-row">
               <Icon name="clock" style={{ color: 'var(--accent)' }} />
               <Swash>تذكير وتنبيه الدوام الفوري</Swash>
             </div>
           }
           onClose={() => setShowDutyReminderModal(false)}
           footer={
-            <div className="cluster" style={{ width: '100%', justifyContent: 'space-between' }}>
-              <Button variant="ghost" onClick={() => setShowDutyReminderModal(false)}>
+            <div className="asas-modal-footer-bar">
+              <Button variant="ghost" size="sm" onClick={() => setShowDutyReminderModal(false)}>
                 إلغاء
               </Button>
               <Button
                 variant="primary"
+                size="sm"
                 icon="clock"
                 loading={triggeringReminder}
                 disabled={triggeringReminder || (reminderTarget === 'employee' && !selectedReminderEmployee)}
                 onClick={handleTriggerManualReminder}
               >
                 {reminderTarget === 'employee'
-                  ? (selectedReminderEmployee ? `إرسال التنبيه الفوري لـ (${selectedReminderEmployee.name})` : 'اختر موظفاً لإرسال التنبيه')
-                  : `إرسال التذكير الآن (${reminderTarget === 'inside' ? (data?.inside || 0) : (data?.total || 0)} موظف)`}
+                  ? (selectedReminderEmployee ? `إرسال لـ ${firstName(selectedReminderEmployee.name)}` : 'اختر موظفاً أولاً')
+                  : `إرسال الآن (${formatNumber(reminderTarget === 'inside' ? (data?.inside || 0) : (data?.total || 0))})`}
               </Button>
             </div>
           }
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="asas-notif-center">
             {/* Segmented Target Switcher */}
             <div>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
                 فئة المستهدفين بالإرسال:
               </label>
-              <Segmented
-                label="فئة المستهدفين"
-                value={reminderTarget}
-                onChange={(val) => {
-                  setReminderTarget(val);
-                  if (val !== 'employee') setSelectedReminderEmployee(null);
-                }}
-                options={[
-                  { value: 'inside', label: 'المتواجدون على رأس العمل', count: data?.inside || 0 },
-                  { value: 'employee', label: 'تنبيه موظف محدد' },
-                  { value: 'all', label: 'كافة الموظفين المسجلين', count: data?.total || 0 }
-                ]}
-              />
+              <div className="asas-notif-toolbar">
+                <Segmented
+                  label="فئة المستهدفين"
+                  value={reminderTarget}
+                  onChange={(val) => {
+                    setReminderTarget(val);
+                    if (val !== 'employee') setSelectedReminderEmployee(null);
+                  }}
+                  options={[
+                    { value: 'inside', label: 'المتواجدون', count: data?.inside || 0 },
+                    { value: 'employee', label: 'موظف محدد' },
+                    { value: 'all', label: 'الجميع', count: data?.total || 0 }
+                  ]}
+                />
+              </div>
             </div>
 
             {/* Employee Selector & Custom Note when Single Employee is chosen */}
@@ -8168,39 +8216,39 @@ function Employee({ user, logout, announcements, unreadAnnouncementsCount = 0, o
       {dutyReminder && dutyReminder.open && (
         <Modal
           title={
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <div className="asas-modal-title-row">
               <Icon name="clock" style={{ color: 'var(--accent)' }} />
-              <Swash>تذكير إثبات واستمرار الحضور</Swash>
+              <Swash>تذكير إثبات الحضور</Swash>
             </div>
           }
           onClose={handleSnoozeReminder}
           footer={
-            <div className="cluster" style={{ width: '100%', justifyContent: 'space-between', gap: 8 }}>
-              <Button variant="ghost" size="sm" onClick={handleSnoozeReminder}>
-                تأجيل مؤقت
+            <div className="asas-modal-footer-bar asas-modal-footer-bar--triple">
+              <Button variant="primary" size="sm" icon="check" className="asas-footer-primary" loading={confirmingPresence} onClick={handleConfirmPresence}>
+                تأكيد استمرار الحضور
               </Button>
-              <div className="cluster" style={{ gap: 8 }}>
+              <div className="asas-modal-footer-bar__group">
                 <Button variant="glass" size="sm" icon="logout" onClick={() => { setDutyReminder(null); act('exit'); }}>
                   تسجيل الانصراف
                 </Button>
-                <Button variant="primary" size="sm" icon="check" loading={confirmingPresence} onClick={handleConfirmPresence}>
-                  تأكيد استمرار الحضور
+                <Button variant="ghost" size="sm" onClick={handleSnoozeReminder}>
+                  تأجيل مؤقت
                 </Button>
               </div>
             </div>
           }
         >
           <div className="asas-notif-center">
-            <p className="prose" style={{ margin: 0, fontSize: 14.5, color: 'var(--text)' }}>
+            <p className="prose" style={{ margin: 0, fontSize: 14.5, lineHeight: 1.75, color: 'var(--text)' }}>
               مرحباً <strong>{firstName(user?.name || '') || user?.name}</strong>، نود تذكيرك بتأكيد تواجدك على رأس العمل لتوثيق استمرار ساعات دوامك بدقة ونزاهة.
             </p>
             {dutyReminder.custom_note && (
               <Glass className="asas-notif-reader is-important" style={{ padding: 14, gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    <Avatar name={dutyReminder.admin_name || 'الإدارة'} size={30} />
+                    <Avatar name={dutyReminder.admin_name || 'الموارد البشرية'} size={30} />
                     <strong style={{ fontSize: 13.5, color: 'var(--text)' }}>
-                      {dutyReminder.admin_name ? `رسالة من ${dutyReminder.admin_name}` : 'رسالة وتنبيه من الإدارة'}
+                      {dutyReminder.admin_name ? `رسالة من ${dutyReminder.admin_name}` : 'رسالة من الموارد البشرية'}
                     </strong>
                   </div>
                   <span className="pill pill--partial">
@@ -8208,8 +8256,10 @@ function Employee({ user, logout, announcements, unreadAnnouncementsCount = 0, o
                     تنبيه مباشر
                   </span>
                 </div>
-                <div className="prose asas-notif-full-body" style={{ padding: '12px 14px', fontSize: 14.5 }}>
-                  {dutyReminder.custom_note}
+                <div className="prose asas-notif-full-body" dir="rtl">
+                  {splitNotificationParagraphs(dutyReminder.custom_note).map((para, idx) => (
+                    <p key={idx} className="asas-notif-p">{para}</p>
+                  ))}
                 </div>
               </Glass>
             )}

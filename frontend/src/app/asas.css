@@ -3596,13 +3596,22 @@ select.asas-input option {
 }
 
 /* ─── Professional Notification Center & Full-Message Reader (AI-ASAAS/skills) ─── */
-.asas-notif-center {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+.asas-modal-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  line-height: 1.35;
 }
 
-.asas-notif-toolbar {
+.asas-modal-title-row svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.asas-modal-footer-bar {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3610,15 +3619,54 @@ select.asas-input option {
   flex-wrap: wrap;
 }
 
+.asas-modal-footer-bar__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.asas-notif-center {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+.asas-notif-toolbar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.asas-notif-toolbar .segmented {
+  width: 100%;
+  max-width: 100%;
+}
+
+.asas-notif-toolbar .segmented__option {
+  padding: 0 10px;
+  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Notification List Card (Full-width clean vertical flow) */
 .asas-notif-row {
   width: 100%;
   border: 0;
   text-align: start;
   cursor: pointer;
-  align-items: flex-start;
-  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 15px 16px;
   min-height: var(--tap, 44px);
-  border-inline-start: 3px solid transparent;
+  border-inline-start: 3.5px solid transparent;
   transition: background 0.25s var(--ease-out), transform 0.3s var(--ease-spring), box-shadow 0.25s;
 }
 
@@ -3649,21 +3697,36 @@ select.asas-input option {
   border-inline-start-color: var(--accent);
 }
 
-.asas-notif-row__head {
+.asas-notif-row__top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 5px;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.asas-notif-row__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  flex: none;
+}
+
+.asas-notif-row__icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.asas-notif-row__title-block {
+  flex: 1;
+  min-width: 0;
 }
 
 .asas-notif-row__title-wrap {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
-  flex: 1;
 }
 
 .asas-notif-unread-dot {
@@ -3685,41 +3748,56 @@ select.asas-input option {
   font-size: 15.5px;
   font-weight: 700;
   color: var(--text);
-  line-height: 1.4;
+  line-height: 1.45;
+  text-align: start;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  word-break: break-word;
 }
 
 .asas-notif-excerpt {
-  margin: 0 0 10px;
+  margin: 0;
+  width: 100%;
+  text-align: start;
   font-family: var(--font-text);
-  font-size: 13.5px;
-  line-height: 1.65;
+  font-size: 14px;
+  line-height: 1.7;
   color: var(--text-2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  white-space: pre-line;
+  overflow-wrap: break-word;
 }
 
 .asas-notif-row__foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
   font-size: 12px;
   color: var(--text-3);
+}
+
+.asas-notif-row__meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .asas-notif-cta {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  flex: none;
+  white-space: nowrap;
   font-family: var(--font);
   font-size: 12px;
   font-weight: 700;
@@ -3752,6 +3830,8 @@ select.asas-input option {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
+  min-width: 0;
 }
 
 .asas-notif-reader.is-urgent {
@@ -3766,17 +3846,18 @@ select.asas-input option {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  padding-bottom: 14px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--hairline);
 }
 
 .asas-notif-reader__sender {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
+  flex: 1;
 }
 
 .asas-notif-reader__sender-info {
@@ -3787,14 +3868,16 @@ select.asas-input option {
 }
 
 .asas-notif-reader__sender-name {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--text);
+  line-height: 1.35;
 }
 
 .asas-notif-reader__time {
   font-size: 12px;
   color: var(--text-3);
+  line-height: 1.4;
 }
 
 .asas-notif-reader__title {
@@ -3802,23 +3885,40 @@ select.asas-input option {
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 700;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--text);
+  text-align: start;
+  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .asas-notif-full-body {
   margin: 0;
-  font-family: var(--font-text);
-  font-size: 15px;
-  line-height: 1.95;
-  color: var(--text);
-  white-space: pre-wrap;
-  word-break: break-word;
-  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
   border-radius: var(--radius-md);
   background: var(--glass-inset);
   box-shadow: inset 0 0 0 1px var(--hairline);
   user-select: text;
+  text-align: start;
+  width: 100%;
+  min-width: 0;
+}
+
+.asas-notif-p {
+  margin: 0;
+  font-family: var(--font-text);
+  font-size: 15.5px;
+  line-height: 1.9;
+  color: var(--text);
+  white-space: pre-line;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-align: start;
+  text-wrap: pretty;
+  unicode-bidi: plaintext;
 }
 
 .asas-notif-reader__actions {
@@ -3834,11 +3934,19 @@ select.asas-input option {
 .asas-notif-pager {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+}
+
+.asas-notif-pager__count {
+  padding: 0 6px;
+  white-space: nowrap;
 }
 
 .asas-announcement-card--interactive {
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   transition: transform 0.3s var(--ease-spring), box-shadow 0.25s var(--ease-out);
 }
 
@@ -3847,13 +3955,26 @@ select.asas-input option {
   box-shadow: inset 0 1px 0 var(--glass-rim), 0 12px 28px -12px rgba(0, 0, 0, 0.22);
 }
 
+.asas-announcement-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--text-3);
+  border-top: 1px solid var(--hairline);
+  padding-top: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* Upgraded In-App Notice Banner (Liquid Glass) */
 .asas-notice {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 14px;
   border-radius: var(--radius-md);
   background: var(--glass-tint-strong);
   border: 1px solid color-mix(in srgb, var(--paid) 32%, var(--hairline));
@@ -3867,7 +3988,7 @@ select.asas-input option {
 
 .asas-notice__content {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   min-width: 0;
   flex: 1;
@@ -3882,6 +4003,7 @@ select.asas-input option {
   background: var(--paid-bg);
   color: var(--paid);
   flex: none;
+  margin-top: 1px;
 }
 
 .asas-notice__icon svg {
@@ -3890,24 +4012,199 @@ select.asas-input option {
 }
 
 .asas-notice__text {
-  line-height: 1.55;
+  line-height: 1.65;
   white-space: pre-line;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  text-align: start;
 }
 
-@media (max-width: 640px) {
+/* ─── Responsive Tablet Breakpoint (641px – 1024px) ─── */
+@media (max-width: 1024px) {
+  .modal--wide {
+    width: min(94vw, 720px);
+  }
+
+  .asas-announcements-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
   .asas-notif-reader {
-    padding: 16px;
+    padding: 18px;
   }
-  .asas-notif-reader__title {
-    font-size: 17.5px;
-  }
+
   .asas-notif-full-body {
-    padding: 14px;
+    padding: 16px 18px;
+  }
+}
+
+/* ─── Responsive Phone Breakpoint (<= 640px) ─── */
+@media (max-width: 640px) {
+  /* Edge-to-edge native bottom sheet for modals on phones to maximize Arabic reading width */
+  .modal-backdrop {
+    padding: 0 !important;
+    place-items: end stretch !important;
+  }
+
+  .modal,
+  .modal--wide {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92dvh !important;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0 !important;
+  }
+
+  .modal__header {
+    padding: 16px 16px 10px !important;
+  }
+
+  .modal__header h2 {
+    font-size: 16.5px !important;
+  }
+
+  .modal__body {
+    padding: 10px 14px 14px !important;
+  }
+
+  .modal__footer {
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .asas-announcements-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .asas-notif-toolbar .segmented__option {
+    padding: 0 6px;
+    font-size: 12px;
+    gap: 4px;
+    height: 34px;
+  }
+
+  .asas-notif-row {
+    padding: 13px 13px;
+    gap: 8px;
+    border-radius: var(--radius-md);
+  }
+
+  .asas-notif-row__top {
+    gap: 8px;
+  }
+
+  .asas-notif-row__icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+  }
+
+  .asas-notif-row__icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .asas-notif-row__title {
+    font-size: 14.5px;
+  }
+
+  .asas-notif-row .pill {
+    height: 23px;
+    padding: 0 8px;
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .asas-notif-excerpt {
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+
+  .asas-notif-reader {
+    padding: 14px 13px;
+    gap: 12px;
+    border-radius: var(--radius-md);
+  }
+
+  .asas-notif-reader__title {
+    font-size: 17px;
+    line-height: 1.48;
+  }
+
+  .asas-notif-full-body {
+    padding: 13px 14px;
+    gap: 12px;
+    border-radius: var(--radius-sm);
+  }
+
+  .asas-notif-p {
     font-size: 14.5px;
     line-height: 1.85;
   }
-  .asas-notif-row {
-    padding: 12px;
+
+  .asas-notif-footer-hint {
+    display: none;
+  }
+
+  .asas-modal-footer-bar {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .asas-modal-footer-bar > .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .asas-modal-footer-bar__group {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 8px;
+  }
+
+  .asas-modal-footer-bar__group > .btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .asas-modal-footer-bar--triple {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .asas-modal-footer-bar--triple .asas-footer-primary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .asas-modal-footer-bar--triple .asas-modal-footer-bar__group {
+    width: 100%;
+  }
+
+  .asas-notif-reader__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .asas-notif-pager {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* ─── Extra-Small Phones (<= 380px) ─── */
+@media (max-width: 380px) {
+  .asas-notif-toolbar .segmented__option {
+    font-size: 11.5px;
+    padding: 0 4px;
+  }
+
+  .asas-notif-row__top {
+    flex-wrap: wrap;
+  }
+
+  .asas-notif-p {
+    font-size: 14px;
+    line-height: 1.8;
   }
 }
