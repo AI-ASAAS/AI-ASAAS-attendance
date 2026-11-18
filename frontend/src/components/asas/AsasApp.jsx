@@ -4050,6 +4050,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     <div className="asas-accounts-search asas-search-box">
                       <input
                         className="input asas-search-input-lg"
+                        type="search"
                         placeholder="ابحث بالاسم، الرقم الوظيفي، البريد، الهاتف أو الجهاز…"
                         value={search}
                         onChange={e => { setSearch(e.target.value); setAccountPage(1); }}
@@ -4100,9 +4101,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                         onClick={() => { setAccountFilter(opt.value); setAccountPage(1); }}
                       >
                         <span>{opt.label}</span>
-                        <span className="num" style={{ opacity: accountFilter === opt.value ? 0.9 : 0.72 }}>
-                          ({formatNumber(opt.count)})
-                        </span>
+                        <span className="asas-chip-count num">{formatNumber(opt.count)}</span>
                       </button>
                     ))}
                   </div>

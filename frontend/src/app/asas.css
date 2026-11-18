@@ -1704,6 +1704,7 @@ select.asas-input option {
   gap: 14px;
   margin-bottom: 16px;
   min-width: 0;
+  overflow-x: clip;
 }
 
 .asas-presets-section {
@@ -3306,13 +3307,16 @@ select.asas-input option {
 
 @media (max-width: 640px) {
   .asas-qr-toolbar {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
   }
 
   .asas-qr-branch-select {
+    flex: none;
     max-width: none;
     width: 100%;
+    height: 44px;
   }
 
   .asas-qr-branch-actions {
@@ -3787,8 +3791,11 @@ select.asas-input option {
   }
 
   .asas-presets-chips {
-    margin-inline: -12px !important;
-    padding: 2px 12px 4px !important;
+    margin-inline: 0 !important;
+    padding: 2px 0 4px !important;
+    width: 100%;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
   }
 
   .asas-month-toggle-chip {
@@ -4888,6 +4895,7 @@ select.asas-input option {
   gap: 12px;
   width: 100%;
   min-width: 0;
+  overflow-x: clip;
 }
 
 .asas-accounts-toolbar-top {
@@ -4896,6 +4904,7 @@ select.asas-input option {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .asas-accounts-toolbar-card .asas-accounts-search {
@@ -4909,14 +4918,38 @@ select.asas-input option {
   height: 44px;
   padding-inline-start: 40px;
   padding-inline-end: 36px;
+  box-sizing: border-box;
 }
 
 .asas-accounts-view-switch {
   flex: none;
+  min-width: 0;
 }
 
 .asas-accounts-chips {
   padding-top: 2px;
+  gap: 7px;
+  min-width: 0;
+}
+
+.asas-chip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--glass-tint-strong);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chip[aria-pressed='true'] .asas-chip-count {
+  background: rgba(255, 255, 255, 0.24);
+  color: var(--on-accent);
 }
 
 .asas-accounts-table-shell {
@@ -5358,6 +5391,25 @@ select.asas-input option {
   }
 }
 
+/* ─── Narrow Tablet Breakpoint (<= 720px): Stack search & view switcher cleanly ─── */
+@media (max-width: 720px) {
+  .asas-accounts-toolbar-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .asas-accounts-toolbar-card .asas-accounts-search {
+    flex: none;
+    width: 100%;
+  }
+
+  .asas-accounts-view-switch,
+  .asas-accounts-view-switch .segmented {
+    width: 100%;
+  }
+}
+
 /* ─── Phone Breakpoint (<= 640px): Single-column clean cards in Auto & Cards modes ─── */
 @media (max-width: 640px) {
   .asas-accounts-toolbar-card {
@@ -5367,9 +5419,20 @@ select.asas-input option {
   }
 
   .asas-accounts-toolbar-top {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
+  }
+
+  .asas-accounts-toolbar-card .asas-accounts-search {
+    flex: none;
+    width: 100%;
+    height: auto;
+  }
+
+  .asas-accounts-toolbar-card .asas-accounts-search .input {
+    height: 42px;
+    font-size: 13.5px;
   }
 
   .asas-accounts-view-switch,
@@ -5378,8 +5441,26 @@ select.asas-input option {
   }
 
   .asas-accounts-chips {
-    margin-inline: -12px !important;
-    padding-inline: 12px !important;
+    margin-inline: 0 !important;
+    padding: 2px 0 4px !important;
+    width: 100%;
+    max-width: 100%;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .asas-accounts-chips .chip {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+    gap: 5px;
+  }
+
+  .asas-accounts-chips .asas-chip-count {
+    min-width: 20px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 10.5px;
   }
 
   .asas-accounts-container:not(.view-table) .asas-accounts-cards-view,

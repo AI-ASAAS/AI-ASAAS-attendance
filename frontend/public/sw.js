@@ -1,5 +1,5 @@
 // public/sw.js — AI-ASAAS Sovereign Attendance Service Worker
-const CACHE_NAME = 'asas-attendance-v5.5';
+const CACHE_NAME = 'asas-attendance-v5.6';
 const ASSETS_TO_CACHE = [
   '/',
   '/asas',
