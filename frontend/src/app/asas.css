@@ -2739,16 +2739,65 @@ select.asas-input option {
 .asas-remote-btn-status.done { color: var(--chart-out); }
 .asas-remote-btn-status.disabled { color: var(--text-3); }
 
-/* ───────── QR Poster Cards ───────── */
+/* ───────── QR Poster Cards & Print Toolbar (AI-ASAAS/skills Responsive) ───────── */
+.asas-qr-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.asas-qr-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.asas-qr-branch-select {
+  flex: 1 1 240px;
+  max-width: 340px;
+  height: 44px;
+}
+
+.asas-qr-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.asas-qr-branch-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.asas-qr-branch-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.asas-qr-branch-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .asas-qr-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
-  gap: var(--gutter);
-  margin-top: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .asas-qr-card {
-  padding: clamp(16px, 2.5vw, 22px);
+  padding: clamp(16px, 2.2vw, 22px);
   border-radius: var(--radius-xl);
   text-align: center;
   background: linear-gradient(160deg, rgba(252, 249, 245, 0.90) 0%, rgba(237, 231, 218, 0.66) 100%);
@@ -2757,6 +2806,7 @@ select.asas-input option {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 12px;
 }
 
 :root[data-theme='dark'] .asas-qr-card {
@@ -2766,11 +2816,12 @@ select.asas-input option {
 
 .asas-qr-box {
   background: #ffffff;
-  padding: clamp(10px, 2vw, 14px);
+  padding: 12px;
   max-width: 100%;
   border-radius: var(--radius-lg);
-  margin: 14px 0;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--hairline);
 }
 
@@ -2779,81 +2830,129 @@ select.asas-input option {
 .asas-qr-box img {
   max-width: 100%;
   height: auto;
+  display: block;
 }
 
-/* ───────── A4 QR Poster Preview & Print Sheet ───────── */
+.asas-qr-card-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 34ch;
+}
+
+.asas-qr-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* ───────── A4 QR Poster Preview & Print Sheet (Zero Empty Spaces & Fully Responsive) ───────── */
 .asas-a4-preview-modal {
-  max-width: 900px;
-  width: 96vw;
-  max-height: 94vh;
+  max-width: 860px;
+  width: min(96vw, 860px);
+  max-height: 94dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.asas-print-controls {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--glass-inset);
 }
 
 .asas-a4-preview-scroll {
-  max-height: 72vh;
-  overflow: auto;
-  padding: clamp(10px, 2vw, 16px);
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: clamp(10px, 2vw, 18px);
   background: var(--overlay);
   display: flex;
-  justify-content: flex-start;
-  border-radius: var(--radius-md);
+  justify-content: center;
+  align-items: flex-start;
 }
 
+.asas-printable-area {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* On screen: Fluid & tight — ZERO giant 297mm blank spaces and ZERO 210mm horizontal overflow */
 .asas-a4-sheet {
-  flex: none;
-  margin-inline: auto;
-  width: 210mm;
-  min-height: 297mm;
-  max-height: 297mm;
-  padding: 8mm 10mm;
+  width: 100%;
+  max-width: 760px;
+  height: auto;
+  min-height: 0;
+  padding: 14px;
   background: #ffffff;
   color: #1a1918;
   font-family: var(--font-text), serif;
   direction: rtl;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  border-radius: 4px;
-  overflow: hidden;
+  border-radius: 10px;
+  box-shadow: 0 18px 42px -18px rgba(0, 0, 0, 0.35);
 }
 
 .asas-a4-border {
   border: 3px double #ba9555;
   outline: 1.5px solid #1a1918;
   outline-offset: -5px;
-  padding: 6mm 8mm;
-  height: 100%;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 16px;
   background: #ffffff;
 }
 
 .asas-a4-header {
   text-align: center;
   border-bottom: 2px solid #ba9555;
-  padding-bottom: 10px;
-  margin-bottom: 12px;
+  padding-bottom: 12px;
 }
 
 .asas-a4-logo-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.asas-a4-logo-brand {
+  text-align: start;
+}
+
+.asas-a4-logo-stamp {
+  text-align: end;
+  font-size: 11px;
+  color: #55524e;
+  font-weight: 600;
+  line-height: 1.45;
 }
 
 .asas-a4-brand-title {
   font-family: var(--font-display), serif;
-  font-size: 22px;
+  font-size: clamp(17px, 2.6vw, 22px);
   font-weight: 800;
   color: #1a1918;
   margin: 0;
+  line-height: 1.35;
 }
 
 .asas-a4-subtitle {
-  font-size: 12px;
+  font-family: var(--font);
+  font-size: 11px;
   color: #8c6928;
   font-weight: 700;
+  letter-spacing: 0.4px;
   margin: 2px 0 0;
 }
 
@@ -2862,52 +2961,55 @@ select.asas-input option {
   background: #fbf7ee;
   border: 1.5px solid #ba9555;
   color: #1a1918;
-  font-size: 16.5px;
+  font-family: var(--font-display);
+  font-size: clamp(14.5px, 2.2vw, 17px);
   font-weight: 800;
-  padding: 5px 22px;
+  padding: 5px 20px;
   border-radius: 30px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .asas-a4-meta-line {
-  font-size: 10.5px;
+  font-size: 11px;
   color: #55524e;
-  margin-top: 5px;
+  margin-top: 6px;
+  line-height: 1.5;
 }
 
 .asas-a4-codes-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  margin: 10px 0;
+  align-items: stretch;
 }
 
 .asas-a4-codes-grid.single {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .asas-a4-code-card {
   border: 1.5px solid #d4c8b2;
   border-radius: 12px;
-  padding: 14px 10px;
+  padding: 16px 14px;
   text-align: center;
   background: #fdfcf9;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 10px;
 }
 
 .asas-a4-code-card.enter { border-color: #2e7d32; background: #f4fbf5; }
 .asas-a4-code-card.exit { border-color: #c62828; background: #fff8f8; }
 
 .asas-a4-code-title {
-  font-size: 15px;
+  font-family: var(--font);
+  font-size: 14.5px;
   font-weight: 800;
-  padding: 5px 14px;
+  padding: 5px 16px;
   border-radius: 20px;
   display: inline-block;
-  margin-bottom: 10px;
   color: #ffffff;
 }
 
@@ -2918,57 +3020,143 @@ select.asas-input option {
   background: #ffffff;
   padding: 10px;
   border: 2px solid #1a1918;
-  border-radius: 8px;
-  display: inline-block;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+}
+
+.asas-a4-qr-frame svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
 .asas-a4-code-desc {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   color: #292524;
-  margin: 10px 0 5px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .asas-a4-steps-list {
-  font-size: 10px;
-  color: #57534e;
-  line-height: 1.5;
+  margin: 0;
+  padding: 8px 22px 8px 12px;
+  font-size: 11px;
+  color: #44403c;
+  line-height: 1.65;
   background: #ffffff;
   border: 1px dashed #d6d3d1;
-  border-radius: 6px;
-  padding: 6px 10px;
-  margin-top: 6px;
-  width: 90%;
-  text-align: right;
+  border-radius: 8px;
+  width: 100%;
+  text-align: start;
 }
 
 .asas-a4-footer {
   border-top: 1.5px solid #d4c8b2;
-  padding-top: 8px;
-  margin-top: 8px;
+  padding-top: 10px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .asas-a4-security-notice {
-  font-size: 9.5px;
+  font-size: 10.5px;
   color: #78350f;
   background: #fffbeb;
-  border: 1px solid #fef3c7;
-  padding: 5px 8px;
-  border-radius: 6px;
-  line-height: 1.4;
+  border: 1px solid #fde68a;
+  padding: 7px 10px;
+  border-radius: 8px;
+  line-height: 1.55;
   font-weight: 600;
-  margin-bottom: 6px;
 }
 
 .asas-a4-footer-bottom {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 10.5px;
   color: #78716c;
   font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .asas-qr-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .asas-qr-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .asas-qr-branch-select {
+    max-width: none;
+    width: 100%;
+  }
+
+  .asas-qr-branch-actions {
+    width: 100%;
+  }
+
+  .asas-qr-branch-actions > .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .asas-qr-card-actions > .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .asas-print-controls {
+    padding: 10px 12px;
+  }
+
+  .asas-a4-preview-scroll {
+    padding: 8px;
+  }
+
+  .asas-a4-sheet {
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  .asas-a4-border {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .asas-a4-logo-row {
+    flex-direction: column;
+    text-align: center;
+    gap: 4px;
+  }
+
+  .asas-a4-logo-brand,
+  .asas-a4-logo-stamp {
+    text-align: center;
+  }
+
+  .asas-a4-codes-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .asas-a4-code-card {
+    padding: 12px;
+  }
+
+  .asas-a4-footer-bottom {
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -3452,11 +3640,34 @@ select.asas-input option {
 
   .asas-a4-sheet {
     width: 100% !important;
-    min-height: 285mm !important;
-    max-height: 295mm !important;
+    max-width: 100% !important;
+    min-height: 282mm !important;
+    max-height: 289mm !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     padding: 4mm 6mm !important;
+  }
+
+  .asas-a4-border {
+    flex: 1 1 auto !important;
+    padding: 7mm 8mm !important;
+    gap: 8mm !important;
+  }
+
+  .asas-a4-codes-grid {
+    flex: 1 1 auto !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6mm !important;
+  }
+
+  .asas-a4-codes-grid.single {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .asas-a4-code-card {
+    justify-content: center !important;
+    gap: 6mm !important;
+    padding: 8mm 6mm !important;
   }
 }
 
