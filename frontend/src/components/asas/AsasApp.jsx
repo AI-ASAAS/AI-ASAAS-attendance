@@ -359,11 +359,11 @@ function Records({ rows = [], onEdit, canEdit, viewMode: externalViewMode, showV
               return (
                 <tr key={r.id || ('emp-' + (r.employee_id || idx))}>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="asas-acc-cell-emp">
                       <UserAvatar user={{ name: r.name, avatar: r.avatar }} size="sm" />
-                      <div>
-                        <strong>{r.name}</strong>
-                        <small style={{ fontFamily: 'monospace', color: 'var(--accent)', display: 'block' }}>#{r.identifier}</small>
+                      <div className="asas-acc-cell-emp__meta">
+                        <strong style={{ lineHeight: 1.4 }}>{r.name}</strong>
+                        <span className="num asas-acc-id" style={{ alignSelf: 'flex-start' }}>#{r.identifier}</span>
                       </div>
                     </div>
                   </td>

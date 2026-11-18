@@ -1153,12 +1153,16 @@ select.asas-input option {
   width: 100%;
 }
 
-.asas-accounts-cards-view {
-  display: none;
-}
-
 .asas-accounts-table-view {
   display: block;
+}
+
+/* Hidden by default on Desktop (> 900px) when in Auto mode */
+.asas-accounts-cards-view,
+.asas-accounts-cards-view.asas-accounts-grid {
+  display: none;
+  grid-template-columns: repeat(auto-fill, minmax(min(310px, 100%), 1fr));
+  gap: 14px;
 }
 
 .asas-accounts-container.view-cards .asas-accounts-table-view {
@@ -1167,8 +1171,8 @@ select.asas-input option {
 
 .asas-accounts-container.view-cards .asas-accounts-cards-view {
   display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
-  gap: 14px !important;
+  grid-template-columns: repeat(auto-fill, minmax(min(310px, 100%), 1fr));
+  gap: 14px;
 }
 
 .asas-accounts-container.view-table .asas-accounts-table-view {
@@ -1178,14 +1182,6 @@ select.asas-input option {
 
 .asas-accounts-container.view-table .asas-accounts-cards-view {
   display: none !important;
-}
-
-/* Compact Employee Cards Grid */
-.asas-accounts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
-  margin-bottom: 16px;
 }
 
 .asas-account-card {
@@ -1271,9 +1267,14 @@ select.asas-input option {
   width: 100%;
 }
 
-.asas-records-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+.asas-records-table-view {
+  display: block;
+}
+
+.asas-records-cards-view,
+.asas-records-cards-view.asas-records-grid {
+  display: none;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
   gap: 14px;
 }
 
@@ -1282,8 +1283,8 @@ select.asas-input option {
 }
 .asas-records-container.view-cards .asas-records-cards-view {
   display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
-  gap: 14px !important;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 14px;
 }
 
 .asas-records-container.view-table .asas-records-table-view {
@@ -1297,11 +1298,6 @@ select.asas-input option {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 12px;
-}
-
-.asas-records-cards-view {
-  display: none;
-  gap: 14px;
 }
 
 .asas-record-card {
@@ -1327,7 +1323,7 @@ select.asas-input option {
 
 .asas-record-card-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
   min-width: 0;
@@ -1338,13 +1334,19 @@ select.asas-input option {
 }
 
 .asas-record-emp-name {
+  font-family: var(--font);
   font-size: 14.5px;
   font-weight: 700;
+  line-height: 1.4;
   color: var(--text);
+  text-align: start;
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
 }
 
 .asas-record-card-body {
@@ -4319,11 +4321,14 @@ select.asas-input option {
   padding: 0;
   background: none;
   text-align: start;
-  font-family: var(--font-display);
+  font-family: var(--font);
   font-size: 14.5px;
   font-weight: 700;
   color: var(--text);
-  line-height: 1.35;
+  line-height: 1.4;
+  white-space: normal;
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
   cursor: pointer;
   transition: color 0.2s;
 }
@@ -4441,13 +4446,14 @@ select.asas-input option {
   background: none;
   text-align: start;
   width: 100%;
-  font-family: var(--font-display);
-  font-size: 15.5px;
+  font-family: var(--font);
+  font-size: 15px;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--text);
   white-space: normal;
-  word-break: break-word;
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
@@ -4600,12 +4606,25 @@ select.asas-input option {
 
 .asas-emp-detail-hero__name {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 18.5px;
+  font-family: var(--font);
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.4;
   color: var(--text);
-  word-break: break-word;
+  text-align: start;
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
+}
+
+/* Unified Employee Name Formatting across ALL Tables, Cards & Lists (Arabic + Latin safe) */
+.asas-table td strong,
+.asas-collective-card-head strong,
+.asas-leave-card strong,
+.asas-dossier-banner h3 {
+  font-family: var(--font);
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
+  text-align: start;
 }
 
 .asas-emp-detail-grid {
@@ -4632,20 +4651,66 @@ select.asas-input option {
   font-weight: 700;
   color: var(--text);
   line-height: 1.45;
-  overflow-wrap: break-word;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-/* ─── Tablet Breakpoint (641px – 1080px) ─── */
+/* ─── Authoritative Auto / Table / Cards Switch Engine (All Lists) ─── */
+/* Desktop (> 900px): Auto mode strictly shows Table ONLY and hides Cards */
+@media (min-width: 901px) {
+  .asas-accounts-container:not(.view-cards) .asas-accounts-cards-view,
+  .asas-records-container:not(.view-cards) .asas-records-cards-view,
+  .asas-collective-container:not(.view-cards) .asas-collective-cards-view,
+  .asas-leave-container:not(.view-cards) .asas-leave-cards-view,
+  .asas-timeline-container:not(.view-cards) .asas-timeline-cards-view,
+  .asas-audit-container:not(.view-cards) .asas-audit-cards-view {
+    display: none !important;
+  }
+
+  .asas-accounts-container:not(.view-cards) .asas-accounts-table-view,
+  .asas-records-container:not(.view-cards) .asas-records-table-view,
+  .asas-collective-container:not(.view-cards) .asas-collective-table-view,
+  .asas-leave-container:not(.view-cards) .asas-leave-table-view,
+  .asas-timeline-container:not(.view-cards) .asas-timeline-table-view,
+  .asas-audit-container:not(.view-cards) .asas-audit-table-view {
+    display: block;
+  }
+}
+
+/* Tablet Forced Cards (641px – 1080px) */
 @media (max-width: 1080px) {
-  .asas-accounts-container:not(.view-table) .asas-accounts-cards-view,
-  .asas-accounts-container.view-cards .asas-accounts-cards-view {
+  .asas-accounts-container.view-cards .asas-accounts-cards-view,
+  .asas-records-container.view-cards .asas-records-cards-view,
+  .asas-collective-container.view-cards .asas-collective-cards-view {
+    display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 12px !important;
   }
 }
 
-/* ─── Phone Breakpoint (<= 640px) ─── */
+/* Tablet & Mobile Auto Mode (<= 900px): Auto strictly switches to Cards (2 cols) and hides Table */
+@media (max-width: 900px) {
+  .asas-accounts-container:not(.view-table) .asas-accounts-table-view,
+  .asas-records-container:not(.view-table) .asas-records-table-view,
+  .asas-collective-container:not(.view-table) .asas-collective-table-view,
+  .asas-leave-container:not(.view-table) .asas-leave-table-view,
+  .asas-timeline-container:not(.view-table) .asas-timeline-table-view,
+  .asas-audit-container:not(.view-table) .asas-audit-table-view {
+    display: none !important;
+  }
+
+  .asas-accounts-container:not(.view-table) .asas-accounts-cards-view,
+  .asas-records-container:not(.view-table) .asas-records-cards-view,
+  .asas-collective-container:not(.view-table) .asas-collective-cards-view,
+  .asas-leave-container:not(.view-table) .asas-leave-cards-view,
+  .asas-timeline-container:not(.view-table) .asas-timeline-cards-view,
+  .asas-audit-container:not(.view-table) .asas-audit-cards-view {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+}
+
+/* ─── Phone Breakpoint (<= 640px): Single-column clean cards in Auto & Cards modes ─── */
 @media (max-width: 640px) {
   .asas-accounts-toolbar-card {
     padding: 12px;
@@ -4670,7 +4735,15 @@ select.asas-input option {
   }
 
   .asas-accounts-container:not(.view-table) .asas-accounts-cards-view,
-  .asas-accounts-container.view-cards .asas-accounts-cards-view {
+  .asas-accounts-container.view-cards .asas-accounts-cards-view,
+  .asas-records-container:not(.view-table) .asas-records-cards-view,
+  .asas-records-container.view-cards .asas-records-cards-view,
+  .asas-collective-container:not(.view-table) .asas-collective-cards-view,
+  .asas-collective-container.view-cards .asas-collective-cards-view,
+  .asas-leave-container:not(.view-table) .asas-leave-cards-view,
+  .asas-timeline-container:not(.view-table) .asas-timeline-cards-view,
+  .asas-audit-container:not(.view-table) .asas-audit-cards-view {
+    display: grid !important;
     grid-template-columns: minmax(0, 1fr) !important;
     gap: 12px !important;
   }
