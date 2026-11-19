@@ -1737,6 +1737,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const [reminderTarget, setReminderTarget] = useState('inside');
   const [selectedReminderEmployee, setSelectedReminderEmployee] = useState(null);
   const [reminderCustomNote, setReminderCustomNote] = useState('');
+  const [dutyLiveStats, setDutyLiveStats] = useState({ inside: 0, total: 0, present: 0 });
+  const [savingReminderPolicy, setSavingReminderPolicy] = useState(false);
   const [allEmployees, setAllEmployees] = useState([]);
   const [installPrompt, setInstallPrompt] = useState(null);
 
@@ -1847,13 +1849,42 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       const res = await api('/admin/remind-duty', 'POST', payload);
       playChime('success');
       setNotice(res?.message || 'تم إرسال تذكير الدوام بنجاح');
-      load(true);
+      api('/admin/dashboard').then(dash => {
+        if (dash) setDutyLiveStats({ inside: dash.inside || 0, total: dash.total || 0, present: dash.present || 0 });
+      }).catch(() => {});
+      load(false);
       setShowDutyReminderModal(false);
       setReminderCustomNote('');
     } catch (err) {
       setError(err?.message || 'تعذر إرسال تذكير الدوام');
     } finally {
       setTriggeringReminder(false);
+    }
+  };
+
+  const handleSaveReminderPolicy = async (customConfig = null) => {
+    setSavingReminderPolicy(true);
+    try {
+      const payload = {
+        duty_reminder_enabled: customConfig?.duty_reminder_enabled !== undefined
+          ? customConfig.duty_reminder_enabled
+          : (systemSettings.duty_reminder_enabled !== false),
+        duty_reminder_interval_hours: Number(
+          customConfig?.duty_reminder_interval_hours || systemSettings.duty_reminder_interval_hours || 2
+        ),
+        email_notifications: customConfig?.email_notifications !== undefined
+          ? customConfig.email_notifications
+          : Boolean(systemSettings.email_notifications)
+      };
+      await api('/admin/settings', 'PUT', payload);
+      playChime('success');
+      setNotice('تم حفظ وتطبيق سياسة تذكير الدوام بنجاح');
+      const fresh = await api('/admin/settings');
+      if (fresh) setSystemSettings(fresh);
+    } catch (err) {
+      setError(err?.message || 'تعذر حفظ إعدادات تذكير الدوام');
+    } finally {
+      setSavingReminderPolicy(false);
     }
   };
 
@@ -2035,6 +2066,17 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           }
         }
         if (tab === 'settings' && result) setSystemSettings(result);
+        if (tab === 'shifts') {
+          Promise.all([
+            api('/admin/settings').catch(() => null),
+            api('/admin/dashboard').catch(() => null),
+            allEmployees.length === 0 ? api('/admin/accounts').catch(() => null) : Promise.resolve(null)
+          ]).then(([s, dash, accs]) => {
+            if (s) setSystemSettings(s);
+            if (dash) setDutyLiveStats({ inside: dash.inside || 0, total: dash.total || 0, present: dash.present || 0 });
+            if (Array.isArray(accs)) setAllEmployees(accs.filter(a => a.role === 'employee' && a.active !== false));
+          }).catch(() => {});
+        }
         if (tab === 'announcements' && Array.isArray(result)) setAnnouncements(result);
       }
     } catch (e) {
@@ -2734,21 +2776,6 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
 
             <div className="asas-topbar-actions">
               <LiveClock iconSize={14} iconColor="var(--accent)" />
-              <Button
-                variant="glass"
-                size="sm"
-                icon="clock"
-                className="asas-topbar-reminder-btn"
-                onClick={() => setShowDutyReminderModal(true)}
-                title="تذكير الدوام وإثبات الحضور (كل ساعتين)"
-              >
-                <span className="asas-reminder-btn-label">تذكير الدوام</span>
-                {Boolean(data?.inside > 0) && (
-                  <span className="sm-badge sm-badge--teal num" style={{ marginInlineStart: 4, padding: '1px 6px', fontSize: 11 }}>
-                    {data.inside}
-                  </span>
-                )}
-              </Button>
               <button
                 type="button"
                 className="btn btn--ghost btn--sm btn--icon asas-bell-btn"
@@ -4609,43 +4636,286 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
             </div>
           )}
 
-          {/* SHIFTS TAB */}
+          {/* SHIFTS TAB — سياسات وجداول الدوام + نظام التذكير والتنبيه الفوري بالدوام */}
           {tab === 'shifts' && (
-            <div className="asas-form-grid">
-              {rows.map(s => (
-                <Glass key={s.id} style={{ padding: 22 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div className="asas-tile-icon">
-                        <Icon name="clock" width={14} height={14} />
-                      </div>
-                      <div>
-                        <p className="asas-eyebrow" style={{ fontSize: 11, marginBottom: 2 }}>سياسة واحتساب الدوام</p>
-                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{s.name}</h2>
-                      </div>
-                    </div>
-                    <span className="asas-badge inside" style={{ fontSize: 11, padding: '4px 9px', borderRadius: 6, flexShrink: 0 }}>
-                      {s.close_policy === 'scheduled' ? 'إغلاق تلقائي' : 'انصراف فعلي'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, color: 'var(--text-2)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--glass-inset)', borderRadius: 10, border: '1px solid var(--hairline)' }}>
-                      <span>ساعات العمل المعتمدة:</span>
-                      <strong dir="ltr" style={{ color: 'var(--accent)', fontFamily: 'var(--font)', fontSize: 14 }}>
-                        {s.start_time.slice(0, 5)} — {s.end_time.slice(0, 5)}
+            <div className="asas-shifts-page">
+              {/* 1. Sovereign Duty Reminders & Live Alert Dispatch Card */}
+              <Card
+                title="خاصية التذكير والتنبيه الدوري بالدوام"
+                icon="clock"
+                badge={
+                  <span className={`pill ${systemSettings.duty_reminder_enabled !== false ? 'pill--paid' : 'pill--partial'}`}>
+                    <Icon name={systemSettings.duty_reminder_enabled !== false ? 'checkCircle' : 'clock'} />
+                    {systemSettings.duty_reminder_enabled !== false ? 'التذكير الدوري مفعّل' : 'التذكير التلقائي معطّل'}
+                  </span>
+                }
+              >
+                <div className="asas-shifts-reminder-card">
+                  {/* KPI metric tiles */}
+                  <div className="asas-shifts-kpi-grid">
+                    <div className="asas-shifts-kpi-tile">
+                      <span className="asas-shifts-kpi-title">
+                        <Icon name="users" />
+                        الحاضرون على رأس العمل
+                      </span>
+                      <strong className="asas-shifts-kpi-val num" style={{ color: 'var(--paid)' }}>
+                        {formatNumber(dutyLiveStats.inside || data?.inside || 0)}
                       </strong>
+                      <span className="asas-shifts-kpi-sub">الموظفون المتواجدون داخل النطاق حالياً</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>فترة السماح بالدخول:</span>
-                      <strong>{s.grace_minutes || 0} دقيقة</strong>
+
+                    <div className="asas-shifts-kpi-tile">
+                      <span className="asas-shifts-kpi-title">
+                        <Icon name="clock" />
+                        دورية التذكير المعتمدة
+                      </span>
+                      <strong className="asas-shifts-kpi-val num" style={{ color: 'var(--accent)' }}>
+                        كل {formatNumber(systemSettings.duty_reminder_interval_hours || 2)} ساعات
+                      </strong>
+                      <span className="asas-shifts-kpi-sub">تنبيه آلي يرسل أثناء ساعات العمل</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>خصم مدد المغادرة:</span>
-                      <span className={`asas-badge ${s.deduct_away ? 'urgent' : 'inside'}`} style={{ fontSize: 11, borderRadius: 6 }}>
-                        {s.deduct_away ? 'مفعّل' : 'غير مفعّل'}
+
+                    <div className="asas-shifts-kpi-tile">
+                      <span className="asas-shifts-kpi-title">
+                        <Icon name="shieldCheck" />
+                        إجمالي حسابات الموظفين
+                      </span>
+                      <strong className="asas-shifts-kpi-val num">
+                        {formatNumber(dutyLiveStats.total || data?.total || allEmployees.length || 0)}
+                      </strong>
+                      <span className="asas-shifts-kpi-sub">الحسابات النشطة المصرح لها بالدوام</span>
+                    </div>
+                  </div>
+
+                  {/* Dual Power Panels: 1) Edit & Save Automation Policy, 2) Instant Broadcast & Send */}
+                  <div className="asas-shifts-dual-grid">
+                    {/* Panel 1: تعديل وضبط سياسة التذكير الآلي */}
+                    <div className="asas-shifts-panel">
+                      <div className="asas-shifts-panel-head">
+                        <div>
+                          <h3 className="asas-shifts-panel-title">
+                            <Icon name="settings" style={{ color: 'var(--accent)' }} />
+                            تعديل وضبط سياسة التذكير التلقائي
+                          </h3>
+                          <p className="asas-shifts-panel-desc">
+                            التحكم في دورية التنبيهات التلقائية المرسلة لأجهزة الموظفين لإثبات الحضور والاستمرار.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="asas-shifts-panel-body">
+                        <label className="asas-check" style={{ fontSize: 13.5, fontWeight: 700, margin: '4px 0' }}>
+                          <input
+                            type="checkbox"
+                            checked={systemSettings.duty_reminder_enabled !== false}
+                            onChange={(e) => setSystemSettings(prev => ({ ...prev, duty_reminder_enabled: e.target.checked }))}
+                          />
+                          <span>تفعيل التذكير التلقائي أثناء ساعات الدوام</span>
+                        </label>
+
+                        <div className="asas-modern-field-group">
+                          <label className="asas-modern-field-label">تكرار التذكير الدوري:</label>
+                          <select
+                            className="input"
+                            style={{ height: 42 }}
+                            value={systemSettings.duty_reminder_interval_hours || 2}
+                            onChange={(e) => setSystemSettings(prev => ({ ...prev, duty_reminder_interval_hours: Number(e.target.value) }))}
+                          >
+                            <option value={1}>كل ساعة واحدة (تنبيه مكثف)</option>
+                            <option value={2}>كل ساعتين (الافتراضي الموصى به لمنظومة أساس)</option>
+                            <option value={3}>كل 3 ساعات</option>
+                            <option value={4}>كل 4 ساعات (نصف يوم عمل)</option>
+                          </select>
+                        </div>
+
+                        <label className="asas-check" style={{ fontSize: 13, color: 'var(--text-2)', margin: '2px 0' }}>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(systemSettings.email_notifications)}
+                            onChange={(e) => setSystemSettings(prev => ({ ...prev, email_notifications: e.target.checked }))}
+                          />
+                          <span>إرسال بريد إلكتروني تذكيري بالإضافة لإشعار الجوال اللحظي</span>
+                        </label>
+
+                        <p className="subtle prose" style={{ fontSize: 12, margin: '4px 0 0', lineHeight: 1.55 }}>
+                          يتم إرسال إشعار Web Push للجوال مع تنبيه صوتي حتى لو كان التطبيق مغلقاً.
+                        </p>
+                      </div>
+
+                      <div className="asas-shifts-panel-foot">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon="check"
+                          loading={savingReminderPolicy}
+                          disabled={savingReminderPolicy}
+                          onClick={() => handleSaveReminderPolicy()}
+                        >
+                          حفظ وتطبيق سياسة التذكير
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Panel 2: نشر وإرسال تنبيه فوري لحظي */}
+                    <div className="asas-shifts-panel">
+                      <div className="asas-shifts-panel-head">
+                        <div>
+                          <h3 className="asas-shifts-panel-title">
+                            <Icon name="send" style={{ color: 'var(--accent)' }} />
+                            نشر وإرسال تنبيه فوري مباشر
+                          </h3>
+                          <p className="asas-shifts-panel-desc">
+                            بث إشعار فوري وتنبيه صوتي لحظي لأجهزة الموظفين لتأكيد الحضور أو إرسال تعليمات إدارية.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="asas-shifts-panel-body">
+                        <div>
+                          <label className="asas-modern-field-label" style={{ display: 'block', marginBottom: 6 }}>
+                            فئة المستهدفين بالنشر:
+                          </label>
+                          <div className="asas-notif-toolbar">
+                            <Segmented
+                              label="فئة المستهدفين"
+                              value={reminderTarget}
+                              onChange={(val) => {
+                                setReminderTarget(val);
+                                if (val !== 'employee') setSelectedReminderEmployee(null);
+                              }}
+                              options={[
+                                { value: 'inside', label: 'المتواجدون حالياً', count: dutyLiveStats.inside || data?.inside || 0 },
+                                { value: 'employee', label: 'موظف محدد' },
+                                { value: 'all', label: 'كافة الموظفين', count: dutyLiveStats.total || data?.total || allEmployees.length || 0 }
+                              ]}
+                            />
+                          </div>
+                        </div>
+
+                        {reminderTarget === 'employee' && (
+                          <div className="asas-modern-field-group">
+                            <label className="asas-modern-field-label">اختر الموظف المراد تنبيهه:</label>
+                            <select
+                              className="input"
+                              style={{ height: 42 }}
+                              value={selectedReminderEmployee?.id || ''}
+                              onChange={(e) => {
+                                const idNum = Number(e.target.value);
+                                const pool = allEmployees.length ? allEmployees : (data?.records || []).map(r => ({ id: r.employee_id, name: r.name, identifier: r.identifier }));
+                                const found = pool.find(x => (x.id === idNum || x.employee_id === idNum));
+                                setSelectedReminderEmployee(found ? { id: found.id || found.employee_id, name: found.name, identifier: found.identifier } : null);
+                              }}
+                            >
+                              <option value="">-- اضغط لاختيار الموظف --</option>
+                              {(allEmployees.length ? allEmployees : (data?.records || []).map(r => ({ id: r.employee_id, name: r.name, identifier: r.identifier }))).map(emp => {
+                                const isInside = (data?.records || []).some(r => (r.employee_id === emp.id || r.id === emp.id) && r.state === 'inside');
+                                return (
+                                  <option key={emp.id} value={emp.id}>
+                                    {emp.name} (#{emp.identifier}) {isInside ? '🟢 متواجد بالدوام' : '⚪ خارج الدوام'}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                        )}
+
+                        <div className="asas-modern-field-group">
+                          <label className="asas-modern-field-label">نص رسالة التنبيه (اختياري أو مخصص):</label>
+                          <textarea
+                            className="input"
+                            rows={2}
+                            placeholder="اكتب رسالة التنبيه التي ستصل لجوال الموظف فوراً..."
+                            value={reminderCustomNote}
+                            onChange={(e) => setReminderCustomNote(e.target.value)}
+                            style={{ height: 'auto', minHeight: 64, resize: 'vertical', padding: '8px 12px' }}
+                          />
+                          <div className="asas-shifts-templates-bar">
+                            <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>قوالب سريعة:</span>
+                            {[
+                              { label: 'تأكيد الحضور', text: 'يرجى تأكيد استمرار تواجدك على رأس العمل لتوثيق ساعات الدوام بدقة.' },
+                              { label: 'تقرير المهام', text: 'تذكير: يرجى استكمال وتسليم تقرير الإنجاز اليومي قبل انتهاء فترة الدوام.' },
+                              { label: 'تنبيه إداري', text: 'تنبيه إداري رسمي: يرجى التواجد في مقر العمل والالتزام بنظام الحضور المعتمد.' }
+                            ].map((tpl, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                className="chip asas-shifts-template-chip"
+                                onClick={() => setReminderCustomNote(tpl.text)}
+                              >
+                                {tpl.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="asas-shifts-panel-foot">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon="send"
+                          loading={triggeringReminder}
+                          disabled={triggeringReminder || (reminderTarget === 'employee' && !selectedReminderEmployee)}
+                          onClick={handleTriggerManualReminder}
+                        >
+                          {reminderTarget === 'employee'
+                            ? (selectedReminderEmployee ? `نشر التنبيه لـ ${firstName(selectedReminderEmployee.name)}` : 'اختر موظفاً أولاً')
+                            : `نشر التنبيه الفوري الآن (${formatNumber(reminderTarget === 'inside' ? (dutyLiveStats.inside || data?.inside || 0) : (dutyLiveStats.total || data?.total || allEmployees.length || 0))})`}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* 2. Shift Schedules Section */}
+              <div className="asas-shifts-section-head">
+                <div>
+                  <h2 className="asas-shifts-section-title">جداول وسياسات احتساب ساعات الدوام</h2>
+                  <p className="asas-shifts-section-desc">مواعيد الدوام المعتمدة، فترات السماح، وسياسات إغلاق السجلات.</p>
+                </div>
+                {can('shifts.write') && (
+                  <Button variant="primary" size="sm" icon="plus" onClick={() => edit('shifts', null)}>
+                    إضافة جدول دوام جديد
+                  </Button>
+                )}
+              </div>
+
+              <div className="asas-form-grid">
+                {rows.map(s => (
+                  <Glass key={s.id} style={{ padding: 22 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="asas-tile-icon">
+                          <Icon name="clock" width={14} height={14} />
+                        </div>
+                        <div>
+                          <p className="asas-eyebrow" style={{ fontSize: 11, marginBottom: 2 }}>سياسة واحتساب الدوام</p>
+                          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{s.name}</h3>
+                        </div>
+                      </div>
+                      <span className="asas-badge inside" style={{ fontSize: 11, padding: '4px 9px', borderRadius: 6, flexShrink: 0 }}>
+                        {s.close_policy === 'scheduled' ? 'إغلاق تلقائي' : 'انصراف فعلي'}
                       </span>
                     </div>
-                  </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, color: 'var(--text-2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--glass-inset)', borderRadius: 10, border: '1px solid var(--hairline)' }}>
+                        <span>ساعات العمل المعتمدة:</span>
+                        <strong dir="ltr" style={{ color: 'var(--accent)', fontFamily: 'var(--font)', fontSize: 14 }}>
+                          {s.start_time.slice(0, 5)} — {s.end_time.slice(0, 5)}
+                        </strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>فترة السماح بالدخول:</span>
+                        <strong>{s.grace_minutes || 0} دقيقة</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>خصم مدد المغادرة:</span>
+                        <span className={`asas-badge ${s.deduct_away ? 'urgent' : 'inside'}`} style={{ fontSize: 11, borderRadius: 6 }}>
+                          {s.deduct_away ? 'مفعّل' : 'غير مفعّل'}
+                        </span>
+                      </div>
+                    </div>
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--hairline)' }}>
                       <span style={{ fontSize: 11.5, color: 'var(--text-3)', display: 'block', marginBottom: 4 }}>أيام العمل المعتمدة:</span>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -4678,26 +4948,27 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                         })}
                       </div>
                     </div>
-                  {can('shifts.write') && (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-                      <button className="asas-btn sm" style={{ flex: 1, justifyContent: 'center' }} onClick={() => edit('shifts', s)}>
-                        <Icon name="edit" />
-                        تعديل السياسة
-                      </button>
-                      <button
-                        className="asas-btn sm danger"
-                        title="حذف هذا الدوام"
-                        style={{ padding: '0 10px' }}
-                        onClick={() => deleteShift(s)}
-                      >
-                        <Icon name="trash" />
-                        حذف
-                      </button>
-                    </div>
-                  )}
-                </Glass>
-              ))}
-              {!rows.length && !busy && <Empty>أضف جدول دوام لتحديده للموظفين.</Empty>}
+                    {can('shifts.write') && (
+                      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                        <button className="asas-btn sm" style={{ flex: 1, justifyContent: 'center' }} onClick={() => edit('shifts', s)}>
+                          <Icon name="edit" />
+                          تعديل السياسة
+                        </button>
+                        <button
+                          className="asas-btn sm danger"
+                          title="حذف هذا الدوام"
+                          style={{ padding: '0 10px' }}
+                          onClick={() => deleteShift(s)}
+                        >
+                          <Icon name="trash" />
+                          حذف
+                        </button>
+                      </div>
+                    )}
+                  </Glass>
+                ))}
+                {!rows.length && !busy && <Empty>أضف جدول دوام لتحديده للموظفين.</Empty>}
+              </div>
             </div>
           )}
 
