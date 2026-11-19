@@ -5774,3 +5774,182 @@ select.asas-input option {
     flex-wrap: wrap;
   }
 }
+
+/* ───────── Branch Network Attendance Styles ───────── */
+.asas-branch-network-box {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, 12px);
+  background: var(--glass-inset);
+  border: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.asas-branch-network-badge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.asas-branch-network-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.asas-branch-network-title.active {
+  color: var(--paid);
+}
+
+.asas-branch-network-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--hairline);
+}
+
+.asas-branch-net-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.asas-branch-net-row .label {
+  color: var(--text-muted);
+}
+
+.asas-branch-net-row .val {
+  color: var(--text);
+}
+
+.asas-net-ip-tag {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.asas-branch-net-muted {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.asas-inquiry-responses-card {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: var(--radius-md, 12px);
+  background: var(--glass-inset);
+  border: 1px solid var(--hairline);
+}
+
+/* Modal Network Card */
+.asas-branch-network-card {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: var(--radius-md, 14px);
+  background: var(--glass-inset);
+  border: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.asas-branch-network-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.asas-branch-network-header .asas-branch-network-title {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.asas-branch-network-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+.asas-branch-network-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--hairline);
+}
+
+.asas-network-ip-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.asas-network-ip-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.asas-capture-ip-btn {
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+  height: auto !important;
+  min-height: 28px !important;
+  gap: 5px;
+}
+
+.asas-network-ip-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.asas-network-ip-hint code {
+  background: var(--glass-inset);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+@media (max-width: 640px) {
+  .asas-branch-network-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .asas-network-ip-label-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .asas-capture-ip-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .asas-branch-net-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+}
+

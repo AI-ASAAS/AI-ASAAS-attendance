@@ -360,22 +360,132 @@ app.get('/api/admin/branches',admin,wrap(async(req,res)=>{
  const broad=['super_admin','hr_admin'].includes(req.user.role);
  respond(res,(await db.query('SELECT * FROM branches WHERE ($1=1 OR id=$2) ORDER BY id',[broad,req.user.branch_id])).rows);
 }));
+app.get('/api/admin/my-ip',admin,(req,res)=>{
+ const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || '').split(',')[0].trim().replace(/^::ffff:/, '');
+ respond(res, { ip });
+});
+function parseIpV4(ipStr) {
+ if (!ipStr || typeof ipStr !== 'string') return null;
+ const clean = ipStr.trim().replace(/^::ffff:/, '');
+ const parts = clean.split('.');
+ if (parts.length === 4 && parts.every(p => /^\d+$/.test(p) && Number(p) >= 0 && Number(p) <= 255)) {
+  return ((Number(parts[0]) << 24) | (Number(parts[1]) << 16) | (Number(parts[2]) << 8) | Number(parts[3])) >>> 0;
+ }
+ return null;
+}
+function isIpInSubnet(ipStr, subnetStr) {
+ const cleanIp = (ipStr || '').trim().replace(/^::ffff:/, '');
+ const cleanSubnet = (subnetStr || '').trim().replace(/^::ffff:/, '');
+ if (!cleanIp || !cleanSubnet) return false;
+ if (cleanSubnet === '*' || cleanSubnet === cleanIp) return true;
+ if (cleanSubnet.endsWith('.*')) {
+  const prefix = cleanSubnet.slice(0, -1);
+  return cleanIp.startsWith(prefix);
+ }
+ if (cleanSubnet.includes('/')) {
+  const [range, bitsStr] = cleanSubnet.split('/');
+  const bits = parseInt(bitsStr, 10);
+  const ipNum = parseIpV4(cleanIp);
+  const rangeNum = parseIpV4(range);
+  if (ipNum !== null && rangeNum !== null && !isNaN(bits) && bits >= 0 && bits <= 32) {
+   if (bits === 0) return true;
+   const mask = ((0xFFFFFFFF << (32 - bits)) >>> 0);
+   return ((ipNum & mask) >>> 0) === ((rangeNum & mask) >>> 0);
+  }
+ }
+ return cleanIp.toLowerCase() === cleanSubnet.toLowerCase();
+}
+function verifyBranchNetwork(branch, clientIp, clientSsid, clientBssid) {
+ if (!branch || !branch.network_attendance_enabled) {
+  return { enabled: false, matched: false, reason: 'network_disabled' };
+ }
+ const cleanIp = (clientIp || '').trim().replace(/^::ffff:/, '');
+ let ipMatched = false, matchedRule = '';
+ if (branch.allowed_ips && branch.allowed_ips.trim()) {
+  const rules = branch.allowed_ips.split(/[,\n;]+/).map(s => s.trim()).filter(Boolean);
+  for (const rule of rules) {
+   if (isIpInSubnet(cleanIp, rule)) {
+    ipMatched = true;
+    matchedRule = rule;
+    break;
+   }
+  }
+ }
+ let ssidMatched = false;
+ if (branch.wifi_ssid && branch.wifi_ssid.trim() && clientSsid) {
+  const allowedSsids = branch.wifi_ssid.split(/[,\n;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+  const cSsid = String(clientSsid).trim().toLowerCase();
+  if (allowedSsids.includes(cSsid) || allowedSsids.some(s => cSsid.includes(s) || s.includes(cSsid))) {
+   ssidMatched = true;
+  }
+ }
+ let bssidMatched = false;
+ if (branch.wifi_bssid && branch.wifi_bssid.trim() && clientBssid) {
+  const allowedBssids = branch.wifi_bssid.split(/[,\n;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+  const cBssid = String(clientBssid).trim().toLowerCase();
+  if (allowedBssids.includes(cBssid)) {
+   bssidMatched = true;
+  }
+ }
+ const hasIpRules = Boolean(branch.allowed_ips && branch.allowed_ips.trim());
+ const hasSsidRules = Boolean(branch.wifi_ssid && branch.wifi_ssid.trim());
+ let matched = false;
+ if (hasIpRules && hasSsidRules) {
+  matched = ipMatched || ssidMatched;
+ } else if (hasIpRules) {
+  matched = ipMatched;
+ } else if (hasSsidRules) {
+  matched = ssidMatched;
+ } else {
+  matched = true;
+ }
+ return {
+  enabled: true,
+  matched,
+  clientIp: cleanIp,
+  matchedRule: matchedRule || (ssidMatched ? branch.wifi_ssid : ''),
+  ipMatched,
+  ssidMatched,
+  bssidMatched,
+  mode: branch.network_mode || 'network_or_gps'
+ };
+}
 function branchInput(b){
  const name=string(b.name);
  for(const [k,limit] of [['latitude',90],['longitude',180]])if(typeof b[k]!=='number'||!Number.isFinite(b[k])||Math.abs(b[k])>limit)error('VALIDATION','إحداثيات غير صالحة');
  const entry=integer(b.entry_radius,10,1000),exit=integer(b.exit_radius,entry+1,2000);
- return [name,b.latitude,b.longitude,entry,exit,integer(b.max_accuracy,1,500),integer(b.exit_samples,2,10),integer(b.exit_delay_seconds,30,600),bool(b.active)];
+ const networkEnabled = Boolean(b.network_attendance_enabled);
+ const wifiSsid = typeof b.wifi_ssid === 'string' ? b.wifi_ssid.trim().slice(0, 300) : '';
+ const wifiBssid = typeof b.wifi_bssid === 'string' ? b.wifi_bssid.trim().slice(0, 150) : '';
+ const allowedIps = typeof b.allowed_ips === 'string' ? b.allowed_ips.trim().slice(0, 1000) : '';
+ const networkMode = ['network_or_gps', 'network_and_gps', 'network_only'].includes(b.network_mode) ? b.network_mode : 'network_or_gps';
+ return [
+  name,
+  b.latitude,
+  b.longitude,
+  entry,
+  exit,
+  integer(b.max_accuracy,1,500),
+  integer(b.exit_samples,2,10),
+  integer(b.exit_delay_seconds,30,600),
+  bool(b.active),
+  networkEnabled,
+  wifiSsid,
+  wifiBssid,
+  allowedIps,
+  networkMode
+ ];
 }
 app.post('/api/admin/branches',admin,allow('locations.write'),wrap(async(req,res)=>{
  if(!['super_admin','hr_admin'].includes(req.user.role))error('FORBIDDEN','إنشاء فرع يحتاج إدارة مركزية',403);
  const values=branchInput(req.body),reason=string(req.body.reason,500);
- respond(res,await db.transaction(async c=>{const r=await c.query('INSERT INTO branches(name,latitude,longitude,entry_radius,exit_radius,max_accuracy,exit_samples,exit_delay_seconds,active) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',values);await audit(c,req.user,'branch.create',r.rows[0].id,reason);return r.rows[0];}));
+ respond(res,await db.transaction(async c=>{const r=await c.query('INSERT INTO branches(name,latitude,longitude,entry_radius,exit_radius,max_accuracy,exit_samples,exit_delay_seconds,active,network_attendance_enabled,wifi_ssid,wifi_bssid,allowed_ips,network_mode) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *',values);await audit(c,req.user,'branch.create',r.rows[0].id,reason);return r.rows[0];}));
 }));
 app.put('/api/admin/branches/:id',admin,allow('locations.write'),wrap(async(req,res)=>{
  const branchId=id(req.params.id);scope(req.user,branchId);const values=branchInput(req.body),reason=string(req.body.reason,500);
  respond(res,await db.transaction(async c=>{
  const old=(await c.query('SELECT * FROM branches WHERE id=$1',[branchId])).rows[0];if(!old)error('NOT_FOUND','الموقع غير موجود',404);
- const r=await c.query('UPDATE branches SET name=$1,latitude=$2,longitude=$3,entry_radius=$4,exit_radius=$5,max_accuracy=$6,exit_samples=$7,exit_delay_seconds=$8,active=$9,location_revision=location_revision+1 WHERE id=$10 RETURNING *',[...values,branchId]);
+ const r=await c.query('UPDATE branches SET name=$1,latitude=$2,longitude=$3,entry_radius=$4,exit_radius=$5,max_accuracy=$6,exit_samples=$7,exit_delay_seconds=$8,active=$9,network_attendance_enabled=$10,wifi_ssid=$11,wifi_bssid=$12,allowed_ips=$13,network_mode=$14,location_revision=location_revision+1 WHERE id=$15 RETURNING *',[...values,branchId]);
  await c.query('UPDATE duty_records SET exit_candidate=NULL WHERE branch_id=$1',[branchId]);await audit(c,req.user,'branch.update',branchId,reason,{before:old,after:r.rows[0]});return r.rows[0];}));
 }));
 app.get('/api/admin/branches/:id/qr',admin,allow('qr.manage'),wrap(async(req,res)=>{
@@ -921,16 +1031,56 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
   const branch=(await c.query('SELECT * FROM branches WHERE id=$1',[branchId])).rows[0];
   if(!branch)error('NO_BRANCH','لم يتم تعيين موقع لك');
   const location=policy.classifyFix(b.fix,branch,now);
+  const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || '').split(',')[0].trim().replace(/^::ffff:/, '');
+  const clientSsid = b.wifi_ssid || req.headers['x-wifi-ssid'] || b.ssid;
+  const clientBssid = b.wifi_bssid || req.headers['x-wifi-bssid'] || b.bssid;
+  const netCheck = verifyBranchNetwork(branch, clientIp, clientSsid, clientBssid);
+
   if(b.action!=='location'){
    if(!isRemote){
     policy.verifyQr(b.token,branch,process.env.QR_SECRET,now,b.action);
     const dist=Math.round(location.distance);
     const maxAccuracy=Math.max(Number(branch.max_accuracy||200),250);
-    if(b.fix.accuracy>maxAccuracy){
-     error('GPS_LOW_ACCURACY',`إشارة تحديد الموقع ضعيفة (الدقة: ${Math.round(b.fix.accuracy)} متر، والحد الأقصى للدقة المقبولة هو ${maxAccuracy} متر). يرجى تفعيل "الموقع الدقيق Precise Location" في الهاتف والاقتراب من نافذة والمحاولة مجدداً.`,422);
-    }
-    if(b.action==='enter'&&dist>Number(branch.entry_radius)){
-     error('GPS_REJECTED',`أنت خارج نطاق الفرع (${dist} متر). النطاق المسموح للدخول: ${branch.entry_radius} متر. يرجى التواجد في مقر الفرع أو تعديل إحداثيات الفرع في الإدارة لموقعك الحالي.`,422);
+
+    if (branch.network_attendance_enabled) {
+     if (branch.network_mode === 'network_only') {
+      if (!netCheck.matched) {
+       error('NETWORK_REQUIRED', `التحضير في هذا الموقع محدد بالاتصال بشبكة الفرع المعتمدة (${branch.wifi_ssid || branch.allowed_ips || 'شبكة الفرع'}). عنوان IP الحالي (${netCheck.clientIp}) غير معتمد.`, 422);
+      }
+      location.state = 'inside';
+     } else if (branch.network_mode === 'network_and_gps') {
+      if (!netCheck.matched) {
+       error('NETWORK_REQUIRED', `التحضير في هذا الموقع يتطلب الاتصال بشبكة الفرع المعتمدة بالإضافة إلى مطابقة الموقع الجغرافي. عنوان IP الحالي (${netCheck.clientIp}) غير معتمد.`, 422);
+      }
+      if(b.fix && b.fix.accuracy>maxAccuracy){
+       error('GPS_LOW_ACCURACY',`إشارة تحديد الموقع ضعيفة (الدقة: ${Math.round(b.fix.accuracy)} متر، والحد الأقصى للدقة المقبولة هو ${maxAccuracy} متر). يرجى تفعيل "الموقع الدقيق Precise Location" في الهاتف والاقتراب من نافذة والمحاولة مجدداً.`,422);
+      }
+      if(b.action==='enter'&&dist>Number(branch.entry_radius)){
+       error('GPS_REJECTED',`أنت خارج نطاق الفرع (${dist} متر). النطاق المسموح للدخول: ${branch.entry_radius} متر.`,422);
+      }
+      location.state = 'inside';
+     } else {
+      // 'network_or_gps' (default):
+      if (netCheck.matched) {
+       location.state = 'inside';
+      } else {
+       if(b.fix && b.fix.accuracy>maxAccuracy){
+        error('GPS_LOW_ACCURACY',`إشارة تحديد الموقع ضعيفة (الدقة: ${Math.round(b.fix.accuracy)} متر، والحد الأقصى للدقة المقبولة هو ${maxAccuracy} متر). يرجى تفعيل "الموقع الدقيق" أو الاتصال بشبكة واي فاي الفرع المعتمدة (${branch.wifi_ssid || 'شبكة الفرع'}).`,422);
+       }
+       if(b.action==='enter'&&dist>Number(branch.entry_radius)){
+        error('GPS_REJECTED',`أنت خارج نطاق الفرع (${dist} متر). النطاق المسموح للدخول: ${branch.entry_radius} متر. يرجى التواجد في مقر الفرع أو الاتصال بشبكة واي فاي الفرع المعتمدة.`,422);
+       }
+       location.state = 'inside';
+      }
+     }
+    } else {
+     if(b.fix && b.fix.accuracy>maxAccuracy){
+      error('GPS_LOW_ACCURACY',`إشارة تحديد الموقع ضعيفة (الدقة: ${Math.round(b.fix.accuracy)} متر، والحد الأقصى للدقة المقبولة هو ${maxAccuracy} متر). يرجى تفعيل "الموقع الدقيق Precise Location" في الهاتف والاقتراب من نافذة والمحاولة مجدداً.`,422);
+     }
+     if(b.action==='enter'&&dist>Number(branch.entry_radius)){
+      error('GPS_REJECTED',`أنت خارج نطاق الفرع (${dist} متر). النطاق المسموح للدخول: ${branch.entry_radius} متر. يرجى التواجد في مقر الفرع أو تعديل إحداثيات الفرع في الإدارة لموقعك الحالي.`,422);
+     }
+     location.state = 'inside';
     }
    }
    location.state='inside';
@@ -955,17 +1105,18 @@ app.post('/api/attendance/action',employee,wrap(async(req,res)=>{
     const late=Math.max(0,Math.floor((now-window.start)/60000)-shift.grace_minutes);
     record=(await c.query("INSERT INTO duty_records(employee_id,branch_id,shift_id,shift_start,shift_end,first_in,state,close_policy,deduct_away,late_minutes,last_seen) VALUES($1,$2,$3,$4,$5,$6,'inside',$7,$8,$9,$6) RETURNING *",[req.user.id,branch.id,shift.id,window.start,window.end,now,shift.close_policy,shift.deduct_away,late])).rows[0];
    }
-   await event(c,req.user,record,returning?'return':'enter',b,{location,fix:b.fix,branch_snapshot:branch,is_auto:isAuto,biometric:b.biometric});
+   await event(c,req.user,record,returning?'return':'enter',b,{location,fix:b.fix,branch_snapshot:branch,is_auto:isAuto,biometric:b.biometric,network_check:netCheck});
    if(!returning&&req.user.email){
     const timeStr=new Date(now).toLocaleTimeString('ar-YE',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Aden'});
     notifications.notifyCheckIn(req.user,branch.name,timeStr).catch(err=>console.error('[Notification Error] Check-in email failed:',err.message));
    }
    const resolved = resolveRecordStatus(record);
+   const netSuffix = (!isRemote && branch.network_attendance_enabled && netCheck.matched) ? ' (توثيق شبكة الفرع 📶)' : '';
    const enterMsg = isRemote
      ? 'تم تسجيل حضورك بنجاح (العمل عن بعد 🌐)'
      : (record.late_minutes > 0
-       ? `تم تسجيل حضورك بنجاح (تأخير ${record.late_minutes} دقيقة عن بداية الدوام)`
-       : (returning ? (isAuto ? 'تم تسجيل عودتك تلقائياً' : 'تم تسجيل عودتك') : (isAuto ? 'تم تسجيل حضورك تلقائياً بحسب حالتك' : 'تم تسجيل حضورك')));
+       ? `تم تسجيل حضورك بنجاح (تأخير ${record.late_minutes} دقيقة عن بداية الدوام)${netSuffix}`
+       : (returning ? (isAuto ? `تم تسجيل عودتك تلقائياً${netSuffix}` : `تم تسجيل عودتك${netSuffix}`) : (isAuto ? `تم تسجيل حضورك تلقائياً بحسب حالتك${netSuffix}` : `تم تسجيل حضورك${netSuffix}`)));
    return {record:{...record,...resolved},action:'enter',automatic:isAuto,message:enterMsg,status_label:resolved.status_label,exit_reason_label:resolved.exit_reason_label};
   }
   let automatic=false,candidate=null;
@@ -1146,14 +1297,27 @@ app.get('/api/attendance/me',employee,wrap(async(req,res)=>{
 
  let dutyReminderAlert = null;
  if (latestReminder) {
-   try {
-     dutyReminderAlert = {
-       id: latestReminder.id,
-       captured_at: latestReminder.captured_at,
-       ...JSON.parse(latestReminder.details || '{}')
-     };
-   } catch (_) {
-     dutyReminderAlert = { id: latestReminder.id, captured_at: latestReminder.captured_at };
+   const alreadyAnswered = (await db.query(`
+     SELECT id FROM attendance_events
+     WHERE employee_id = $1
+       AND kind IN ('presence_confirmed', 'inquiry_response')
+       AND datetime(captured_at) >= datetime($2)
+     LIMIT 1
+   `, [req.user.id, latestReminder.captured_at])).rows[0];
+
+   if (!alreadyAnswered) {
+     try {
+       const parsedDetails = typeof latestReminder.details === 'object' && latestReminder.details !== null
+         ? latestReminder.details
+         : JSON.parse(latestReminder.details || '{}');
+       dutyReminderAlert = {
+         id: latestReminder.id,
+         captured_at: latestReminder.captured_at,
+         ...parsedDetails
+       };
+     } catch (_) {
+       dutyReminderAlert = { id: latestReminder.id, captured_at: latestReminder.captured_at };
+     }
    }
  }
 
@@ -1168,8 +1332,33 @@ app.post('/api/attendance/offline',employee,wrap(async(req,res)=>{
 }));
 app.post('/api/attendance/heartbeat',employee,wrap(async(req,res)=>{
  const now = new Date();
+ const responseType = req.body?.response; // 'will_attend', 'cannot_attend', 'acknowledged'
+ const customReason = req.body?.note || req.body?.reason || '';
+ const alertId = req.body?.alert_id;
+
  const result = await db.transaction(async c => {
   const record = (await c.query("SELECT * FROM duty_records WHERE employee_id=$1 AND state='inside' ORDER BY shift_start DESC LIMIT 1",[req.user.id])).rows[0];
+  
+  if (responseType === 'will_attend' || responseType === 'cannot_attend') {
+   await c.query("INSERT INTO attendance_events(record_id, employee_id, kind, captured_at, details) VALUES($1, $2, 'inquiry_response', $3, $4)", [
+    record?.id || null,
+    req.user.id,
+    now.toISOString(),
+    JSON.stringify({
+     source: 'employee_attendance_inquiry_reply',
+     response: responseType,
+     status_text: responseType === 'will_attend' ? 'سيداوم اليوم' : 'معتذر عن الدوام',
+     note: customReason,
+     alert_id: alertId || null,
+     answered_at: now.toISOString()
+    })
+   ]);
+   const replyMsg = responseType === 'will_attend'
+    ? 'تم توثيق تأكيدك بالحضور اليوم بنجاح للإدارة'
+    : 'تم توثيق اعتذارك عن الحضور اليوم وإشعار الإدارة';
+   return { active: Boolean(record), confirmed: true, inquiry_answered: true, message: replyMsg, confirmed_at: now.toISOString() };
+  }
+
   if (!record) {
    return { active: false, message: 'لا توجد مناوبة نشطة حالياً لتأكيدها' };
   }
@@ -1183,6 +1372,26 @@ app.post('/api/attendance/heartbeat',employee,wrap(async(req,res)=>{
   return { active: true, confirmed: true, message: 'تم تأكيد استمرار حضورك بنجاح', confirmed_at: now.toISOString() };
  });
  respond(res, result);
+}));
+
+app.get('/api/admin/inquiry-responses',admin,wrap(async(req,res)=>{
+ const broad=['super_admin','hr_admin'].includes(req.user.role);
+ const today = policy.localDay();
+ const rows = (await db.query(`
+   SELECT e.id, e.employee_id, e.captured_at, e.details, a.name, a.identifier, b.name as branch_name
+   FROM attendance_events e
+   JOIN accounts a ON a.id = e.employee_id
+   LEFT JOIN branches b ON b.id = a.branch_id
+   WHERE e.kind = 'inquiry_response'
+     AND date(e.captured_at, '+3 hours') = $1
+     AND ($2=1 OR a.branch_id=$3)
+   ORDER BY e.id DESC LIMIT 50
+ `, [today, broad, req.user.branch_id])).rows;
+ const mapped = rows.map(r => {
+   const d = typeof r.details === 'object' && r.details !== null ? r.details : {};
+   return { id: r.id, employee_id: r.employee_id, name: r.name, identifier: r.identifier, branch: r.branch_name, captured_at: r.captured_at, ...d };
+ });
+ respond(res, mapped);
 }));
 
 async function recordsFor(user,from,to){
@@ -1359,6 +1568,8 @@ app.get('/api/admin/settings',admin,wrap(async(req,res)=>{
   email_notifications: settingsMap.email_notifications === 'true',
   duty_reminder_enabled: settingsMap.duty_reminder_enabled !== 'false',
   duty_reminder_interval_hours: Number(settingsMap.duty_reminder_interval_hours || 2),
+  absent_reminder_enabled: settingsMap.absent_reminder_enabled !== 'false',
+  absent_reminder_delay_minutes: Number(settingsMap.absent_reminder_delay_minutes || 30),
   support_contact: settingsMap.support_contact || '+967 770000000',
   assistant_enabled: assistantGlobals.enabled,
   assistant_daily_quota_employee: assistantGlobals.dailyQuotaEmployee,
@@ -1387,6 +1598,8 @@ app.put('/api/admin/settings',admin,allow('locations.write'),wrap(async(req,res)
   email_notifications,
   duty_reminder_enabled,
   duty_reminder_interval_hours,
+  absent_reminder_enabled,
+  absent_reminder_delay_minutes,
   support_contact,
   assistant_enabled,
   assistant_daily_quota_employee,
@@ -1407,6 +1620,8 @@ app.put('/api/admin/settings',admin,allow('locations.write'),wrap(async(req,res)
   if(email_notifications !== undefined) await upsertSetting(c, 'email_notifications', email_notifications ? 'true' : 'false');
   if(duty_reminder_enabled !== undefined) await upsertSetting(c, 'duty_reminder_enabled', duty_reminder_enabled ? 'true' : 'false');
   if(duty_reminder_interval_hours !== undefined) await upsertSetting(c, 'duty_reminder_interval_hours', integer(Number(duty_reminder_interval_hours), 1, 12));
+  if(absent_reminder_enabled !== undefined) await upsertSetting(c, 'absent_reminder_enabled', absent_reminder_enabled ? 'true' : 'false');
+  if(absent_reminder_delay_minutes !== undefined) await upsertSetting(c, 'absent_reminder_delay_minutes', integer(Number(absent_reminder_delay_minutes), 10, 180));
   if(support_contact !== undefined) await upsertSetting(c, 'support_contact', string(support_contact, 100));
   if(assistant_enabled !== undefined) await upsertSetting(c, 'assistant_enabled', assistant_enabled ? 'true' : 'false');
   if(assistant_daily_quota_employee !== undefined) await upsertSetting(c, 'assistant_daily_quota_employee', integer(Number(assistant_daily_quota_employee), 1, 500));
@@ -1465,6 +1680,16 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
    if (!targets.length) {
      error('NOT_FOUND', 'الموظف المحدد غير موجود أو خارج نطاق صلاحيات الفرع');
    }
+ } else if (target === 'absent') {
+   targets = (await db.query(`
+     SELECT a.id as employee_id, a.name, a.email, a.identifier, b.name as branch_name, NULL as record_id, NULL as first_in, 'absent' as state
+     FROM accounts a
+     LEFT JOIN branches b ON b.id = a.branch_id
+     WHERE a.role = 'employee' AND a.active = TRUE AND ($1=1 OR a.branch_id=$2)
+       AND a.id NOT IN (
+         SELECT employee_id FROM duty_records WHERE state = 'inside'
+       )
+   `, [broad, req.user.branch_id])).rows;
  } else if (target === 'all') {
    targets = (await db.query(`
      SELECT a.id as employee_id, a.name, a.email, a.identifier, b.name as branch_name, r.id as record_id, r.first_in, r.state
@@ -1488,6 +1713,11 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
  for (const record of targets) {
    const firstInTime = record.first_in ? new Date(record.first_in).getTime() : now.getTime();
    const hoursOnDuty = Math.max(1, Math.round((now.getTime() - firstInTime) / 3600000));
+   const isInquiry = (target === 'absent') || Boolean(req.body?.inquiry);
+   const defaultNote = target === 'absent'
+     ? 'تذكير بمباشرة الدوام: هل ستباشر دوامك اليوم؟ يرجى تأكيد حضورك أو تقديم عذر لتنظيم سير العمل.'
+     : 'يرجى تسجيل الحضور وتأكيد الاستمرار في الدوام';
+   const noteToSend = customNote || defaultNote;
 
    await db.query(`
      INSERT INTO attendance_events(record_id, employee_id, kind, captured_at, details)
@@ -1497,7 +1727,9 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
      admin_name: req.user.name,
      hours_on_duty: hoursOnDuty,
      target,
-     custom_note: customNote,
+     inquiry: isInquiry,
+     question: isInquiry ? 'هل ستداوم اليوم؟' : null,
+     custom_note: noteToSend,
      triggered_at: nowIso
    })]);
 
@@ -1506,24 +1738,21 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
        { name: record.name, email: record.email, identifier: record.identifier },
        record.branch_name,
        hoursOnDuty,
-       customNote
+       noteToSend
      ).catch(err => console.error('[Notification Error] Manual duty reminder failed:', err.message));
    }
 
    // Dispatch real Web Push to phone even if app is closed
-   const fullReminderText = customNote
-     ? `${customNote}\n\nيرجى فتح النظام لتأكيد استمرار تواجدك وتوثيق ساعات دوامك بدقة.`
-     : `مرحباً ${record.name}، نود تذكيرك بتأكيد تواجدك على رأس العمل لتوثيق ساعات دوامك بدقة.`;
-   const shortReminderBody = customNote
-     ? (customNote.length > 140 ? `${customNote.slice(0, 137).trim()}… — اضغط لقراءة التنبيه كاملاً` : customNote)
-     : `مرحباً ${record.name}، يرجى تأكيد استمرار تواجدك في الدوام الآن.`;
+   const pushTitle = isInquiry ? 'تأكيد الحضور — هل ستداوم اليوم؟ ⏰' : 'تذكير إثبات واستمرار الحضور · أساس';
+   const fullReminderText = noteToSend;
+   const shortReminderBody = noteToSend.length > 140 ? `${noteToSend.slice(0, 137).trim()}…` : noteToSend;
    webpushService.sendPushToAccount(db, record.employee_id, {
-     title: 'تذكير إثبات واستمرار الحضور · أساس',
+     title: pushTitle,
      body: shortReminderBody,
      fullBody: fullReminderText,
-     type: 'duty_reminder',
-     priority: customNote ? 'important' : 'normal',
-     senderName: req.user.name || 'إدارة الدوام',
+     type: isInquiry ? 'attendance_inquiry' : 'duty_reminder',
+     priority: 'important',
+     senderName: req.user.name || 'الموارد البشرية',
      createdAt: nowIso,
      tag: `duty-reminder-${record.employee_id}-${Date.now()}`,
      url: '/asas?open_reminder=1'
@@ -1534,7 +1763,7 @@ app.post('/api/admin/remind-duty',admin,wrap(async(req,res)=>{
 
  const targetLabel = (target === 'employee' && targets[0])
    ? `الموظف (${targets[0].name})`
-   : (target === 'all' ? 'كافة الموظفين' : 'الحاضرون بالدوام');
+   : (target === 'absent' ? 'غير الحاضرين (الغائبين)' : (target === 'all' ? 'كافة الموظفين' : 'الحاضرون بالدوام'));
  await audit(db, req.user, 'duty.reminder_blast', null, `إرسال تذكير دوام فوري لـ ${count} (${targetLabel})`);
  respond(res, {
    success: true,

@@ -271,7 +271,7 @@ const permissions = {
 };
 
 const defaults = {
-  branches: { name: '', latitude: '', longitude: '', entry_radius: 80, exit_radius: 120, max_accuracy: 30, exit_samples: 3, exit_delay_seconds: 120, active: true, reason: '' },
+  branches: { name: '', latitude: '', longitude: '', entry_radius: 80, exit_radius: 120, max_accuracy: 30, exit_samples: 3, exit_delay_seconds: 120, active: true, network_attendance_enabled: false, wifi_ssid: '', wifi_bssid: '', allowed_ips: '', network_mode: 'network_or_gps', reason: '' },
   shifts: { name: '', start_time: '08:00', end_time: '16:00', work_days: [0, 1, 2, 3, 4, 6], grace_minutes: 15, close_policy: 'actual_exit', deduct_away: false, reason: '' },
   accounts: { name: '', identifier: '', email: '', phone: '', password: '', role: 'employee', branch_id: '', shift_id: '', permissions: [] },
   records: { first_in: '', last_out: '', state: 'closed', exit_reason: 'انتهاء ساعات الدوام الرسمي في الموعد', deduct_away: false, reason: '' },
@@ -1737,7 +1737,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   const [reminderTarget, setReminderTarget] = useState('inside');
   const [selectedReminderEmployee, setSelectedReminderEmployee] = useState(null);
   const [reminderCustomNote, setReminderCustomNote] = useState('');
-  const [dutyLiveStats, setDutyLiveStats] = useState({ inside: 0, total: 0, present: 0 });
+  const [dutyLiveStats, setDutyLiveStats] = useState({ inside: 0, total: 0, present: 0, absent: 0 });
+  const [inquiryResponses, setInquiryResponses] = useState([]);
   const [savingReminderPolicy, setSavingReminderPolicy] = useState(false);
   const [allEmployees, setAllEmployees] = useState([]);
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -1844,14 +1845,20 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       const payload = {
         target: reminderTarget,
         employee_id: reminderTarget === 'employee' ? selectedReminderEmployee?.id : undefined,
+        inquiry: reminderTarget === 'absent',
         custom_note: reminderCustomNote.trim() || undefined
       };
       const res = await api('/admin/remind-duty', 'POST', payload);
       playChime('success');
       setNotice(res?.message || 'تم إرسال تذكير الدوام بنجاح');
       api('/admin/dashboard').then(dash => {
-        if (dash) setDutyLiveStats({ inside: dash.inside || 0, total: dash.total || 0, present: dash.present || 0 });
+        if (dash) {
+          const inc = dash.inside || 0;
+          const tot = dash.total || 0;
+          setDutyLiveStats({ inside: inc, total: tot, present: dash.present || 0, absent: Math.max(0, tot - inc) });
+        }
       }).catch(() => {});
+      api('/admin/inquiry-responses').then(setInquiryResponses).catch(() => {});
       load(false);
       setShowDutyReminderModal(false);
       setReminderCustomNote('');
@@ -1872,19 +1879,46 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
         duty_reminder_interval_hours: Number(
           customConfig?.duty_reminder_interval_hours || systemSettings.duty_reminder_interval_hours || 2
         ),
+        absent_reminder_enabled: customConfig?.absent_reminder_enabled !== undefined
+          ? customConfig.absent_reminder_enabled
+          : (systemSettings.absent_reminder_enabled !== false),
+        absent_reminder_delay_minutes: Number(
+          customConfig?.absent_reminder_delay_minutes || systemSettings.absent_reminder_delay_minutes || 30
+        ),
         email_notifications: customConfig?.email_notifications !== undefined
           ? customConfig.email_notifications
           : Boolean(systemSettings.email_notifications)
       };
       await api('/admin/settings', 'PUT', payload);
       playChime('success');
-      setNotice('تم حفظ وتطبيق سياسة تذكير الدوام بنجاح');
+      setNotice('تم حفظ وتطبيق سياسة تذكير واستفسار الدوام بنجاح');
       const fresh = await api('/admin/settings');
       if (fresh) setSystemSettings(fresh);
     } catch (err) {
       setError(err?.message || 'تعذر حفظ إعدادات تذكير الدوام');
     } finally {
       setSavingReminderPolicy(false);
+    }
+  };
+
+  const handleAnswerInquiry = async (answerType, note) => {
+    try {
+      setConfirmingPresence(true);
+      const res = await api('/attendance/heartbeat', 'POST', {
+        response: answerType,
+        note: note || '',
+        alert_id: dutyReminder?.alertId || null
+      });
+      if (dutyReminder?.alertId && typeof localStorage !== 'undefined') {
+        localStorage.setItem(`asas_duty_reminder_alert_ack_${user?.id}_${dutyReminder.alertId}`, String(Date.now()));
+      }
+      setDutyReminder(null);
+      setNotice(res?.message || 'تم إرسال إجابتك بنجاح للإدارة');
+      await load();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setConfirmingPresence(false);
     }
   };
 
@@ -2070,10 +2104,16 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
           Promise.all([
             api('/admin/settings').catch(() => null),
             api('/admin/dashboard').catch(() => null),
+            api('/admin/inquiry-responses').catch(() => []),
             allEmployees.length === 0 ? api('/admin/accounts').catch(() => null) : Promise.resolve(null)
-          ]).then(([s, dash, accs]) => {
+          ]).then(([s, dash, inqResp, accs]) => {
             if (s) setSystemSettings(s);
-            if (dash) setDutyLiveStats({ inside: dash.inside || 0, total: dash.total || 0, present: dash.present || 0 });
+            if (dash) {
+              const inc = dash.inside || 0;
+              const tot = dash.total || 0;
+              setDutyLiveStats({ inside: inc, total: tot, present: dash.present || 0, absent: Math.max(0, tot - inc) });
+            }
+            if (Array.isArray(inqResp)) setInquiryResponses(inqResp);
             if (Array.isArray(accs)) setAllEmployees(accs.filter(a => a.role === 'employee' && a.active !== false));
           }).catch(() => {});
         }
@@ -2411,6 +2451,11 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       const body = { ...form };
       if (modal === 'branches') {
         for (const k of ['latitude', 'longitude', 'entry_radius', 'exit_radius', 'max_accuracy', 'exit_samples', 'exit_delay_seconds']) body[k] = Number(body[k]);
+        body.network_attendance_enabled = Boolean(body.network_attendance_enabled);
+        body.wifi_ssid = typeof body.wifi_ssid === 'string' ? body.wifi_ssid.trim() : '';
+        body.wifi_bssid = typeof body.wifi_bssid === 'string' ? body.wifi_bssid.trim() : '';
+        body.allowed_ips = typeof body.allowed_ips === 'string' ? body.allowed_ips.trim() : '';
+        body.network_mode = ['network_or_gps', 'network_and_gps', 'network_only'].includes(body.network_mode) ? body.network_mode : 'network_or_gps';
       }
       if (modal === 'shifts') {
         body.grace_minutes = Number(body.grace_minutes || 0);
@@ -4598,6 +4643,51 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     <div>تأكيد المغادرة: <strong>{b.exit_samples} قراءات / {b.exit_delay_seconds} ثانية</strong></div>
                     <div dir="ltr" style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{b.latitude}, {b.longitude}</div>
                   </div>
+
+                  {/* تفاصيل التحضير عن طريق الشبكة */}
+                  <div className="asas-branch-network-box">
+                    <div className="asas-branch-network-badge-row">
+                      <span className={`asas-branch-network-title ${b.network_attendance_enabled ? 'active' : ''}`}>
+                        <Icon name="wifi" />
+                        التحضير عبر الشبكة والواي فاي
+                      </span>
+                      <span className={`pill ${b.network_attendance_enabled ? 'pill--paid' : 'pill--partial'}`} style={{ fontSize: 11, padding: '2px 8px' }}>
+                        {b.network_attendance_enabled ? 'مفعّل' : 'معطّل (GPS فقط)'}
+                      </span>
+                    </div>
+
+                    {b.network_attendance_enabled ? (
+                      <div className="asas-branch-network-details">
+                        {b.wifi_ssid && (
+                          <div className="asas-branch-net-row">
+                            <span className="label">شبكة Wi-Fi المعتمدة:</span>
+                            <strong className="val">{b.wifi_ssid}</strong>
+                          </div>
+                        )}
+                        {b.allowed_ips && (
+                          <div className="asas-branch-net-row">
+                            <span className="label">عناوين / نطاقات IP:</span>
+                            <code dir="ltr" className="asas-net-ip-tag">{b.allowed_ips}</code>
+                          </div>
+                        )}
+                        <div className="asas-branch-net-row">
+                          <span className="label">نمط التحقق:</span>
+                          <strong className="val">
+                            {b.network_mode === 'network_only'
+                              ? 'الشبكة المعتمدة فقط (دون GPS)'
+                              : b.network_mode === 'network_and_gps'
+                              ? 'الشبكة والموقع معاً (تحقق مزدوج)'
+                              : 'الشبكة أو الموقع الجغرافي (تسهيل الدخول داخل المقر)'}
+                          </strong>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="asas-branch-net-muted">
+                        التحضير محدد بإحداثيات الـ GPS ونطاق الخريطة فقط.
+                      </div>
+                    )}
+                  </div>
+
                   <iframe className="asas-map" src={`https://maps.google.com/maps?q=${b.latitude},${b.longitude}&hl=ar&z=17&output=embed`} loading="lazy" title={`خريطة Google - ${b.name}`} allowFullScreen style={{ width: '100%', height: 160, borderRadius: 12, border: '1px solid var(--hairline)', marginTop: 14 }} />
                   <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
                     {can('locations.write') && (
@@ -4665,6 +4755,17 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                     </div>
 
                     <div className="asas-shifts-kpi-tile">
+                      <span className="asas-shifts-kpi-title" style={{ color: 'var(--danger)' }}>
+                        <Icon name="alert" />
+                        غير الحاضرين (الغائبين اليوم)
+                      </span>
+                      <strong className="asas-shifts-kpi-val num" style={{ color: 'var(--danger)' }}>
+                        {formatNumber(dutyLiveStats.absent !== undefined ? dutyLiveStats.absent : Math.max(0, (dutyLiveStats.total || allEmployees.length) - (dutyLiveStats.inside || 0)))}
+                      </strong>
+                      <span className="asas-shifts-kpi-sub">الموظفون الذين لم يباشروا الدوام حتى الآن</span>
+                    </div>
+
+                    <div className="asas-shifts-kpi-tile">
                       <span className="asas-shifts-kpi-title">
                         <Icon name="clock" />
                         دورية التذكير المعتمدة
@@ -4728,7 +4829,33 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                           </select>
                         </div>
 
-                        <label className="asas-check" style={{ fontSize: 13, color: 'var(--text-2)', margin: '2px 0' }}>
+                        <label className="asas-check" style={{ fontSize: 13, fontWeight: 700, margin: '8px 0 2px' }}>
+                          <input
+                            type="checkbox"
+                            checked={systemSettings.absent_reminder_enabled !== false}
+                            onChange={(e) => setSystemSettings(prev => ({ ...prev, absent_reminder_enabled: e.target.checked }))}
+                          />
+                          <span>تذكير واستفسار آلي لغير الحاضرين (يسألهم هل سيداومون أم لا)</span>
+                        </label>
+
+                        {systemSettings.absent_reminder_enabled !== false && (
+                          <div className="asas-modern-field-group" style={{ marginTop: 4 }}>
+                            <label className="asas-modern-field-label">إرسال استفسار الدوام للمتأخرين/الغائبين بعد:</label>
+                            <select
+                              className="input"
+                              style={{ height: 42 }}
+                              value={systemSettings.absent_reminder_delay_minutes || 30}
+                              onChange={(e) => setSystemSettings(prev => ({ ...prev, absent_reminder_delay_minutes: Number(e.target.value) }))}
+                            >
+                              <option value={15}>15 دقيقة بعد بدء الدوام</option>
+                              <option value={30}>30 دقيقة بعد بدء الدوام (موصى به)</option>
+                              <option value={45}>45 دقيقة بعد بدء الدوام</option>
+                              <option value={60}>ساعة واحدة بعد بدء الدوام</option>
+                            </select>
+                          </div>
+                        )}
+
+                        <label className="asas-check" style={{ fontSize: 13, color: 'var(--text-2)', margin: '4px 0 2px' }}>
                           <input
                             type="checkbox"
                             checked={Boolean(systemSettings.email_notifications)}
@@ -4765,7 +4892,7 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                             نشر وإرسال تنبيه فوري مباشر
                           </h3>
                           <p className="asas-shifts-panel-desc">
-                            بث إشعار فوري وتنبيه صوتي لحظي لأجهزة الموظفين لتأكيد الحضور أو إرسال تعليمات إدارية.
+                            بث إشعار فوري وتنبيه صوتي لحظي لأجهزة الموظفين لتأكيد الحضور أو استفسار الغائبين.
                           </p>
                         </div>
                       </div>
@@ -4782,15 +4909,26 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                               onChange={(val) => {
                                 setReminderTarget(val);
                                 if (val !== 'employee') setSelectedReminderEmployee(null);
+                                if (val === 'absent' && !reminderCustomNote) {
+                                  setReminderCustomNote('هل ستداوم اليوم؟ يرجى تأكيد حضورك أو تقديم عذر لتنظيم سير العمل.');
+                                }
                               }}
                               options={[
                                 { value: 'inside', label: 'المتواجدون حالياً', count: dutyLiveStats.inside || data?.inside || 0 },
+                                { value: 'absent', label: 'غير الحاضرين (استفسار هل سيداوم؟)', count: dutyLiveStats.absent !== undefined ? dutyLiveStats.absent : Math.max(0, (dutyLiveStats.total || allEmployees.length) - (dutyLiveStats.inside || 0)) },
                                 { value: 'employee', label: 'موظف محدد' },
                                 { value: 'all', label: 'كافة الموظفين', count: dutyLiveStats.total || data?.total || allEmployees.length || 0 }
                               ]}
                             />
                           </div>
                         </div>
+
+                        {reminderTarget === 'absent' && (
+                          <div className="asas-notice info" style={{ fontSize: 12.5, margin: '6px 0 10px', padding: '8px 12px' }}>
+                            <Icon name="bell" />
+                            تنبيه مخصص لغير الحاضرين يسألهم مباشرة: <strong>«هل ستداوم اليوم؟»</strong> ويتيح لهم تأكيد الحضور فورياً من هواتفهم.
+                          </div>
+                        )}
 
                         {reminderTarget === 'employee' && (
                           <div className="asas-modern-field-group">
@@ -4831,11 +4969,16 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                           />
                           <div className="asas-shifts-templates-bar">
                             <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>قوالب سريعة:</span>
-                            {[
+                            {(reminderTarget === 'absent' ? [
+                              { label: 'هل ستداوم اليوم؟', text: 'هل ستداوم اليوم؟ يرجى تأكيد الحضور أو تقديم عذر لتنظيم العمل.' },
+                              { label: 'توضيح التأخير', text: 'تذكير بمباشرة الدوام: يرجى توضيح هل ستتأخر أم لن تحضر اليوم؟' },
+                              { label: 'تذكير بدء الدوام', text: 'تذكير رسمي: بدأت ساعات العمل الرسمية، نرجو سرعة تسجيل الحضور أو الإفادة.' },
+                              { label: 'استفسار عن الظرف', text: 'استفسار حضور: هل لديك ظرف طارئ يمنعك من الحضور اليوم؟' }
+                            ] : [
                               { label: 'تأكيد الحضور', text: 'يرجى تأكيد استمرار تواجدك على رأس العمل لتوثيق ساعات الدوام بدقة.' },
                               { label: 'تقرير المهام', text: 'تذكير: يرجى استكمال وتسليم تقرير الإنجاز اليومي قبل انتهاء فترة الدوام.' },
                               { label: 'تنبيه إداري', text: 'تنبيه إداري رسمي: يرجى التواجد في مقر العمل والالتزام بنظام الحضور المعتمد.' }
-                            ].map((tpl, idx) => (
+                            ]).map((tpl, idx) => (
                               <button
                                 key={idx}
                                 type="button"
@@ -4858,12 +5001,63 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                           disabled={triggeringReminder || (reminderTarget === 'employee' && !selectedReminderEmployee)}
                           onClick={handleTriggerManualReminder}
                         >
-                          {reminderTarget === 'employee'
-                            ? (selectedReminderEmployee ? `نشر التنبيه لـ ${firstName(selectedReminderEmployee.name)}` : 'اختر موظفاً أولاً')
-                            : `نشر التنبيه الفوري الآن (${formatNumber(reminderTarget === 'inside' ? (dutyLiveStats.inside || data?.inside || 0) : (dutyLiveStats.total || data?.total || allEmployees.length || 0))})`}
+                          {triggeringReminder
+                            ? 'جاري إرسال التنبيه الفوري...'
+                            : reminderTarget === 'employee'
+                            ? `إرسال التنبيه الفوري لـ ${selectedReminderEmployee?.name || 'الموظف المحدد'}`
+                            : `نشر التنبيه الفوري الآن (${formatNumber(
+                                reminderTarget === 'inside'
+                                  ? (dutyLiveStats.inside || data?.inside || 0)
+                                  : reminderTarget === 'absent'
+                                  ? (dutyLiveStats.absent !== undefined ? dutyLiveStats.absent : Math.max(0, (dutyLiveStats.total || allEmployees.length) - (dutyLiveStats.inside || 0)))
+                                  : (dutyLiveStats.total || data?.total || allEmployees.length || 0)
+                              )})`}
                         </Button>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Live Feed: ردود الموظفين على استفسار "هل ستداوم اليوم؟" */}
+                  <div className="asas-inquiry-responses-card" style={{ marginTop: 18, padding: 16, borderRadius: 12, background: 'var(--glass-inset)', border: '1px solid var(--hairline)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Icon name="bell" style={{ color: 'var(--accent)' }} />
+                        <strong style={{ fontSize: 14 }}>ردود الموظفين على استفسار «هل ستداوم اليوم؟»</strong>
+                      </div>
+                      <span className="pill pill--partial" style={{ fontSize: 11 }}>
+                        إجمالي الردود: {formatNumber(inquiryResponses.length)}
+                      </span>
+                    </div>
+
+                    {inquiryResponses.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {inquiryResponses.map(resp => (
+                          <div key={resp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 8, background: 'var(--glass-panel)', border: '1px solid var(--hairline)', flexWrap: 'wrap', gap: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <Avatar name={resp.name} size={30} />
+                              <div>
+                                <strong style={{ fontSize: 13, display: 'block' }}>{resp.name}</strong>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>#{resp.identifier} • {resp.branch || 'الفرع الرئيسي'}</span>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <span className={`pill ${resp.response === 'will_attend' ? 'pill--paid' : 'pill--danger'}`}>
+                                <Icon name={resp.response === 'will_attend' ? 'checkCircle' : 'alert'} />
+                                {resp.status_text || (resp.response === 'will_attend' ? 'سيداوم اليوم' : 'معتذر عن الدوام')}
+                                {resp.note ? ` (${resp.note})` : ''}
+                              </span>
+                              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                {new Date(resp.captured_at).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'center', padding: '14px 0' }}>
+                        لا توجد ردود مسجلة بعد لهذا اليوم. عند إرسال تنبيه "غير الحاضرين" ستظهر هنا ردود الموظفين وتأكيداتهم فوراً.
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -5945,7 +6139,110 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                       <Field key={k} label={label} type="number" required min={min} max={max} step={k === 'latitude' || k === 'longitude' ? 'any' : 1} value={form[k]} onChange={e => set(k, e.target.value)} />
                     ))}
                   </div>
-                  <label className="asas-check" style={{ marginTop: 8 }}><input type="checkbox" checked={form.active} onChange={e => set('active', e.target.checked)} />الموقع مفعل</label>
+
+                  {/* خاصية التحضير عن طريق الشبكة (Wi-Fi / IP) */}
+                  <div className="asas-branch-network-card">
+                    <div className="asas-branch-network-header">
+                      <div className="asas-branch-network-title">
+                        <Icon name="wifi" />
+                        <span>خاصية التحضير عن طريق الشبكة (Wi-Fi / IP)</span>
+                      </div>
+                      <label className="asas-check" style={{ margin: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(form.network_attendance_enabled)}
+                          onChange={e => set('network_attendance_enabled', e.target.checked)}
+                        />
+                        تفعيل
+                      </label>
+                    </div>
+
+                    <p className="asas-branch-network-desc">
+                      تمكّن الموظفين من تسجيل الحضور والدوام بسلاسة فور الاتصال بشبكة واي فاي الفرع أو عنوان IP المعتمد للشركة، لتجاوز مشكلة ضعف إشارة GPS داخل المباني والمكاتب.
+                    </p>
+
+                    {Boolean(form.network_attendance_enabled) && (
+                      <div className="asas-branch-network-fields">
+                        <Field
+                          label="اسم شبكة الواي فاي المعتمدة (Wi-Fi SSID)"
+                          placeholder="مثال: AI-ASAAS-WiFi, Office-5G"
+                          value={form.wifi_ssid || ''}
+                          onChange={e => set('wifi_ssid', e.target.value)}
+                        />
+
+                        <div className="asas-network-ip-group">
+                          <div className="asas-network-ip-label-row">
+                            <label className="asas-label" style={{ margin: 0 }}>
+                              <span>عناوين أو نطاقات IP المعتمدة للفرع (Allowed IPs)</span>
+                            </label>
+                            <button
+                              type="button"
+                              className="asas-btn sm asas-capture-ip-btn"
+                              onClick={async () => {
+                                try {
+                                  const res = await api('/admin/my-ip');
+                                  if (res?.ip) {
+                                    const current = (form.allowed_ips || '').trim();
+                                    const list = current ? current.split(',').map(s => s.trim()) : [];
+                                    if (!list.includes(res.ip)) {
+                                      const next = list.length ? `${current}, ${res.ip}` : res.ip;
+                                      set('allowed_ips', next);
+                                      setNotice(`تم التقاط عنوان IP الحالي (${res.ip}) وإضافته لقائمة الشبكات المعتمدة`);
+                                    } else {
+                                      setNotice(`عنوان IP الحالي (${res.ip}) مضاف بالفعل مسبقاً`);
+                                    }
+                                  }
+                                } catch (e) {
+                                  setError('تعذر قراءة عنوان IP: ' + e.message);
+                                }
+                              }}
+                            >
+                              <Icon name="globe" />
+                              التقاط IP جهازي الحالي
+                            </button>
+                          </div>
+                          <input
+                            className="asas-input"
+                            dir="ltr"
+                            placeholder="مثال: 192.168.1.0/24, 157.90.133.20, 10.0.0.1"
+                            value={form.allowed_ips || ''}
+                            onChange={e => set('allowed_ips', e.target.value)}
+                          />
+                          <div className="asas-network-ip-hint">
+                            يقبل IP ثابت للشركة أو نطاقات محلية (مثل <code>192.168.1.0/24</code> أو <code>192.168.1.*</code>). يمكنك إضافة عدة عناوين بفواصل.
+                          </div>
+                        </div>
+
+                        <div className="asas-form-grid" style={{ marginTop: 4 }}>
+                          <Field
+                            label="معرف الماك لنقطة الوصول BSSID (اختياري)"
+                            placeholder="مثال: 00:14:22:01:23:45"
+                            dir="ltr"
+                            value={form.wifi_bssid || ''}
+                            onChange={e => set('wifi_bssid', e.target.value)}
+                          />
+
+                          <label className="asas-label">
+                            <span>شرط وسياسة اعتماد الحضور</span>
+                            <select
+                              className="asas-input"
+                              value={form.network_mode || 'network_or_gps'}
+                              onChange={e => set('network_mode', e.target.value)}
+                            >
+                              <option value="network_or_gps">الشبكة أو الموقع الجغرافي (Network OR GPS) — موصى به</option>
+                              <option value="network_and_gps">الشبكة والموقع الجغرافي معاً (Network AND GPS) — أمان مضاعف</option>
+                              <option value="network_only">الشبكة المعتمدة فقط (Network Only) — دون اشتراط GPS</option>
+                            </select>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <label className="asas-check" style={{ marginTop: 14 }}>
+                    <input type="checkbox" checked={form.active} onChange={e => set('active', e.target.checked)} />
+                    الموقع مفعل
+                  </label>
                 </>
               )}
 
@@ -7644,10 +7941,11 @@ function Employee({ user, logout, announcements, unreadAnnouncementsCount = 0, o
           return {
             open: true,
             alertId,
+            inquiry: Boolean(data.duty_reminder_alert.inquiry || data.duty_reminder_alert.target === 'absent'),
             hoursOnDuty: data.duty_reminder_alert.hours_on_duty || 2,
             custom_note: customMsg || null,
             admin_name: data.duty_reminder_alert.admin_name || null,
-            type: 'admin_blast'
+            type: data.duty_reminder_alert.target === 'absent' ? 'absent_inquiry' : 'admin_blast'
           };
         });
         return;
@@ -8687,68 +8985,149 @@ function Employee({ user, logout, announcements, unreadAnnouncementsCount = 0, o
         </div>
       )}
 
-      {/* ─── Duty Attendance Reminder Modal (Official Asas UI) ─── */}
+      {/* ─── Duty Attendance Reminder / Inquiry Modal (Official Asas UI) ─── */}
       {dutyReminder && dutyReminder.open && (
         <Modal
           title={
             <div className="asas-modal-title-row">
-              <Icon name="clock" style={{ color: 'var(--accent)' }} />
-              <Swash>تذكير إثبات الحضور</Swash>
+              <Icon name={dutyReminder.inquiry ? 'bell' : 'clock'} style={{ color: 'var(--accent)' }} />
+              <Swash>{dutyReminder.inquiry ? 'استفسار الحضور — هل ستداوم اليوم؟' : 'تذكير إثبات الحضور'}</Swash>
             </div>
           }
           onClose={handleSnoozeReminder}
           footer={
-            <div className="asas-modal-footer-bar asas-modal-footer-bar--triple">
-              <Button variant="primary" size="sm" icon="check" className="asas-footer-primary" loading={confirmingPresence} onClick={handleConfirmPresence}>
-                تأكيد استمرار الحضور
-              </Button>
-              <div className="asas-modal-footer-bar__group">
-                <Button variant="glass" size="sm" icon="logout" onClick={() => { setDutyReminder(null); act('exit'); }}>
-                  تسجيل الانصراف
-                </Button>
+            dutyReminder.inquiry ? (
+              <div className="asas-modal-footer-bar" style={{ justifyContent: 'flex-end', gap: 8 }}>
                 <Button variant="ghost" size="sm" onClick={handleSnoozeReminder}>
-                  تأجيل مؤقت
+                  إغلاق مؤقت
                 </Button>
               </div>
-            </div>
+            ) : (
+              <div className="asas-modal-footer-bar asas-modal-footer-bar--triple">
+                <Button variant="primary" size="sm" icon="check" className="asas-footer-primary" loading={confirmingPresence} onClick={handleConfirmPresence}>
+                  تأكيد استمرار الحضور
+                </Button>
+                <div className="asas-modal-footer-bar__group">
+                  <Button variant="glass" size="sm" icon="logout" onClick={() => { setDutyReminder(null); act('exit'); }}>
+                    تسجيل الانصراف
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleSnoozeReminder}>
+                    تأجيل مؤقت
+                  </Button>
+                </div>
+              </div>
+            )
           }
         >
-          <div className="asas-notif-center">
-            <p className="prose" style={{ margin: 0, fontSize: 14.5, lineHeight: 1.75, color: 'var(--text)' }}>
-              مرحباً <strong>{firstName(user?.name || '') || user?.name}</strong>، نود تذكيرك بتأكيد تواجدك على رأس العمل لتوثيق استمرار ساعات دوامك بدقة ونزاهة.
-            </p>
-            {dutyReminder.custom_note && (
-              <Glass className="asas-notif-reader is-important" style={{ padding: 14, gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    <Avatar name={dutyReminder.admin_name || 'الموارد البشرية'} size={30} />
-                    <strong style={{ fontSize: 13.5, color: 'var(--text)' }}>
-                      {dutyReminder.admin_name ? `رسالة من ${dutyReminder.admin_name}` : 'رسالة من الموارد البشرية'}
+          {dutyReminder.inquiry ? (
+            /* INTERACTIVE INQUIRY FOR NON-ATTENDEES (هل ستداوم اليوم؟) */
+            <div className="asas-notif-center">
+              <div style={{ textAlign: 'center', marginBottom: 14 }}>
+                <div style={{ display: 'inline-flex', padding: 12, borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent)', marginBottom: 8 }}>
+                  <Icon name="clock" />
+                </div>
+                <h3 style={{ margin: '0 0 6px', fontSize: 17, color: 'var(--text)' }}>
+                  مرحباً {firstName(user?.name || '') || user?.name}، هل ستداوم اليوم؟
+                </h3>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
+                  {dutyReminder.custom_note || 'تود الإدارة الاطمئنان عليك وتأكيد حضورك اليوم لتنظيم ومتابعة سير العمل.'}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Option 1: نعم سأداوم اليوم */}
+                <Glass style={{ padding: 14, borderRadius: 12, border: '1px solid rgba(34, 197, 94, 0.3)', background: 'rgba(34, 197, 94, 0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <strong style={{ fontSize: 14, color: 'var(--paid)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Icon name="checkCircle" />
+                      نعم، سأحضر وأباشر الدوام اليوم
                     </strong>
                   </div>
-                  <span className="pill pill--partial">
-                    <Icon name="bell" />
-                    تنبيه مباشر
+                  <span style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 10 }}>
+                    اختر وقت وصولك المتوقع لإشعار الإدارة فوراً:
                   </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {['بالطريق الآن', 'خلال 15 دقيقة', 'خلال 30 دقيقة', 'سأتأخر قليلاً'].map(eta => (
+                      <button
+                        key={eta}
+                        type="button"
+                        className="asas-btn primary sm"
+                        style={{ fontSize: 12, padding: '5px 12px' }}
+                        disabled={confirmingPresence}
+                        onClick={() => handleAnswerInquiry('will_attend', eta)}
+                      >
+                        {eta}
+                      </button>
+                    ))}
+                  </div>
+                </Glass>
+
+                {/* Option 2: لن أداوم اليوم / اعتذار */}
+                <Glass style={{ padding: 14, borderRadius: 12, border: '1px solid rgba(239, 68, 68, 0.25)', background: 'rgba(239, 68, 68, 0.04)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <strong style={{ fontSize: 14, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Icon name="alert" />
+                      اعتذار — لن أتمكن من الدوام اليوم
+                    </strong>
+                  </div>
+                  <span style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 10 }}>
+                    يرجى تحديد سبب الغياب لإشعار الموارد البشرية:
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {['ظرف طارئ', 'عذر صحي / مرضي', 'استئذان رسمي', 'طلب إجازة'].map(reason => (
+                      <button
+                        key={reason}
+                        type="button"
+                        className="asas-btn sm"
+                        style={{ fontSize: 12, padding: '5px 12px', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                        disabled={confirmingPresence}
+                        onClick={() => handleAnswerInquiry('cannot_attend', reason)}
+                      >
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                </Glass>
+              </div>
+            </div>
+          ) : (
+            <div className="asas-notif-center">
+              <p className="prose" style={{ margin: 0, fontSize: 14.5, lineHeight: 1.75, color: 'var(--text)' }}>
+                مرحباً <strong>{firstName(user?.name || '') || user?.name}</strong>، نود تذكيرك بتأكيد تواجدك على رأس العمل لتوثيق استمرار ساعات دوامك بدقة ونزاهة.
+              </p>
+              {dutyReminder.custom_note && (
+                <Glass className="asas-notif-reader is-important" style={{ padding: 14, gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <Avatar name={dutyReminder.admin_name || 'الموارد البشرية'} size={30} />
+                      <strong style={{ fontSize: 13.5, color: 'var(--text)' }}>
+                        {dutyReminder.admin_name ? `رسالة من ${dutyReminder.admin_name}` : 'رسالة من الموارد البشرية'}
+                      </strong>
+                    </div>
+                    <span className="pill pill--partial">
+                      <Icon name="bell" />
+                      تنبيه مباشر
+                    </span>
+                  </div>
+                  <div className="prose asas-notif-full-body" dir="rtl">
+                    {splitNotificationParagraphs(dutyReminder.custom_note).map((para, idx) => (
+                      <p key={idx} className="asas-notif-p">{para}</p>
+                    ))}
+                  </div>
+                </Glass>
+              )}
+              <Glass className="card" style={{ padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-2)' }}>المدة المسجلة بالدوام:</span>
+                  <strong className="num" style={{ color: 'var(--paid)', fontSize: 16 }}>{formatNumber(dutyReminder.hoursOnDuty || 2)} ساعات متواصلة</strong>
                 </div>
-                <div className="prose asas-notif-full-body" dir="rtl">
-                  {splitNotificationParagraphs(dutyReminder.custom_note).map((para, idx) => (
-                    <p key={idx} className="asas-notif-p">{para}</p>
-                  ))}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--hairline)', paddingTop: 8 }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-2)' }}>حالة المناوبة:</span>
+                  <span className="pill pill--paid"><Icon name="checkCircle" /> على رأس العمل</span>
                 </div>
               </Glass>
-            )}
-            <Glass className="card" style={{ padding: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>المدة المسجلة بالدوام:</span>
-                <strong className="num" style={{ color: 'var(--paid)', fontSize: 16 }}>{formatNumber(dutyReminder.hoursOnDuty || 2)} ساعات متواصلة</strong>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--hairline)', paddingTop: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>حالة المناوبة:</span>
-                <span className="pill pill--paid"><Icon name="checkCircle" /> على رأس العمل</span>
-              </div>
-            </Glass>
-          </div>
+            </div>
+          )}
         </Modal>
       )}
       </div>

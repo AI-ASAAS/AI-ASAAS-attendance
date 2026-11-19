@@ -12,6 +12,11 @@ CREATE TABLE IF NOT EXISTS branches (
   exit_samples INTEGER NOT NULL DEFAULT 3 CHECK(exit_samples BETWEEN 2 AND 10),
   exit_delay_seconds INTEGER NOT NULL DEFAULT 120 CHECK(exit_delay_seconds BETWEEN 30 AND 600),
   active INTEGER NOT NULL DEFAULT 1,
+  network_attendance_enabled INTEGER NOT NULL DEFAULT 0,
+  wifi_ssid TEXT DEFAULT '',
+  wifi_bssid TEXT DEFAULT '',
+  allowed_ips TEXT DEFAULT '',
+  network_mode TEXT NOT NULL DEFAULT 'network_or_gps',
   location_revision INTEGER NOT NULL DEFAULT 1,
   qr_revision INTEGER NOT NULL DEFAULT 1
 );

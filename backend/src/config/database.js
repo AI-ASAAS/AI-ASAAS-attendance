@@ -21,7 +21,8 @@ const BOOLEAN_COLS = new Set([
   'allow_leave_info',
   'allow_team_data',
   'allow_general_help',
-  'strict_topic_only'
+  'strict_topic_only',
+  'network_attendance_enabled'
 ]);
 const JSON_ARRAY_COLS = new Set(['permissions', 'work_days']);
 const JSON_OBJ_COLS = new Set(['exit_candidate', 'details']);
@@ -113,6 +114,28 @@ function getInstance() {
       PRIMARY KEY (account_id, announcement_id)
     );
   `);
+
+  // Ensure network attendance columns exist on branches table
+  try {
+    const branchCols = sqlite.prepare("PRAGMA table_info(branches)").all().map(c => c.name);
+    if (!branchCols.includes('network_attendance_enabled')) {
+      sqlite.exec("ALTER TABLE branches ADD COLUMN network_attendance_enabled INTEGER NOT NULL DEFAULT 0;");
+    }
+    if (!branchCols.includes('wifi_ssid')) {
+      sqlite.exec("ALTER TABLE branches ADD COLUMN wifi_ssid TEXT DEFAULT '';");
+    }
+    if (!branchCols.includes('wifi_bssid')) {
+      sqlite.exec("ALTER TABLE branches ADD COLUMN wifi_bssid TEXT DEFAULT '';");
+    }
+    if (!branchCols.includes('allowed_ips')) {
+      sqlite.exec("ALTER TABLE branches ADD COLUMN allowed_ips TEXT DEFAULT '';");
+    }
+    if (!branchCols.includes('network_mode')) {
+      sqlite.exec("ALTER TABLE branches ADD COLUMN network_mode TEXT NOT NULL DEFAULT 'network_or_gps';");
+    }
+  } catch (e) {
+    console.warn('[DB Migration] branches network cols check:', e.message);
+  }
 
   dbInstance = sqlite;
   currentDbPath = targetPath;
