@@ -1974,6 +1974,8 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
     assistant_model: 'mistral-Nemo-Instruct-2407',
     assistant_provider_name: 'LLM7 Free AI'
   });
+  const [gdriveSyncing, setGdriveSyncing] = useState(false);
+  const [gdriveLastResult, setGdriveLastResult] = useState(null);
   const [assistantPolicyForm, setAssistantPolicyForm] = useState({
     enabled: true,
     daily_limit: '',
@@ -2511,6 +2513,23 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       setError(e.message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleManualGdriveBackup() {
+    setGdriveSyncing(true);
+    try {
+      const res = await api('/admin/gdrive-backup', 'POST');
+      if (res && res.success) {
+        setGdriveLastResult(res);
+        setNotice('تم رفع وتحديث أحدث نسخة لقاعدة البيانات وملف SQL في Google Drive بنجاح');
+      } else {
+        setError(res?.message || 'تعذر الرفع إلى Google Drive');
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setGdriveSyncing(false);
     }
   }
 
@@ -5653,6 +5672,46 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
                   <div>تشفير كلمات المرور: <strong>scrypt KDF مع Salt فريد</strong></div>
                   <div>توقيع رموز QR: <strong>HMAC-SHA256 مع مفتاح سري</strong></div>
                   <div>جلسات العمل: <strong>رموز Bearer مشفرة بـ SHA-256</strong></div>
+                </div>
+              </Glass>
+
+              <Glass style={{ padding: 22 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ margin: 0, fontSize: 16, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 18 }}>☁️</span> النسخ الاحتياطي السحابي (Google Drive)
+                  </h3>
+                  <span className="asas-badge inside">مزامنة دورية تلقائية</span>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div>حساب Google المتصل: <strong>anoos.alaghbari@gmail.com</strong></div>
+                  <div>
+                    مجلد النسخ السحابية: {' '}
+                    <a
+                      href="https://drive.google.com/drive/folders/1GBgXVA2SQ4DeZHUas0hb-fXrGKJ2J3s5"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: 'var(--accent)', textDecoration: 'underline', fontWeight: 600 }}
+                    >
+                      فتح مجلد النسخ في Google Drive ↗
+                    </a>
+                  </div>
+                  <div>
+                    حالة الرفع التلقائي: <strong>مفعل كل 4 ساعات وفي الخلفية تلقائياً</strong>
+                  </div>
+                  <div>
+                    آخر رفع سحابي: <strong>{gdriveLastResult?.timestamp ? new Date(gdriveLastResult.timestamp).toLocaleString('ar-YE') : 'محدث الآن (اليوم)'}</strong>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className="asas-btn primary"
+                      style={{ fontSize: 13, padding: '9px 18px', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                      onClick={handleManualGdriveBackup}
+                      disabled={gdriveSyncing}
+                    >
+                      {gdriveSyncing ? 'جاري رفع وتحديث قاعدة البيانات...' : 'رفع وتحديث قاعدة البيانات الآن إلى Google Drive'}
+                    </button>
+                  </div>
                 </div>
               </Glass>
 

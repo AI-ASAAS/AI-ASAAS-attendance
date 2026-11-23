@@ -1640,6 +1640,15 @@ app.put('/api/admin/settings',admin,allow('locations.write'),wrap(async(req,res)
  });
  respond(res, { saved: true, message: 'تم حفظ إعدادات النظام وتطبيقها فوراً' });
 }));
+app.get('/api/admin/gdrive-backup/status',admin,wrap(async(req,res)=>{
+ const gdriveSync=require('./services/gdrive-sync');
+ respond(res,gdriveSync.getSyncStatus());
+}));
+app.post('/api/admin/gdrive-backup',admin,allow('locations.write'),wrap(async(req,res)=>{
+ const gdriveSync=require('./services/gdrive-sync');
+ const result=await gdriveSync.performGoogleDriveBackup();
+ respond(res,result);
+}));
 app.get('/api/admin/dashboard',admin,wrap(async(req,res)=>{
  await closeScheduled();const broad=['super_admin','hr_admin'].includes(req.user.role);
  const accounts=(await db.query("SELECT id,name,branch_id FROM accounts WHERE role='employee' AND active=TRUE AND ($1=1 OR branch_id=$2)",[broad,req.user.branch_id])).rows;

@@ -21,10 +21,17 @@ async function start() {
   const backupTimer = setInterval(() => ensureLocalDatabase().catch(e => console.error('Scheduled backup check failed:', e.message)), 6 * 3600 * 1000);
   backupTimer.unref();
 
+  // Periodic Google Drive backup (every 4 hours, and once shortly after startup)
+  const { performGoogleDriveBackup } = require('./services/gdrive-sync');
+  setTimeout(() => performGoogleDriveBackup().catch(e => console.warn('Initial GDrive sync notice:', e.message)), 15000);
+  const gdriveTimer = setInterval(() => performGoogleDriveBackup().catch(e => console.warn('Periodic GDrive sync notice:', e.message)), 4 * 3600 * 1000);
+  gdriveTimer.unref();
+
   const server = app.listen(Number(process.env.PORT || 5000), process.env.HOST || '127.0.0.1', () => console.log('ASAS API ready'));
   const stop = () => {
     clearInterval(timer);
     clearInterval(backupTimer);
+    clearInterval(gdriveTimer);
     server.close(() => db.pool.end().then(() => process.exit(0)));
   };
   process.on('SIGINT', stop);
