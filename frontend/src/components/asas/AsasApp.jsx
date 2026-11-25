@@ -1950,9 +1950,6 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
       navigator.serviceWorker.register('/sw.js').catch(err => {
         console.warn('Service worker registration note:', err?.message);
       });
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        registerWebPushSubscription().catch(() => {});
-      }
     }
 
     return () => window.removeEventListener('beforeinstallprompt', handler);
@@ -2034,6 +2031,14 @@ function AsasAppInner({ defaultAction = 'auto', isRemoteMode = false }) {
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  // Register Web Push subscription whenever an authenticated user session is active (Employees & Admins)
+  useEffect(() => {
+    if (!user?.id) return;
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'Notification' in window && Notification.permission === 'granted') {
+      registerWebPushSubscription().catch(() => {});
+    }
+  }, [user?.id]);
 
   // Load Announcements for everyone
   const loadAnnouncements = useCallback(async () => {
@@ -7572,8 +7577,8 @@ function sendSystemNotification(title, body, options = {}) {
       };
       const opts = {
         body: previewBody,
-        icon: '/icon-192.png',
-        badge: '/favicon.png',
+        icon: '/notification-icon.png',
+        badge: '/notification-badge.png',
         dir: 'rtl',
         lang: 'ar',
         tag: options.tag || 'asas-geofence',

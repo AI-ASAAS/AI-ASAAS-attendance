@@ -2,6 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { logger } = require('../utils/logger');
 let webpush = null;
 try {
   webpush = require('web-push');
@@ -9,7 +10,7 @@ try {
   try {
     webpush = require(path.resolve(__dirname, '../../node_modules/web-push'));
   } catch (_) {
-    console.warn('[WebPush] web-push module not found, push notifications will be simulated');
+    logger.warn('[WebPush] web-push module not found, push notifications will be simulated');
   }
 }
 
@@ -132,8 +133,8 @@ async function sendNotificationToSub(db, subRecord, payloadObj) {
     announcementId: payloadObj.announcementId || null,
     senderName: payloadObj.senderName || 'إدارة نظام أساس',
     createdAt: payloadObj.createdAt || new Date().toISOString(),
-    icon: payloadObj.icon || '/icon-192.png',
-    badge: payloadObj.badge || '/favicon.png',
+    icon: payloadObj.icon || '/notification-icon.png',
+    badge: payloadObj.badge || '/notification-badge.png',
     tag: payloadObj.tag || 'asas-alert-' + Date.now(),
     url: payloadObj.url || '/asas',
     timestamp: Date.now()

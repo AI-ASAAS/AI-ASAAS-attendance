@@ -18,12 +18,17 @@ const wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
 const error=(code,message,status=400)=>{throw new AppError(code,message,status);};
 const origin=()=>process.env.WEB_ORIGIN||'http://localhost:3000';
 const isAllowedOrigin=(orig)=>{
- if(!orig || orig === 'null') return true;
+ if(!orig) return true;
+ if(orig === 'null') return false;
  const configured=(process.env.WEB_ORIGIN||'').split(',').map(s=>s.trim()).filter(Boolean);
  if(configured.includes('*')||process.env.NODE_ENV!=='production') return true;
  if(configured.includes(orig)||orig===origin()) return true;
- if(orig==='http://localhost:3000'||orig==='http://127.0.0.1:3000') return true;
- if(orig.includes('ai-asaas.com')||orig.includes('157.90.133.20')||orig.endsWith('.trycloudflare.com')||orig.endsWith('.loca.lt')) return true;
+ try {
+  const host = new URL(orig).hostname.toLowerCase();
+  if(host==='localhost'||host==='127.0.0.1'||host==='157.90.133.20') return true;
+  if(host==='ai-asaas.com'||host.endsWith('.ai-asaas.com')) return true;
+  if(host.endsWith('.trycloudflare.com')||host.endsWith('.loca.lt')) return true;
+ } catch { return false; }
  return false;
 };
 const string=(value,max=150)=>{if(typeof value!=='string'||!value.trim()||value.length>max)error('VALIDATION','تحقق من الحقول المطلوبة');return value.trim();};

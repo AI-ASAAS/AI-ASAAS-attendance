@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const policy = require('./attendance-policy');
+const { logger } = require('../utils/logger');
 
 async function closeScheduled() {
   const now = new Date();
@@ -152,7 +153,7 @@ async function checkDutyReminders() {
             SELECT employee_id FROM duty_records WHERE state = 'inside' AND date(shift_start, '+3 hours') = $1
           )
           AND a.id NOT IN (
-            SELECT employee_id FROM leave_requests WHERE status = 'approved' AND $1 BETWEEN start_date AND end_date
+            SELECT employee_id FROM leave_requests WHERE status = 'approved' AND $1 BETWEEN from_date AND to_date
           )
       `, [todayAden])).rows;
 

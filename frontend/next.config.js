@@ -2,7 +2,7 @@
 const nextConfig = {
   poweredByHeader: false,
   compress: true,
-  swcMinify: true,
+  turbopack: {},
   async redirects() {
     return [
       { source: '/admin/:path*', destination: '/', permanent: false },
@@ -18,8 +18,17 @@ const nextConfig = {
     }
     return [{ source: '/api/:path*', destination: `${raw}/api/:path*` }];
   },
-  // Enable PWA service worker in production
+  // Enable PWA service worker in production & enforce security headers
   headers: async () => [
+    {
+      source: '/(.*)',
+      headers: [
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'Permissions-Policy', value: 'camera=(self), geolocation=(self), microphone=()' },
+      ],
+    },
     {
       source: '/sw.js',
       headers: [

@@ -1,5 +1,5 @@
 // public/sw.js — AI-ASAAS Sovereign Attendance Service Worker
-const CACHE_NAME = 'asas-attendance-v5.7';
+const CACHE_NAME = 'asas-attendance-v5.8';
 const ASSETS_TO_CACHE = [
   '/',
   '/asas',
@@ -7,7 +7,9 @@ const ASSETS_TO_CACHE = [
   '/icon-192.png',
   '/icon-512.png',
   '/favicon.png',
-  '/apple-touch-icon.png'
+  '/apple-touch-icon.png',
+  '/notification-icon.png',
+  '/notification-badge.png'
 ];
 
 // ─── Install: cache shell assets & force immediate activation ──
@@ -46,8 +48,8 @@ self.addEventListener('push', (event) => {
     announcementId: null,
     senderName: 'إدارة نظام أساس',
     createdAt: new Date().toISOString(),
-    icon: '/icon-192.png',
-    badge: '/favicon.png',
+    icon: '/notification-icon.png',
+    badge: '/notification-badge.png',
     tag: 'asas-duty-reminder',
     url: '/asas'
   };
@@ -74,8 +76,8 @@ self.addEventListener('push', (event) => {
 
   const notifOptions = {
     body: payload.body,
-    icon: payload.icon || '/icon-192.png',
-    badge: payload.badge || '/favicon.png',
+    icon: payload.icon || '/notification-icon.png',
+    badge: payload.badge || '/notification-badge.png',
     tag: payload.tag || 'asas-duty-reminder',
     dir: 'rtl',
     lang: 'ar',

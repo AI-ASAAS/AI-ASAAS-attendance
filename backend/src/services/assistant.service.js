@@ -5,6 +5,7 @@ const path = require('node:path');
 const db = require('../config/database');
 const { AppError } = require('../utils/AppError');
 const policyEngine = require('./attendance-policy');
+const { logger } = require('../utils/logger');
 
 const PROMPT_VERSION = 'asaas-assistant-v1.1';
 const PROMPT_PATH = path.resolve(__dirname, '../prompts/assistant.md');
@@ -223,7 +224,7 @@ function classifyAndValidateQuestion(question, user, policy) {
   }
 
   if (!policy.allow_team_data) {
-    const teamProbeRe = /(زميل|زملائي|الموظفين|بقية\s+الموظفين|باقي\s+الموظفين|موظف\s+آخر|غيري|رواتب\s+الموظف|من\s+تأخر|من\s+غائب|المتأخرون|الغائبون|قائمة\s+الحضور|تقرير\s+جماعي|كل\s+العمال|حساب\s+محمد|حساب\s+أحمد|بيانات\s+غيري)/i;
+    const teamProbeRe = /(زميل|زملائي|الموظفين|بقية\s+الموظفين|باقي\s+الموظفين|موظف\s+آخر|الموظف\s+\S+|دوام\s+الموظف|غيري|رواتب\s+الموظف|من\s+تأخر|من\s+غائب|المتأخرون|الغائبون|قائمة\s+الحضور|تقرير\s+جماعي|كل\s+العمال|حساب\s+محمد|حساب\s+أحمد|بيانات\s+غيري)/i;
     if (teamProbeRe.test(q)) {
       return { blocked: true, reason: 'privacy', reply: FIXED_REFUSALS.privacy };
     }
@@ -609,11 +610,11 @@ async function askAssistant({ user, history = [], question, helpers, fetchImpl =
         usedAi = true;
         break;
       }
-      console.warn(`[Assistant AI number-guard fallback] provider=${candidate.name} deviated from verified numbers`);
+      logger.warn(`[Assistant AI number-guard fallback] provider=${candidate.name} deviated from verified numbers`);
       activeProvider = candidate;
       break;
     } catch (err) {
-      console.warn(`[Assistant AI fallback] provider=${candidate.name} reason=${err.message}`);
+      logger.warn(`[Assistant AI fallback] provider=${candidate.name} reason=${err.message}`);
     }
   }
 

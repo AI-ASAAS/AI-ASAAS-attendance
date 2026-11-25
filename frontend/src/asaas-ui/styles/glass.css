@@ -50,9 +50,13 @@
 
 /* Thicker, more opaque glass for floating controls (nav, sheets, popovers). */
 .glass--thick {
-  background: linear-gradient(165deg, var(--glass-tint-strong) 0%, var(--glass-tint-strong) 100%);
-  -webkit-backdrop-filter: blur(36px) saturate(190%);
-  backdrop-filter: blur(36px) saturate(190%);
+  background: linear-gradient(
+    165deg,
+    var(--glass-tint-strong) 0%,
+    color-mix(in srgb, var(--glass-tint-strong) 62%, var(--glass-tint)) 100%
+  );
+  -webkit-backdrop-filter: blur(22px) saturate(190%);
+  backdrop-filter: blur(22px) saturate(190%);
 }
 
 .glass--pill {

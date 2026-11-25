@@ -1,6 +1,7 @@
 'use strict';
 
 const nodemailer = require('nodemailer');
+const { logger } = require('../utils/logger');
 
 // Configure transporter from environment or fallback
 function createTransporter() {
